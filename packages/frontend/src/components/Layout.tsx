@@ -2,6 +2,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { api } from '../lib/api';
+import { SyncStatusIndicator } from './SyncStatusIndicator';
 
 interface LayoutProps {
   children: ReactNode;
@@ -85,6 +86,7 @@ export function Layout({ children }: LayoutProps) {
         </nav>
       </header>
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">{children}</main>
+      <SyncStatusIndicator />
     </div>
   );
 }

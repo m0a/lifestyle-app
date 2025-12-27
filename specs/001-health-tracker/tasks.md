@@ -239,12 +239,12 @@
 
 **Purpose**: PWA and offline capability
 
-- [ ] T093 Configure PWA plugin in packages/frontend/vite.config.ts
-- [ ] T094 Create Service Worker for offline caching
-- [ ] T095 Create IndexedDB wrapper in packages/frontend/src/lib/offlineDb.ts
-- [ ] T096 Create sync service in packages/frontend/src/services/sync.ts
-- [ ] T097 Update hooks to use offline-first pattern
-- [ ] T098 Write E2E test for offline behavior in tests/e2e/offline.spec.ts
+- [x] T093 Configure PWA plugin in packages/frontend/vite.config.ts
+- [x] T094 Create Service Worker for offline caching
+- [x] T095 Create IndexedDB wrapper in packages/frontend/src/lib/offlineDb.ts
+- [x] T096 Create sync service in packages/frontend/src/services/sync.ts
+- [x] T097 Update hooks to use offline-first pattern
+- [x] T098 Write E2E test for offline behavior in tests/e2e/offline.spec.ts
 
 **Checkpoint**: Offline support complete
 
