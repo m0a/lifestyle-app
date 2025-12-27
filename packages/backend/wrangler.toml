@@ -1,0 +1,11 @@
+name = "health-tracker-api"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+[vars]
+ENVIRONMENT = "development"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "health-tracker-db"
+database_id = "TODO_REPLACE_WITH_ACTUAL_ID"

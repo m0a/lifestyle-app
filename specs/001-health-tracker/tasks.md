@@ -19,15 +19,15 @@
 
 **Purpose**: Monorepo structure and tooling configuration
 
-- [ ] T001 Create pnpm workspace configuration in pnpm-workspace.yaml
-- [ ] T002 Create root package.json with workspace scripts
-- [ ] T003 Create root tsconfig.json with strict mode settings
-- [ ] T004 [P] Initialize packages/shared with package.json and tsconfig.json
-- [ ] T005 [P] Initialize packages/backend with package.json and tsconfig.json
-- [ ] T006 [P] Initialize packages/frontend with Vite React template
-- [ ] T007 [P] Configure ESLint and Prettier in root
-- [ ] T008 [P] Configure Vitest in root vitest.config.ts
-- [ ] T009 [P] Configure Playwright in playwright.config.ts
+- [x] T001 Create pnpm workspace configuration in pnpm-workspace.yaml
+- [x] T002 Create root package.json with workspace scripts
+- [x] T003 Create root tsconfig.json with strict mode settings
+- [x] T004 [P] Initialize packages/shared with package.json and tsconfig.json
+- [x] T005 [P] Initialize packages/backend with package.json and tsconfig.json
+- [x] T006 [P] Initialize packages/frontend with Vite React template
+- [x] T007 [P] Configure ESLint and Prettier in root
+- [x] T008 [P] Configure Vitest in root vitest.config.ts
+- [x] T009 [P] Configure Playwright in playwright.config.ts
 
 **Checkpoint**: All packages initialized, dev tooling ready
 
