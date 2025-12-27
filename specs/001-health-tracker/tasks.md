@@ -159,28 +159,28 @@
 
 ### Tests for User Story 3 (TDD - Write First, Verify Fail)
 
-- [ ] T062 [P] [US3] Write unit tests for ExerciseService in tests/unit/exercise.service.test.ts
-- [ ] T063 [P] [US3] Write API integration tests for /exercises in tests/integration/exercises.test.ts
-- [ ] T064 [P] [US3] Write E2E test for exercise recording flow in tests/e2e/exercise.spec.ts
+- [x] T062 [P] [US3] Write unit tests for ExerciseService in tests/unit/exercise.service.test.ts
+- [x] T063 [P] [US3] Write API integration tests for /exercises in tests/integration/exercises.test.ts
+- [x] T064 [P] [US3] Write E2E test for exercise recording flow in tests/e2e/exercise.spec.ts
 
 ### Backend Implementation for User Story 3
 
-- [ ] T065 [US3] Create ExerciseService in packages/backend/src/services/exercise.ts
-- [ ] T066 [US3] Create exercise routes (CRUD) in packages/backend/src/routes/exercises.ts
-- [ ] T067 [US3] Register exercise routes in packages/backend/src/index.ts
+- [x] T065 [US3] Create ExerciseService in packages/backend/src/services/exercise.ts
+- [x] T066 [US3] Create exercise routes (CRUD) in packages/backend/src/routes/exercises.ts
+- [x] T067 [US3] Register exercise routes in packages/backend/src/index.ts
 
 ### Frontend Implementation for User Story 3
 
-- [ ] T068 [P] [US3] Create useExercises hook in packages/frontend/src/hooks/useExercises.ts
-- [ ] T069 [P] [US3] Create ExerciseInput component in packages/frontend/src/components/exercise/ExerciseInput.tsx
-- [ ] T070 [P] [US3] Create ExerciseList component in packages/frontend/src/components/exercise/ExerciseList.tsx
-- [ ] T071 [P] [US3] Create ExerciseSummary component in packages/frontend/src/components/exercise/ExerciseSummary.tsx
-- [ ] T072 [US3] Create Exercise page in packages/frontend/src/pages/Exercise.tsx
-- [ ] T073 [US3] Add Exercise route to router in packages/frontend/src/router.tsx
+- [x] T068 [P] [US3] Create useExercises hook in packages/frontend/src/hooks/useExercises.ts
+- [x] T069 [P] [US3] Create ExerciseInput component in packages/frontend/src/components/exercise/ExerciseInput.tsx
+- [x] T070 [P] [US3] Create ExerciseList component in packages/frontend/src/components/exercise/ExerciseList.tsx
+- [x] T071 [P] [US3] Create ExerciseSummary component in packages/frontend/src/components/exercise/ExerciseSummary.tsx
+- [x] T072 [US3] Create Exercise page in packages/frontend/src/pages/Exercise.tsx
+- [x] T073 [US3] Add Exercise route to router in packages/frontend/src/router.tsx
 
 ### Verify Tests Pass
 
-- [ ] T074 [US3] Run all exercise-related tests and verify pass
+- [x] T074 [US3] Run all exercise-related tests and verify pass
 
 **Checkpoint**: User Story 3 complete - exercise recording functional
 

@@ -6,6 +6,7 @@ import { errorHandler } from './middleware/error';
 import { auth } from './routes/auth';
 import { weights } from './routes/weights';
 import { meals } from './routes/meals';
+import { exercises } from './routes/exercises';
 
 type Bindings = {
   DB: D1Database;
@@ -48,5 +49,6 @@ app.get('/', (c) => {
 app.route('/api/auth', auth);
 app.route('/api/weights', weights);
 app.route('/api/meals', meals);
+app.route('/api/exercises', exercises);
 
 export default app;
