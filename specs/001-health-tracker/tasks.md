@@ -87,30 +87,30 @@
 
 ### Tests for User Story 1 (TDD - Write First, Verify Fail)
 
-- [ ] T034 [P] [US1] Write unit tests for WeightService in tests/unit/weight.service.test.ts
-- [ ] T035 [P] [US1] Write API integration tests for /weights in tests/integration/weights.test.ts
-- [ ] T036 [P] [US1] Write E2E test for weight recording flow in tests/e2e/weight.spec.ts
+- [x] T034 [P] [US1] Write unit tests for WeightService in tests/unit/weight.service.test.ts
+- [x] T035 [P] [US1] Write API integration tests for /weights in tests/integration/weights.test.ts
+- [x] T036 [P] [US1] Write E2E test for weight recording flow in tests/e2e/weight.spec.ts
 
 ### Backend Implementation for User Story 1
 
-- [ ] T037 [US1] Create WeightService in packages/backend/src/services/weight.ts
-- [ ] T038 [US1] Create weight routes (CRUD) in packages/backend/src/routes/weights.ts
-- [ ] T039 [US1] Register weight routes in packages/backend/src/index.ts
+- [x] T037 [US1] Create WeightService in packages/backend/src/services/weight.ts
+- [x] T038 [US1] Create weight routes (CRUD) in packages/backend/src/routes/weights.ts
+- [x] T039 [US1] Register weight routes in packages/backend/src/index.ts
 
 ### Frontend Implementation for User Story 1
 
-- [ ] T040 [P] [US1] Create useWeights hook in packages/frontend/src/hooks/useWeights.ts
-- [ ] T041 [P] [US1] Create WeightInput component in packages/frontend/src/components/weight/WeightInput.tsx
-- [ ] T042 [P] [US1] Create WeightChart component in packages/frontend/src/components/weight/WeightChart.tsx
-- [ ] T043 [P] [US1] Create WeightList component in packages/frontend/src/components/weight/WeightList.tsx
-- [ ] T044 [US1] Create Weight page in packages/frontend/src/pages/Weight.tsx
-- [ ] T045 [US1] Add Weight route to router in packages/frontend/src/router.tsx
+- [x] T040 [P] [US1] Create useWeights hook in packages/frontend/src/hooks/useWeights.ts
+- [x] T041 [P] [US1] Create WeightInput component in packages/frontend/src/components/weight/WeightInput.tsx
+- [x] T042 [P] [US1] Create WeightChart component in packages/frontend/src/components/weight/WeightChart.tsx
+- [x] T043 [P] [US1] Create WeightList component in packages/frontend/src/components/weight/WeightList.tsx
+- [x] T044 [US1] Create Weight page in packages/frontend/src/pages/Weight.tsx
+- [x] T045 [US1] Add Weight route to router in packages/frontend/src/router.tsx
 
 ### Verify Tests Pass
 
-- [ ] T046 [US1] Run unit tests and verify all pass
-- [ ] T047 [US1] Run integration tests and verify all pass
-- [ ] T048 [US1] Run E2E tests and verify weight flow works
+- [x] T046 [US1] Run unit tests and verify all pass
+- [x] T047 [US1] Run integration tests and verify all pass
+- [x] T048 [US1] Run E2E tests and verify weight flow works
 
 **Checkpoint**: User Story 1 complete - MVP functional and testable
 

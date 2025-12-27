@@ -3,6 +3,7 @@ import { Layout } from './components/Layout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
+import { Weight } from './pages/Weight';
 
 // Placeholder components for protected pages
 function Home() {
@@ -18,15 +19,6 @@ function Dashboard() {
   return (
     <div>
       <h1 className="text-2xl font-bold text-gray-900">ダッシュボード</h1>
-      <p className="mt-2 text-gray-600">実装予定</p>
-    </div>
-  );
-}
-
-function Weight() {
-  return (
-    <div>
-      <h1 className="text-2xl font-bold text-gray-900">体重記録</h1>
       <p className="mt-2 text-gray-600">実装予定</p>
     </div>
   );

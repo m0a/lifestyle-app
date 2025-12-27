@@ -4,6 +4,7 @@ import { logger } from 'hono/logger';
 import { createDb, type Database } from './db';
 import { errorHandler } from './middleware/error';
 import { auth } from './routes/auth';
+import { weights } from './routes/weights';
 
 type Bindings = {
   DB: D1Database;
@@ -44,5 +45,6 @@ app.get('/', (c) => {
 
 // Routes
 app.route('/api/auth', auth);
+app.route('/api/weights', weights);
 
 export default app;
