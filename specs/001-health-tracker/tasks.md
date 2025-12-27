@@ -226,10 +226,10 @@
 
 **Purpose**: Privacy features per Constitution Principle I
 
-- [ ] T089 Implement data export endpoint in packages/backend/src/routes/user.ts
-- [ ] T090 Implement account deletion endpoint in packages/backend/src/routes/user.ts
-- [ ] T091 [P] Create Settings page with export/delete in packages/frontend/src/pages/Settings.tsx
-- [ ] T092 Write E2E test for export/delete in tests/e2e/user.spec.ts
+- [x] T089 Implement data export endpoint in packages/backend/src/routes/user.ts
+- [x] T090 Implement account deletion endpoint in packages/backend/src/routes/user.ts
+- [x] T091 [P] Create Settings page with export/delete in packages/frontend/src/pages/Settings.tsx
+- [x] T092 Write E2E test for export/delete in tests/e2e/user.spec.ts
 
 **Checkpoint**: Privacy features complete
 

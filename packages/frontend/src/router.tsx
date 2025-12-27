@@ -7,6 +7,7 @@ import { Weight } from './pages/Weight';
 import { Meal } from './pages/Meal';
 import { Exercise } from './pages/Exercise';
 import { Dashboard } from './pages/Dashboard';
+import { Settings } from './pages/Settings';
 
 // Home component
 function Home() {
@@ -67,6 +68,16 @@ export const router = createBrowserRouter([
       <Layout>
         <ProtectedRoute>
           <Exercise />
+        </ProtectedRoute>
+      </Layout>
+    ),
+  },
+  {
+    path: '/settings',
+    element: (
+      <Layout>
+        <ProtectedRoute>
+          <Settings />
         </ProtectedRoute>
       </Layout>
     ),
