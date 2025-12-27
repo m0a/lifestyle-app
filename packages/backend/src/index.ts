@@ -7,6 +7,7 @@ import { auth } from './routes/auth';
 import { weights } from './routes/weights';
 import { meals } from './routes/meals';
 import { exercises } from './routes/exercises';
+import { dashboard } from './routes/dashboard';
 
 type Bindings = {
   DB: D1Database;
@@ -50,5 +51,6 @@ app.route('/api/auth', auth);
 app.route('/api/weights', weights);
 app.route('/api/meals', meals);
 app.route('/api/exercises', exercises);
+app.route('/api/dashboard', dashboard);
 
 export default app;

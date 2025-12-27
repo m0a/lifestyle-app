@@ -194,29 +194,29 @@
 
 ### Tests for User Story 4 (TDD - Write First, Verify Fail)
 
-- [ ] T075 [P] [US4] Write unit tests for DashboardService in tests/unit/dashboard.service.test.ts
-- [ ] T076 [P] [US4] Write API integration tests for /dashboard in tests/integration/dashboard.test.ts
-- [ ] T077 [P] [US4] Write E2E test for dashboard flow in tests/e2e/dashboard.spec.ts
+- [x] T075 [P] [US4] Write unit tests for DashboardService in tests/unit/dashboard.service.test.ts
+- [x] T076 [P] [US4] Write API integration tests for /dashboard in tests/integration/dashboard.test.ts
+- [x] T077 [P] [US4] Write E2E test for dashboard flow in tests/e2e/dashboard.spec.ts
 
 ### Backend Implementation for User Story 4
 
-- [ ] T078 [US4] Create DashboardService in packages/backend/src/services/dashboard.ts
-- [ ] T079 [US4] Create dashboard routes in packages/backend/src/routes/dashboard.ts
-- [ ] T080 [US4] Register dashboard routes in packages/backend/src/index.ts
+- [x] T078 [US4] Create DashboardService in packages/backend/src/services/dashboard.ts
+- [x] T079 [US4] Create dashboard routes in packages/backend/src/routes/dashboard.ts
+- [x] T080 [US4] Register dashboard routes in packages/backend/src/index.ts
 
 ### Frontend Implementation for User Story 4
 
-- [ ] T081 [P] [US4] Create useDashboard hook in packages/frontend/src/hooks/useDashboard.ts
-- [ ] T082 [P] [US4] Create PeriodSelector component in packages/frontend/src/components/dashboard/PeriodSelector.tsx
-- [ ] T083 [P] [US4] Create WeightSummaryCard component in packages/frontend/src/components/dashboard/WeightSummaryCard.tsx
-- [ ] T084 [P] [US4] Create MealSummaryCard component in packages/frontend/src/components/dashboard/MealSummaryCard.tsx
-- [ ] T085 [P] [US4] Create ExerciseSummaryCard component in packages/frontend/src/components/dashboard/ExerciseSummaryCard.tsx
-- [ ] T086 [US4] Create Dashboard page in packages/frontend/src/pages/Dashboard.tsx
-- [ ] T087 [US4] Add Dashboard route to router in packages/frontend/src/router.tsx
+- [x] T081 [P] [US4] Create useDashboard hook in packages/frontend/src/hooks/useDashboard.ts
+- [x] T082 [P] [US4] Create PeriodSelector component in packages/frontend/src/components/dashboard/PeriodSelector.tsx
+- [x] T083 [P] [US4] Create WeightSummaryCard component in packages/frontend/src/components/dashboard/WeightSummaryCard.tsx
+- [x] T084 [P] [US4] Create MealSummaryCard component in packages/frontend/src/components/dashboard/MealSummaryCard.tsx
+- [x] T085 [P] [US4] Create ExerciseSummaryCard component in packages/frontend/src/components/dashboard/ExerciseSummaryCard.tsx
+- [x] T086 [US4] Create Dashboard page in packages/frontend/src/pages/Dashboard.tsx
+- [x] T087 [US4] Add Dashboard route to router in packages/frontend/src/router.tsx
 
 ### Verify Tests Pass
 
-- [ ] T088 [US4] Run all dashboard-related tests and verify pass
+- [x] T088 [US4] Run all dashboard-related tests and verify pass
 
 **Checkpoint**: User Story 4 complete - all user stories functional
 

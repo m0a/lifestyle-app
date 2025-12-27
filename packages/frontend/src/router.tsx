@@ -6,22 +6,14 @@ import { Register } from './pages/Register';
 import { Weight } from './pages/Weight';
 import { Meal } from './pages/Meal';
 import { Exercise } from './pages/Exercise';
+import { Dashboard } from './pages/Dashboard';
 
-// Placeholder components for protected pages
+// Home component
 function Home() {
   return (
     <div className="text-center">
       <h1 className="text-3xl font-bold text-gray-900">Health Tracker</h1>
       <p className="mt-4 text-gray-600">体重・食事・運動を記録して健康管理をしましょう</p>
-    </div>
-  );
-}
-
-function Dashboard() {
-  return (
-    <div>
-      <h1 className="text-2xl font-bold text-gray-900">ダッシュボード</h1>
-      <p className="mt-2 text-gray-600">実装予定</p>
     </div>
   );
 }
