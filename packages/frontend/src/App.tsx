@@ -1,8 +1,23 @@
+import { useEffect } from 'react';
+import { useAuthStore } from './stores/authStore';
+import { api } from './lib/api';
+import type { AuthResponse } from '@lifestyle-app/shared';
+
 export function App() {
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <h1 className="text-2xl font-bold text-center py-8">Health Tracker</h1>
-      <p className="text-center text-gray-600">Loading...</p>
-    </div>
-  );
+  const { setUser, setLoading } = useAuthStore();
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const response = await api.get<AuthResponse>('/api/auth/me');
+        setUser(response.user);
+      } catch {
+        setUser(null);
+      }
+    };
+
+    checkAuth();
+  }, [setUser, setLoading]);
+
+  return null;
 }

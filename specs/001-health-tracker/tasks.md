@@ -41,39 +41,39 @@
 
 ### Shared Package
 
-- [ ] T010 Create Zod schemas for all entities in packages/shared/src/schemas/index.ts
-- [ ] T011 [P] Create TypeScript types from Zod schemas in packages/shared/src/types/index.ts
-- [ ] T012 [P] Create shared constants (mealTypes, validation limits) in packages/shared/src/constants.ts
-- [ ] T013 Export all from packages/shared/src/index.ts
+- [x] T010 Create Zod schemas for all entities in packages/shared/src/schemas/index.ts
+- [x] T011 [P] Create TypeScript types from Zod schemas in packages/shared/src/types/index.ts
+- [x] T012 [P] Create shared constants (mealTypes, validation limits) in packages/shared/src/constants.ts
+- [x] T013 Export all from packages/shared/src/index.ts
 
 ### Backend Infrastructure
 
-- [ ] T014 Create Drizzle schema for all tables in packages/backend/src/db/schema.ts
-- [ ] T015 Create Drizzle config in packages/backend/drizzle.config.ts
-- [ ] T016 Create Cloudflare D1 database and update wrangler.toml
-- [ ] T017 Generate and apply initial migration with drizzle-kit
-- [ ] T018 Create database connection utility in packages/backend/src/db/index.ts
-- [ ] T019 Create Hono app entry point in packages/backend/src/index.ts
-- [ ] T020 [P] Create auth middleware in packages/backend/src/middleware/auth.ts
-- [ ] T021 [P] Create error handling middleware in packages/backend/src/middleware/error.ts
-- [ ] T022 Implement auth routes (register/login/logout) in packages/backend/src/routes/auth.ts
-- [ ] T023 Create AuthService in packages/backend/src/services/auth.ts
+- [x] T014 Create Drizzle schema for all tables in packages/backend/src/db/schema.ts
+- [x] T015 Create Drizzle config in packages/backend/drizzle.config.ts
+- [x] T016 Create Cloudflare D1 database and update wrangler.toml
+- [x] T017 Generate and apply initial migration with drizzle-kit
+- [x] T018 Create database connection utility in packages/backend/src/db/index.ts
+- [x] T019 Create Hono app entry point in packages/backend/src/index.ts
+- [x] T020 [P] Create auth middleware in packages/backend/src/middleware/auth.ts
+- [x] T021 [P] Create error handling middleware in packages/backend/src/middleware/error.ts
+- [x] T022 Implement auth routes (register/login/logout) in packages/backend/src/routes/auth.ts
+- [x] T023 Create AuthService in packages/backend/src/services/auth.ts
 
 ### Frontend Infrastructure
 
-- [ ] T024 Configure Tailwind CSS in packages/frontend/tailwind.config.js
-- [ ] T025 [P] Configure React Query provider in packages/frontend/src/providers/QueryProvider.tsx
-- [ ] T026 [P] Create Zustand auth store in packages/frontend/src/stores/authStore.ts
-- [ ] T027 [P] Create API client with fetch wrapper in packages/frontend/src/lib/api.ts
-- [ ] T028 Create React Router setup in packages/frontend/src/router.tsx
-- [ ] T029 [P] Create Layout component in packages/frontend/src/components/Layout.tsx
-- [ ] T030 [P] Create ProtectedRoute component in packages/frontend/src/components/ProtectedRoute.tsx
-- [ ] T031 Create Login page in packages/frontend/src/pages/Login.tsx
-- [ ] T032 Create Register page in packages/frontend/src/pages/Register.tsx
+- [x] T024 Configure Tailwind CSS in packages/frontend/tailwind.config.js
+- [x] T025 [P] Configure React Query provider in packages/frontend/src/providers/QueryProvider.tsx
+- [x] T026 [P] Create Zustand auth store in packages/frontend/src/stores/authStore.ts
+- [x] T027 [P] Create API client with fetch wrapper in packages/frontend/src/lib/api.ts
+- [x] T028 Create React Router setup in packages/frontend/src/router.tsx
+- [x] T029 [P] Create Layout component in packages/frontend/src/components/Layout.tsx
+- [x] T030 [P] Create ProtectedRoute component in packages/frontend/src/components/ProtectedRoute.tsx
+- [x] T031 Create Login page in packages/frontend/src/pages/Login.tsx
+- [x] T032 Create Register page in packages/frontend/src/pages/Register.tsx
 
 ### E2E Test Setup
 
-- [ ] T033 Create auth E2E test in tests/e2e/auth.spec.ts
+- [x] T033 Create auth E2E test in tests/e2e/auth.spec.ts
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
