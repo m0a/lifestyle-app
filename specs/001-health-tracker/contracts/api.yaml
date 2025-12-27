@@ -1,0 +1,695 @@
+openapi: 3.0.3
+info:
+  title: Health Tracker API
+  description: 運動・食事・体重管理のトラッキングAPI
+  version: 1.0.0
+
+servers:
+  - url: /api/v1
+    description: API v1
+
+paths:
+  # Authentication
+  /auth/register:
+    post:
+      summary: ユーザー登録
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: 登録成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: メールアドレス重複
+
+  /auth/login:
+    post:
+      summary: ログイン
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: ログイン成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/logout:
+    post:
+      summary: ログアウト
+      tags: [Auth]
+      security:
+        - sessionAuth: []
+      responses:
+        '204':
+          description: ログアウト成功
+
+  # User
+  /user/me:
+    get:
+      summary: 現在のユーザー情報取得
+      tags: [User]
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: ユーザー情報
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
+    patch:
+      summary: ユーザー情報更新
+      tags: [User]
+      security:
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
+    delete:
+      summary: アカウント削除（全データ含む）
+      tags: [User]
+      security:
+        - sessionAuth: []
+      responses:
+        '204':
+          description: 削除成功
+
+  /user/export:
+    get:
+      summary: 全データエクスポート
+      tags: [User]
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: エクスポートデータ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportData'
+
+  # Weight Records
+  /weights:
+    get:
+      summary: 体重記録一覧取得
+      tags: [Weight]
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/StartDate'
+        - $ref: '#/components/parameters/EndDate'
+      responses:
+        '200':
+          description: 体重記録一覧
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WeightRecord'
+
+    post:
+      summary: 体重記録作成
+      tags: [Weight]
+      security:
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWeightRequest'
+      responses:
+        '201':
+          description: 作成成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WeightRecord'
+
+  /weights/{id}:
+    parameters:
+      - $ref: '#/components/parameters/RecordId'
+
+    get:
+      summary: 体重記録取得
+      tags: [Weight]
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: 体重記録
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WeightRecord'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      summary: 体重記録更新
+      tags: [Weight]
+      security:
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWeightRequest'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WeightRecord'
+
+    delete:
+      summary: 体重記録削除
+      tags: [Weight]
+      security:
+        - sessionAuth: []
+      responses:
+        '204':
+          description: 削除成功
+
+  # Meal Records
+  /meals:
+    get:
+      summary: 食事記録一覧取得
+      tags: [Meal]
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/StartDate'
+        - $ref: '#/components/parameters/EndDate'
+      responses:
+        '200':
+          description: 食事記録一覧
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MealRecord'
+
+    post:
+      summary: 食事記録作成
+      tags: [Meal]
+      security:
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMealRequest'
+      responses:
+        '201':
+          description: 作成成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MealRecord'
+
+  /meals/{id}:
+    parameters:
+      - $ref: '#/components/parameters/RecordId'
+
+    patch:
+      summary: 食事記録更新
+      tags: [Meal]
+      security:
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMealRequest'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MealRecord'
+
+    delete:
+      summary: 食事記録削除
+      tags: [Meal]
+      security:
+        - sessionAuth: []
+      responses:
+        '204':
+          description: 削除成功
+
+  # Exercise Records
+  /exercises:
+    get:
+      summary: 運動記録一覧取得
+      tags: [Exercise]
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/StartDate'
+        - $ref: '#/components/parameters/EndDate'
+      responses:
+        '200':
+          description: 運動記録一覧
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExerciseRecord'
+
+    post:
+      summary: 運動記録作成
+      tags: [Exercise]
+      security:
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateExerciseRequest'
+      responses:
+        '201':
+          description: 作成成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExerciseRecord'
+
+  /exercises/{id}:
+    parameters:
+      - $ref: '#/components/parameters/RecordId'
+
+    patch:
+      summary: 運動記録更新
+      tags: [Exercise]
+      security:
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateExerciseRequest'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExerciseRecord'
+
+    delete:
+      summary: 運動記録削除
+      tags: [Exercise]
+      security:
+        - sessionAuth: []
+      responses:
+        '204':
+          description: 削除成功
+
+  # Dashboard
+  /dashboard/summary:
+    get:
+      summary: ダッシュボードサマリー取得
+      tags: [Dashboard]
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [week, month]
+            default: week
+      responses:
+        '200':
+          description: サマリーデータ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardSummary'
+
+components:
+  securitySchemes:
+    sessionAuth:
+      type: apiKey
+      in: cookie
+      name: session
+
+  parameters:
+    RecordId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    StartDate:
+      name: startDate
+      in: query
+      schema:
+        type: string
+        format: date
+
+    EndDate:
+      name: endDate
+      in: query
+      schema:
+        type: string
+        format: date
+
+  responses:
+    BadRequest:
+      description: 不正なリクエスト
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Unauthorized:
+      description: 認証エラー
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: リソースが見つからない
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  schemas:
+    Error:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+        code:
+          type: string
+
+    RegisterRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        goalWeight:
+          type: number
+          minimum: 20
+          maximum: 300
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    AuthResponse:
+      type: object
+      required: [user]
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+
+    User:
+      type: object
+      required: [id, email, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        goalWeight:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        goalWeight:
+          type: number
+          minimum: 20
+          maximum: 300
+
+    WeightRecord:
+      type: object
+      required: [id, weight, recordedAt, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        weight:
+          type: number
+        recordedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+
+    CreateWeightRequest:
+      type: object
+      required: [weight, recordedAt]
+      properties:
+        weight:
+          type: number
+          minimum: 20
+          maximum: 300
+        recordedAt:
+          type: string
+          format: date-time
+
+    UpdateWeightRequest:
+      type: object
+      properties:
+        weight:
+          type: number
+          minimum: 20
+          maximum: 300
+        recordedAt:
+          type: string
+          format: date-time
+
+    MealRecord:
+      type: object
+      required: [id, mealType, content, recordedAt, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        mealType:
+          type: string
+          enum: [breakfast, lunch, dinner, snack]
+        content:
+          type: string
+        calories:
+          type: integer
+        recordedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+
+    CreateMealRequest:
+      type: object
+      required: [mealType, content, recordedAt]
+      properties:
+        mealType:
+          type: string
+          enum: [breakfast, lunch, dinner, snack]
+        content:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        calories:
+          type: integer
+          minimum: 0
+          maximum: 10000
+        recordedAt:
+          type: string
+          format: date-time
+
+    UpdateMealRequest:
+      type: object
+      properties:
+        mealType:
+          type: string
+          enum: [breakfast, lunch, dinner, snack]
+        content:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        calories:
+          type: integer
+          minimum: 0
+          maximum: 10000
+        recordedAt:
+          type: string
+          format: date-time
+
+    ExerciseRecord:
+      type: object
+      required: [id, exerciseType, durationMinutes, recordedAt, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        exerciseType:
+          type: string
+        durationMinutes:
+          type: integer
+        recordedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+
+    CreateExerciseRequest:
+      type: object
+      required: [exerciseType, durationMinutes, recordedAt]
+      properties:
+        exerciseType:
+          type: string
+          minLength: 1
+          maxLength: 100
+        durationMinutes:
+          type: integer
+          minimum: 1
+          maximum: 1440
+        recordedAt:
+          type: string
+          format: date-time
+
+    UpdateExerciseRequest:
+      type: object
+      properties:
+        exerciseType:
+          type: string
+          minLength: 1
+          maxLength: 100
+        durationMinutes:
+          type: integer
+          minimum: 1
+          maximum: 1440
+        recordedAt:
+          type: string
+          format: date-time
+
+    DashboardSummary:
+      type: object
+      required: [period, weights, meals, exercises]
+      properties:
+        period:
+          type: string
+          enum: [week, month]
+        weights:
+          type: object
+          properties:
+            current:
+              type: number
+            change:
+              type: number
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/WeightRecord'
+        meals:
+          type: object
+          properties:
+            totalCalories:
+              type: integer
+            averageCalories:
+              type: number
+            count:
+              type: integer
+        exercises:
+          type: object
+          properties:
+            totalMinutes:
+              type: integer
+            count:
+              type: integer
+            byType:
+              type: object
+              additionalProperties:
+                type: integer
+
+    ExportData:
+      type: object
+      required: [user, weights, meals, exercises, exportedAt]
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        weights:
+          type: array
+          items:
+            $ref: '#/components/schemas/WeightRecord'
+        meals:
+          type: array
+          items:
+            $ref: '#/components/schemas/MealRecord'
+        exercises:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExerciseRecord'
+        exportedAt:
+          type: string
+          format: date-time
