@@ -5,6 +5,7 @@ import { createDb, type Database } from './db';
 import { errorHandler } from './middleware/error';
 import { auth } from './routes/auth';
 import { weights } from './routes/weights';
+import { meals } from './routes/meals';
 
 type Bindings = {
   DB: D1Database;
@@ -46,5 +47,6 @@ app.get('/', (c) => {
 // Routes
 app.route('/api/auth', auth);
 app.route('/api/weights', weights);
+app.route('/api/meals', meals);
 
 export default app;

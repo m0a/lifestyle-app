@@ -124,28 +124,28 @@
 
 ### Tests for User Story 2 (TDD - Write First, Verify Fail)
 
-- [ ] T049 [P] [US2] Write unit tests for MealService in tests/unit/meal.service.test.ts
-- [ ] T050 [P] [US2] Write API integration tests for /meals in tests/integration/meals.test.ts
-- [ ] T051 [P] [US2] Write E2E test for meal recording flow in tests/e2e/meal.spec.ts
+- [x] T049 [P] [US2] Write unit tests for MealService in tests/unit/meal.service.test.ts
+- [x] T050 [P] [US2] Write API integration tests for /meals in tests/integration/meals.test.ts
+- [x] T051 [P] [US2] Write E2E test for meal recording flow in tests/e2e/meal.spec.ts
 
 ### Backend Implementation for User Story 2
 
-- [ ] T052 [US2] Create MealService in packages/backend/src/services/meal.ts
-- [ ] T053 [US2] Create meal routes (CRUD) in packages/backend/src/routes/meals.ts
-- [ ] T054 [US2] Register meal routes in packages/backend/src/index.ts
+- [x] T052 [US2] Create MealService in packages/backend/src/services/meal.ts
+- [x] T053 [US2] Create meal routes (CRUD) in packages/backend/src/routes/meals.ts
+- [x] T054 [US2] Register meal routes in packages/backend/src/index.ts
 
 ### Frontend Implementation for User Story 2
 
-- [ ] T055 [P] [US2] Create useMeals hook in packages/frontend/src/hooks/useMeals.ts
-- [ ] T056 [P] [US2] Create MealInput component in packages/frontend/src/components/meal/MealInput.tsx
-- [ ] T057 [P] [US2] Create MealList component in packages/frontend/src/components/meal/MealList.tsx
-- [ ] T058 [P] [US2] Create CalorieSummary component in packages/frontend/src/components/meal/CalorieSummary.tsx
-- [ ] T059 [US2] Create Meal page in packages/frontend/src/pages/Meal.tsx
-- [ ] T060 [US2] Add Meal route to router in packages/frontend/src/router.tsx
+- [x] T055 [P] [US2] Create useMeals hook in packages/frontend/src/hooks/useMeals.ts
+- [x] T056 [P] [US2] Create MealInput component in packages/frontend/src/components/meal/MealInput.tsx
+- [x] T057 [P] [US2] Create MealList component in packages/frontend/src/components/meal/MealList.tsx
+- [x] T058 [P] [US2] Create CalorieSummary component in packages/frontend/src/components/meal/CalorieSummary.tsx
+- [x] T059 [US2] Create Meal page in packages/frontend/src/pages/Meal.tsx
+- [x] T060 [US2] Add Meal route to router in packages/frontend/src/router.tsx
 
 ### Verify Tests Pass
 
-- [ ] T061 [US2] Run all meal-related tests and verify pass
+- [x] T061 [US2] Run all meal-related tests and verify pass
 
 **Checkpoint**: User Story 2 complete - meal recording functional
 
