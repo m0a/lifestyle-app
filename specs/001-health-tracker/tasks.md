@@ -254,14 +254,14 @@
 
 **Purpose**: Quality, performance, deployment
 
-- [ ] T099 [P] Add loading states to all pages
-- [ ] T100 [P] Add error boundaries and user-friendly error messages
-- [ ] T101 [P] Add toast notifications for actions
-- [ ] T102 Run full test suite and ensure 80%+ coverage
-- [ ] T103 [P] Configure CI/CD with GitHub Actions in .github/workflows/ci.yml
-- [ ] T104 Deploy backend to Cloudflare Workers
-- [ ] T105 Deploy frontend to Cloudflare Pages
-- [ ] T106 Run quickstart.md validation
+- [x] T099 [P] Add loading states to all pages
+- [x] T100 [P] Add error boundaries and user-friendly error messages
+- [x] T101 [P] Add toast notifications for actions
+- [x] T102 Run full test suite and ensure 80%+ coverage
+- [x] T103 [P] Configure CI/CD with GitHub Actions in .github/workflows/ci.yml
+- [x] T104 Deploy backend to Cloudflare Workers
+- [x] T105 Deploy frontend to Cloudflare Pages
+- [x] T106 Run quickstart.md validation
 
 ---
 
