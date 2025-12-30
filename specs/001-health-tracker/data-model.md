@@ -179,6 +179,8 @@ export const exerciseRecords = sqliteTable('exercise_records', {
 
 ## Zod Schemas (Shared)
 
+> **Hono RPC連携**: これらのスキーマは`@hono/zod-validator`でバックエンドのバリデーションに使用され、型がフロントエンドに自動伝播する。
+
 ```typescript
 // packages/shared/src/schemas/index.ts
 import { z } from 'zod';
@@ -227,3 +229,38 @@ export const userSchema = z.object({
 ### Export
 - FR-008対応: ユーザーの全データをJSON形式でエクスポート
 - 構造: `{ user: {...}, weights: [...], meals: [...], exercises: [...] }`
+
+## Hono RPC Type Flow
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    shared/schemas/index.ts                      │
+│  export const createWeightSchema = z.object({...})              │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+              ┌───────────────┴───────────────┐
+              ▼                               ▼
+┌─────────────────────────────┐  ┌─────────────────────────────────┐
+│   backend/routes/weights.ts │  │   frontend/hooks/useWeights.ts  │
+│                             │  │                                 │
+│ .post('/',                  │  │ client.api.weights.$post({      │
+│   zValidator('json',        │  │   json: { weight: 70.5, ... }   │
+│     createWeightSchema),    │  │ })                              │
+│   (c) => {...}              │  │ // 型エラーがIDEで検知される     │
+│ )                           │  │                                 │
+└─────────────────────────────┘  └─────────────────────────────────┘
+              │                               │
+              └───────────────┬───────────────┘
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│               backend/src/index.ts                              │
+│  export type AppType = typeof app                               │
+│  // この型がフロントエンドに伝播                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**ポイント**:
+- Zodスキーマは`shared`パッケージで一元管理
+- バックエンドで`zValidator`を使用するとレスポンス型が推論される
+- フロントエンドで`hc<AppType>`を使用すると型が自動適用
+- APIの変更はコンパイル時に検知される

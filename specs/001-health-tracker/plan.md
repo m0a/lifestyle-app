@@ -10,7 +10,8 @@
 ## Technical Context
 
 **Language/Version**: TypeScript 5.x (strict mode)
-**Primary Dependencies**: React 18+, Hono, Drizzle ORM, Zod, Tailwind CSS
+**Primary Dependencies**: React 18+, Hono (RPC), Drizzle ORM, Zod, Tailwind CSS
+**API Strategy**: Hono RPC（エンドツーエンド型安全）
 **Storage**: Cloudflare D1 (SQLite) + IndexedDB (オフライン用)
 **Testing**: Vitest + Playwright
 **Target Platform**: Web (モバイルファースト、PWA対応)
@@ -18,6 +19,31 @@
 **Performance Goals**: 1000同時接続、レスポンス<200ms、週間レポート<2秒
 **Constraints**: オフライン対応必須、3タップ以内で記録完了
 **Scale/Scope**: 1000ユーザー、4画面（記録×3 + ダッシュボード）
+
+### Hono RPC Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      Frontend (React)                       │
+│  const client = hc<AppType>('/')                           │
+│  const res = await client.api.weights.$post({ json: data })│
+│                         ↑ 型が自動推論                      │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   Backend (Hono + RPC)                      │
+│  const app = new Hono()                                     │
+│    .post('/api/weights', zValidator('json', schema), ...)  │
+│  export type AppType = typeof app                           │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**メリット**:
+- フロントエンド・バックエンド間で型が自動共有（コード生成不要）
+- APIエンドポイント変更時にコンパイルエラーで検知
+- Zodスキーマの二重定義が不要
+- IDE補完が効く
 
 ## Constitution Check
 
@@ -54,20 +80,22 @@ specs/001-health-tracker/
 packages/
 ├── shared/              # 共有型定義・Zodスキーマ
 │   └── src/
-│       ├── types/
-│       └── schemas/
+│       ├── types/       # 共通型定義
+│       └── schemas/     # Zodバリデーションスキーマ
 ├── backend/             # Hono on Cloudflare Workers
 │   └── src/
+│       ├── index.ts     # AppType export（RPC用）
 │       ├── db/          # Drizzle schema & migrations
-│       ├── routes/      # API endpoints
+│       ├── routes/      # API endpoints（チェーン形式）
 │       └── services/    # Business logic
 └── frontend/            # React + Vite
     └── src/
+        ├── lib/
+        │   └── client.ts  # hc<AppType> RPCクライアント
         ├── components/  # UI components
         ├── pages/       # Route pages
-        ├── hooks/       # Custom hooks
-        ├── stores/      # State management
-        └── lib/         # Utilities
+        ├── hooks/       # Custom hooks（RPCクライアント使用）
+        └── stores/      # State management
 
 tests/
 ├── e2e/                 # Playwright tests
@@ -75,7 +103,7 @@ tests/
 └── unit/                # Unit tests
 ```
 
-**Structure Decision**: Monorepo with packages/ structure. `shared` package enables type sharing between frontend and backend per Constitution Principle IV.
+**Structure Decision**: Monorepo with packages/ structure. `shared` package enables type sharing between frontend and backend per Constitution Principle IV. Hono RPC enables end-to-end type safety by exporting `AppType` from backend.
 
 ## Complexity Tracking
 
@@ -85,3 +113,30 @@ tests/
 |----------|---------------|
 | Monorepo (3 packages) | Type sharing requirement (Constitution IV), single deploy pipeline |
 | IndexedDB for offline | FR-010 requirement, Constitution V (standard browser API) |
+| Workers + Static Assets | 同一オリジンでcookie問題回避、単一デプロイで運用簡素化 |
+| Duck typing for errors | Cloudflare Workers環境での`instanceof`問題回避 |
+| Hono RPC | エンドツーエンド型安全、OpenAPI/コード生成不要、Constitution IV準拠 |
+
+## Deployment Architecture
+
+**方式**: Cloudflare Workers + Static Assets（統合デプロイ）
+
+```
+https://lifestyle-tracker.abe00makoto.workers.dev
+├── /                    # フロントエンド（React SPA）
+├── /api/auth/*          # 認証API
+├── /api/weights/*       # 体重記録API
+├── /api/meals/*         # 食事記録API
+├── /api/exercises/*     # 運動記録API
+├── /api/dashboard/*     # ダッシュボードAPI
+└── /api/user/*          # ユーザー設定API
+```
+
+**選定理由**:
+- Cloudflare Pagesとの分離デプロイではクロスオリジンcookie問題が発生（Brave等でブロック）
+- 同一Workerからフロントエンド・バックエンドを配信することで解決
+- `wrangler.toml`の`[assets]`設定でSPA対応
+
+**設定ファイル**:
+- `packages/backend/wrangler.toml`: Worker + assets設定
+- `packages/frontend/.env.production`: `VITE_API_URL=`（空文字列で相対パス）
