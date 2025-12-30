@@ -6,7 +6,6 @@ interface ExportData {
   user: {
     id: string;
     email: string;
-    name: string | null;
     createdAt: string;
   };
   weights: Array<{
@@ -18,7 +17,7 @@ interface ExportData {
   meals: Array<{
     id: string;
     mealType: string;
-    description: string;
+    content: string;
     calories: number | null;
     recordedAt: string;
     createdAt: string;
@@ -41,7 +40,7 @@ export class UserService {
       .select({
         id: users.id,
         email: users.email,
-        name: users.name,
+        goalWeight: users.goalWeight,
         createdAt: users.createdAt,
       })
       .from(users)
@@ -57,7 +56,6 @@ export class UserService {
       .select({
         id: users.id,
         email: users.email,
-        name: users.name,
         createdAt: users.createdAt,
       })
       .from(users)
@@ -85,7 +83,7 @@ export class UserService {
       .select({
         id: meals.id,
         mealType: meals.mealType,
-        description: meals.description,
+        content: meals.content,
         calories: meals.calories,
         recordedAt: meals.recordedAt,
         createdAt: meals.createdAt,
@@ -111,7 +109,6 @@ export class UserService {
       user: {
         id: user.id,
         email: user.email,
-        name: user.name,
         createdAt: user.createdAt,
       },
       weights: weightRecords,
@@ -141,11 +138,11 @@ export class UserService {
 
     // Meal records
     lines.push('## Meal Records');
-    lines.push('date,meal_type,description,calories');
+    lines.push('date,meal_type,content,calories');
     for (const record of data.meals) {
-      const description = record.description.replace(/"/g, '""');
+      const content = record.content.replace(/"/g, '""');
       lines.push(
-        `${record.recordedAt},${record.mealType},"${description}",${record.calories ?? ''}`
+        `${record.recordedAt},${record.mealType},"${content}",${record.calories ?? ''}`
       );
     }
     lines.push('');

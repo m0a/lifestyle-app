@@ -1,4 +1,4 @@
-import { createBrowserRouter } from 'react-router-dom';
+import { createBrowserRouter, type RouteObject } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Login } from './pages/Login';
@@ -19,7 +19,7 @@ function Home() {
   );
 }
 
-export const router = createBrowserRouter([
+const routes: RouteObject[] = [
   {
     path: '/',
     element: <Layout><Home /></Layout>,
@@ -82,4 +82,6 @@ export const router = createBrowserRouter([
       </Layout>
     ),
   },
-]);
+];
+
+export const router: ReturnType<typeof createBrowserRouter> = createBrowserRouter(routes);

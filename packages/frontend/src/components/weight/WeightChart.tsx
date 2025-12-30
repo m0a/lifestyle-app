@@ -8,6 +8,7 @@ import {
   Tooltip,
   Legend,
   Filler,
+  type TooltipItem,
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
 import type { WeightRecord } from '@lifestyle-app/shared';
@@ -85,8 +86,9 @@ export function WeightChart({ weights }: WeightChartProps) {
       },
       tooltip: {
         callbacks: {
-          label: (context: { dataset: { label?: string }; parsed: { y: number } }) => {
-            return `${context.dataset.label}: ${context.parsed.y.toFixed(1)} kg`;
+          label: (context: TooltipItem<'line'>) => {
+            const y = context.parsed.y;
+            return `${context.dataset.label}: ${y !== null ? y.toFixed(1) : 0} kg`;
           },
         },
       },

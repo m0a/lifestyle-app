@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787';
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8787';
 
 interface ApiError {
   message: string;
@@ -78,3 +78,4 @@ export class ApiRequestError extends Error {
 }
 
 export const api = new ApiClient(API_BASE_URL);
+export const apiClient = api;

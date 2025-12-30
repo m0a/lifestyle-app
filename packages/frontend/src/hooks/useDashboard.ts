@@ -82,21 +82,21 @@ export function useDashboard(options: UseDashboardOptions = {}) {
       } else {
         params.set('period', period);
       }
-      return apiClient.get<DashboardSummary>(`/dashboard/summary?${params.toString()}`);
+      return apiClient.get<DashboardSummary>(`/api/dashboard/summary?${params.toString()}`);
     },
   });
 
   const trendsQuery = useQuery<WeeklyTrendItem[]>({
     queryKey: ['dashboard', 'trends'],
     queryFn: async () => {
-      return apiClient.get<WeeklyTrendItem[]>('/dashboard/trends?weeks=4');
+      return apiClient.get<WeeklyTrendItem[]>('/api/dashboard/trends?weeks=4');
     },
   });
 
   const goalsQuery = useQuery<GoalProgress>({
     queryKey: ['dashboard', 'goals'],
     queryFn: async () => {
-      return apiClient.get<GoalProgress>('/dashboard/goals');
+      return apiClient.get<GoalProgress>('/api/dashboard/goals');
     },
   });
 

@@ -9,8 +9,8 @@ import {
   updateMealSchema,
   createExerciseSchema,
   updateExerciseSchema,
-  mealTypeSchema,
-  dashboardPeriodSchema,
+  type MealType,
+  type DashboardPeriod,
 } from '../schemas';
 
 // Infer types from schemas
@@ -23,8 +23,7 @@ export type CreateMealInput = z.infer<typeof createMealSchema>;
 export type UpdateMealInput = z.infer<typeof updateMealSchema>;
 export type CreateExerciseInput = z.infer<typeof createExerciseSchema>;
 export type UpdateExerciseInput = z.infer<typeof updateExerciseSchema>;
-export type MealType = z.infer<typeof mealTypeSchema>;
-export type DashboardPeriod = z.infer<typeof dashboardPeriodSchema>;
+// MealType and DashboardPeriod are exported from schemas/index.ts
 
 // Entity types
 export interface User {

@@ -57,6 +57,11 @@ export const exerciseRecords = sqliteTable(
   (table) => [index('idx_exercise_user_date').on(table.userId, table.recordedAt)]
 );
 
+// Aliases for convenience
+export { weightRecords as weights };
+export { mealRecords as meals };
+export { exerciseRecords as exercises };
+
 // Type exports for use in services
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;

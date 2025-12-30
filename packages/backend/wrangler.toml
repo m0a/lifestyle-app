@@ -1,11 +1,16 @@
-name = "health-tracker-api"
+name = "lifestyle-tracker"
 main = "src/index.ts"
 compatibility_date = "2024-01-01"
 
+[assets]
+directory = "./public"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+
 [vars]
-ENVIRONMENT = "development"
+ENVIRONMENT = "production"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "health-tracker-db"
-database_id = "TODO_REPLACE_WITH_ACTUAL_ID"
+database_id = "86957e0a-04b6-4530-9b64-79ea36c64ba5"

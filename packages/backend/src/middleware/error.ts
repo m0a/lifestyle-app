@@ -3,6 +3,8 @@ import { HTTPException } from 'hono/http-exception';
 import { ZodError } from 'zod';
 
 export class AppError extends Error {
+  readonly isAppError = true;
+
   constructor(
     message: string,
     public statusCode: number = 500,
@@ -11,6 +13,23 @@ export class AppError extends Error {
     super(message);
     this.name = 'AppError';
   }
+}
+
+interface AppErrorLike {
+  message: string;
+  statusCode: number;
+  code?: string;
+  name: string;
+}
+
+function isAppError(error: unknown): error is AppErrorLike {
+  if (error === null || typeof error !== 'object') return false;
+  const e = error as Record<string, unknown>;
+  return (
+    e.name === 'AppError' &&
+    typeof e.statusCode === 'number' &&
+    typeof e.message === 'string'
+  );
 }
 
 export async function errorHandler(c: Context, next: Next) {
@@ -43,7 +62,7 @@ export async function errorHandler(c: Context, next: Next) {
       );
     }
 
-    if (error instanceof AppError) {
+    if (isAppError(error)) {
       return c.json(
         {
           message: error.message,

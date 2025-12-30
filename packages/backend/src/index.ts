@@ -1,8 +1,9 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
+import { HTTPException } from 'hono/http-exception';
+import { ZodError } from 'zod';
 import { createDb, type Database } from './db';
-import { errorHandler } from './middleware/error';
 import { auth } from './routes/auth';
 import { weights } from './routes/weights';
 import { meals } from './routes/meals';
@@ -21,9 +22,36 @@ type Variables = {
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
+// Global error handler
+app.onError((err, c) => {
+  console.error('Error:', err);
+
+  if (err instanceof HTTPException) {
+    return c.json({ message: err.message, code: 'HTTP_ERROR' }, err.status);
+  }
+
+  if (err instanceof ZodError) {
+    return c.json({
+      message: 'バリデーションエラー',
+      code: 'VALIDATION_ERROR',
+      errors: err.errors.map((e) => ({ path: e.path.join('.'), message: e.message })),
+    }, 400);
+  }
+
+  // Check for AppError by duck typing
+  const e = err as Record<string, unknown>;
+  if (e.name === 'AppError' && typeof e.statusCode === 'number') {
+    return c.json(
+      { message: err.message, code: e.code as string },
+      e.statusCode as number
+    );
+  }
+
+  return c.json({ message: 'サーバーエラーが発生しました', code: 'INTERNAL_ERROR' }, 500);
+});
+
 // Middleware
 app.use('*', logger());
-app.use('*', errorHandler);
 app.use(
   '*',
   cors({
