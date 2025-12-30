@@ -5,11 +5,6 @@ import { DashboardService } from '../services/dashboard';
 import { authMiddleware } from '../middleware/auth';
 import type { Bindings, Variables } from '../types';
 
-const dashboard = new Hono<{ Bindings: Bindings; Variables: Variables }>();
-
-// All dashboard routes require authentication
-dashboard.use('*', authMiddleware);
-
 // Period presets
 const PERIOD_DAYS = {
   week: 7,
@@ -34,60 +29,57 @@ const goalsQuerySchema = z.object({
   dailyCalories: z.coerce.number().positive().optional(),
 });
 
-// GET /api/dashboard/summary
-dashboard.get('/summary', zValidator('query', periodQuerySchema), async (c) => {
-  const user = c.get('user');
-  const { period, startDate: startDateStr, endDate: endDateStr } = c.req.valid('query');
-  const db = c.get('db');
-  const service = new DashboardService(db);
+// Chain format for RPC type inference
+// All dashboard routes require authentication
+export const dashboard = new Hono<{ Bindings: Bindings; Variables: Variables }>()
+  .use(authMiddleware)
+  .get('/summary', zValidator('query', periodQuerySchema), async (c) => {
+    const user = c.get('user');
+    const { period, startDate: startDateStr, endDate: endDateStr } = c.req.valid('query');
+    const db = c.get('db');
+    const service = new DashboardService(db);
 
-  let startDate: Date;
-  let endDate: Date;
+    let startDate: Date;
+    let endDate: Date;
 
-  if (startDateStr && endDateStr) {
-    // Custom date range
-    startDate = new Date(startDateStr);
-    endDate = new Date(endDateStr);
-  } else {
-    // Period preset
-    endDate = new Date();
-    startDate = new Date();
-    const days = PERIOD_DAYS[period || 'week'];
-    startDate.setDate(startDate.getDate() - days);
-  }
+    if (startDateStr && endDateStr) {
+      // Custom date range
+      startDate = new Date(startDateStr);
+      endDate = new Date(endDateStr);
+    } else {
+      // Period preset
+      endDate = new Date();
+      startDate = new Date();
+      const days = PERIOD_DAYS[period || 'week'];
+      startDate.setDate(startDate.getDate() - days);
+    }
 
-  // Validate date range
-  if (startDate > endDate) {
-    return c.json({ error: 'Start date must be before end date' }, 400);
-  }
+    // Validate date range
+    if (startDate > endDate) {
+      return c.json({ error: 'Start date must be before end date' }, 400);
+    }
 
-  const summary = await service.getSummary(user.id, { startDate, endDate });
+    const summary = await service.getSummary(user.id, { startDate, endDate });
 
-  return c.json(summary);
-});
+    return c.json(summary);
+  })
+  .get('/trends', zValidator('query', trendQuerySchema), async (c) => {
+    const user = c.get('user');
+    const { weeks } = c.req.valid('query');
+    const db = c.get('db');
+    const service = new DashboardService(db);
 
-// GET /api/dashboard/trends
-dashboard.get('/trends', zValidator('query', trendQuerySchema), async (c) => {
-  const user = c.get('user');
-  const { weeks } = c.req.valid('query');
-  const db = c.get('db');
-  const service = new DashboardService(db);
+    const trends = await service.getWeeklyTrend(user.id, weeks);
 
-  const trends = await service.getWeeklyTrend(user.id, weeks);
+    return c.json(trends);
+  })
+  .get('/goals', zValidator('query', goalsQuerySchema), async (c) => {
+    const user = c.get('user');
+    const goals = c.req.valid('query');
+    const db = c.get('db');
+    const service = new DashboardService(db);
 
-  return c.json(trends);
-});
+    const progress = await service.getGoalProgress(user.id, goals);
 
-// GET /api/dashboard/goals
-dashboard.get('/goals', zValidator('query', goalsQuerySchema), async (c) => {
-  const user = c.get('user');
-  const goals = c.req.valid('query');
-  const db = c.get('db');
-  const service = new DashboardService(db);
-
-  const progress = await service.getGoalProgress(user.id, goals);
-
-  return c.json(progress);
-});
-
-export { dashboard };
+    return c.json(progress);
+  });

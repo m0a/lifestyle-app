@@ -12,64 +12,60 @@ type Bindings = {
 
 type Variables = {
   db: Database;
+  user: { id: string; email: string };
 };
 
-const auth = new Hono<{ Bindings: Bindings; Variables: Variables }>();
+// Chain format for RPC type inference
+export const auth = new Hono<{ Bindings: Bindings; Variables: Variables }>()
+  .post('/register', zValidator('json', registerSchema), async (c) => {
+    const input = c.req.valid('json');
+    const db = c.get('db');
+    const authService = new AuthService(db);
 
-auth.post('/register', zValidator('json', registerSchema), async (c) => {
-  const input = c.req.valid('json');
-  const db = c.get('db');
-  const authService = new AuthService(db);
+    const user = await authService.register(input);
+    const token = createSessionToken(user.id);
 
-  const user = await authService.register(input);
-  const token = createSessionToken(user.id);
+    setCookie(c, 'session', token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'Lax',
+      path: '/',
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+    });
 
-  setCookie(c, 'session', token, {
-    httpOnly: true,
-    secure: true,
-    sameSite: 'Lax',
-    path: '/',
-    maxAge: 60 * 60 * 24 * 7, // 7 days
+    return c.json({ user }, 201);
+  })
+  .post('/login', zValidator('json', loginSchema), async (c) => {
+    const input = c.req.valid('json');
+    const db = c.get('db');
+    const authService = new AuthService(db);
+
+    const user = await authService.login(input);
+    const token = createSessionToken(user.id);
+
+    setCookie(c, 'session', token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'Lax',
+      path: '/',
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+    });
+
+    return c.json({ user });
+  })
+  .post('/logout', async (c) => {
+    deleteCookie(c, 'session', {
+      path: '/',
+    });
+
+    return c.json({ message: 'ログアウトしました' });
+  })
+  .get('/me', authMiddleware, async (c) => {
+    const authUser = c.get('user');
+    const db = c.get('db');
+    const authService = new AuthService(db);
+
+    const user = await authService.getUserById(authUser.id);
+
+    return c.json({ user });
   });
-
-  return c.json({ user }, 201);
-});
-
-auth.post('/login', zValidator('json', loginSchema), async (c) => {
-  const input = c.req.valid('json');
-  const db = c.get('db');
-  const authService = new AuthService(db);
-
-  const user = await authService.login(input);
-  const token = createSessionToken(user.id);
-
-  setCookie(c, 'session', token, {
-    httpOnly: true,
-    secure: true,
-    sameSite: 'Lax',
-    path: '/',
-    maxAge: 60 * 60 * 24 * 7, // 7 days
-  });
-
-  return c.json({ user });
-});
-
-auth.post('/logout', async (c) => {
-  deleteCookie(c, 'session', {
-    path: '/',
-  });
-
-  return c.json({ message: 'ログアウトしました' });
-});
-
-auth.get('/me', authMiddleware, async (c) => {
-  const authUser = c.get('user');
-  const db = c.get('db');
-  const authService = new AuthService(db);
-
-  const user = await authService.getUserById(authUser.id);
-
-  return c.json({ user });
-});
-
-export { auth };

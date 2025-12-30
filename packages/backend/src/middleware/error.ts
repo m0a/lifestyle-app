@@ -26,9 +26,9 @@ function isAppError(error: unknown): error is AppErrorLike {
   if (error === null || typeof error !== 'object') return false;
   const e = error as Record<string, unknown>;
   return (
-    e.name === 'AppError' &&
-    typeof e.statusCode === 'number' &&
-    typeof e.message === 'string'
+    e['name'] === 'AppError' &&
+    typeof e['statusCode'] === 'number' &&
+    typeof e['message'] === 'string'
   );
 }
 
@@ -63,12 +63,13 @@ export async function errorHandler(c: Context, next: Next) {
     }
 
     if (isAppError(error)) {
+      const statusCode = error.statusCode as 400 | 401 | 403 | 404 | 500;
       return c.json(
         {
           message: error.message,
           code: error.code,
         },
-        error.statusCode
+        statusCode
       );
     }
 

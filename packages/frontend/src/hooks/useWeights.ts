@@ -1,18 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '../lib/api';
+import { api } from '../lib/client';
 import type {
-  WeightRecord,
   CreateWeightInput,
   UpdateWeightInput,
 } from '@lifestyle-app/shared';
-
-interface WeightsResponse {
-  weights: WeightRecord[];
-}
-
-interface WeightResponse {
-  weight: WeightRecord;
-}
 
 interface UseWeightsOptions {
   startDate?: string;
@@ -22,37 +13,56 @@ interface UseWeightsOptions {
 export function useWeights(options?: UseWeightsOptions) {
   const queryClient = useQueryClient();
 
-  const queryParams = new URLSearchParams();
-  if (options?.startDate) queryParams.set('startDate', options.startDate);
-  if (options?.endDate) queryParams.set('endDate', options.endDate);
-
-  const queryString = queryParams.toString();
-  const endpoint = `/api/weights${queryString ? `?${queryString}` : ''}`;
-
   const weightsQuery = useQuery({
     queryKey: ['weights', options],
-    queryFn: () => api.get<WeightsResponse>(endpoint),
+    queryFn: async () => {
+      const res = await api.weights.$get({
+        query: {
+          startDate: options?.startDate,
+          endDate: options?.endDate,
+        },
+      });
+      if (!res.ok) throw new Error('Failed to fetch weights');
+      return res.json();
+    },
     select: (data) => data.weights,
   });
 
   const createMutation = useMutation({
-    mutationFn: (input: CreateWeightInput) =>
-      api.post<WeightResponse>('/api/weights', input),
+    mutationFn: async (input: CreateWeightInput) => {
+      const res = await api.weights.$post({
+        json: input,
+      });
+      if (!res.ok) throw new Error('Failed to create weight');
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['weights'] });
     },
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, input }: { id: string; input: UpdateWeightInput }) =>
-      api.patch<WeightResponse>(`/api/weights/${id}`, input),
+    mutationFn: async ({ id, input }: { id: string; input: UpdateWeightInput }) => {
+      const res = await api.weights[':id'].$patch({
+        param: { id },
+        json: input,
+      });
+      if (!res.ok) throw new Error('Failed to update weight');
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['weights'] });
     },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => api.delete(`/api/weights/${id}`),
+    mutationFn: async (id: string) => {
+      const res = await api.weights[':id'].$delete({
+        param: { id },
+      });
+      if (!res.ok) throw new Error('Failed to delete weight');
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['weights'] });
     },

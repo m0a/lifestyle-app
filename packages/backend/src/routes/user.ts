@@ -1,88 +1,84 @@
 import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
+import { z } from 'zod';
 import { UserService } from '../services/user';
 import { authMiddleware } from '../middleware/auth';
 import type { Bindings, Variables } from '../types';
 
-const user = new Hono<{ Bindings: Bindings; Variables: Variables }>();
+const exportQuerySchema = z.object({
+  format: z.enum(['json', 'csv']).optional().default('json'),
+});
 
+// Chain format for RPC type inference
 // All user routes require authentication
-user.use('*', authMiddleware);
+export const user = new Hono<{ Bindings: Bindings; Variables: Variables }>()
+  .use(authMiddleware)
+  .get('/profile', async (c) => {
+    const currentUser = c.get('user');
+    const db = c.get('db');
+    const service = new UserService(db);
 
-// GET /api/user/profile
-user.get('/profile', async (c) => {
-  const currentUser = c.get('user');
-  const db = c.get('db');
-  const service = new UserService(db);
+    const profile = await service.getProfile(currentUser.id);
 
-  const profile = await service.getProfile(currentUser.id);
+    if (!profile) {
+      return c.json({ error: 'User not found' }, 404);
+    }
 
-  if (!profile) {
-    return c.json({ error: 'User not found' }, 404);
-  }
+    return c.json(profile);
+  })
+  .get('/stats', async (c) => {
+    const currentUser = c.get('user');
+    const db = c.get('db');
+    const service = new UserService(db);
 
-  return c.json(profile);
-});
+    const stats = await service.getStats(currentUser.id);
 
-// GET /api/user/stats
-user.get('/stats', async (c) => {
-  const currentUser = c.get('user');
-  const db = c.get('db');
-  const service = new UserService(db);
+    return c.json(stats);
+  })
+  .get('/export', zValidator('query', exportQuerySchema), async (c) => {
+    const currentUser = c.get('user');
+    const { format } = c.req.valid('query');
+    const db = c.get('db');
+    const service = new UserService(db);
 
-  const stats = await service.getStats(currentUser.id);
+    try {
+      if (format === 'csv') {
+        const csvData = await service.exportDataAsCSV(currentUser.id);
+        const filename = `health-data-${new Date().toISOString().split('T')[0]}.csv`;
 
-  return c.json(stats);
-});
+        return new Response(csvData, {
+          headers: {
+            'Content-Type': 'text/csv; charset=utf-8',
+            'Content-Disposition': `attachment; filename="${filename}"`,
+          },
+        });
+      }
 
-// GET /api/user/export
-user.get('/export', async (c) => {
-  const currentUser = c.get('user');
-  const format = c.req.query('format') || 'json';
-  const db = c.get('db');
-  const service = new UserService(db);
+      // Default: JSON
+      const data = await service.exportData(currentUser.id);
+      const filename = `health-data-${new Date().toISOString().split('T')[0]}.json`;
 
-  try {
-    if (format === 'csv') {
-      const csvData = await service.exportDataAsCSV(currentUser.id);
-      const filename = `health-data-${new Date().toISOString().split('T')[0]}.csv`;
-
-      return new Response(csvData, {
+      return new Response(JSON.stringify(data, null, 2), {
         headers: {
-          'Content-Type': 'text/csv; charset=utf-8',
+          'Content-Type': 'application/json; charset=utf-8',
           'Content-Disposition': `attachment; filename="${filename}"`,
         },
       });
+    } catch (error) {
+      return c.json({ error: 'Export failed' }, 500);
     }
+  })
+  .delete('/account', async (c) => {
+    const currentUser = c.get('user');
+    const db = c.get('db');
+    const service = new UserService(db);
 
-    // Default: JSON
-    const data = await service.exportData(currentUser.id);
-    const filename = `health-data-${new Date().toISOString().split('T')[0]}.json`;
+    try {
+      await service.deleteAccount(currentUser.id);
 
-    return new Response(JSON.stringify(data, null, 2), {
-      headers: {
-        'Content-Type': 'application/json; charset=utf-8',
-        'Content-Disposition': `attachment; filename="${filename}"`,
-      },
-    });
-  } catch (error) {
-    return c.json({ error: 'Export failed' }, 500);
-  }
-});
-
-// DELETE /api/user/account
-user.delete('/account', async (c) => {
-  const currentUser = c.get('user');
-  const db = c.get('db');
-  const service = new UserService(db);
-
-  try {
-    await service.deleteAccount(currentUser.id);
-
-    // Clear session/cookie if applicable
-    return c.json({ success: true, message: 'Account deleted successfully' });
-  } catch (error) {
-    return c.json({ error: 'Failed to delete account' }, 500);
-  }
-});
-
-export { user };
+      // Clear session/cookie if applicable
+      return c.json({ success: true, message: 'Account deleted successfully' });
+    } catch (error) {
+      return c.json({ error: 'Failed to delete account' }, 500);
+    }
+  });

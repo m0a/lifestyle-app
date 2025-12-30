@@ -39,11 +39,12 @@ app.onError((err, c) => {
   }
 
   // Check for AppError by duck typing
-  const e = err as Record<string, unknown>;
-  if (e.name === 'AppError' && typeof e.statusCode === 'number') {
+  const e = err as unknown as Record<string, unknown>;
+  if (e['name'] === 'AppError' && typeof e['statusCode'] === 'number') {
+    const statusCode = e['statusCode'] as 400 | 401 | 403 | 404 | 500;
     return c.json(
-      { message: err.message, code: e.code as string },
-      e.statusCode as number
+      { message: err.message, code: e['code'] as string },
+      statusCode
     );
   }
 
@@ -75,12 +76,16 @@ app.get('/', (c) => {
   });
 });
 
-// Routes
-app.route('/api/auth', auth);
-app.route('/api/weights', weights);
-app.route('/api/meals', meals);
-app.route('/api/exercises', exercises);
-app.route('/api/dashboard', dashboard);
-app.route('/api/user', user);
+// Routes - chain format for RPC type inference
+const routes = app
+  .route('/api/auth', auth)
+  .route('/api/weights', weights)
+  .route('/api/meals', meals)
+  .route('/api/exercises', exercises)
+  .route('/api/dashboard', dashboard)
+  .route('/api/user', user);
+
+// Export type for RPC client
+export type AppType = typeof routes;
 
 export default app;
