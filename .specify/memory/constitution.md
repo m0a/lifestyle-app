@@ -75,7 +75,7 @@ TypeScriptの型システムを最大限活用する。
 **Validation**: Zod
 **Testing**: Vitest + Playwright
 **Styling**: Tailwind CSS
-**Deployment**: Cloudflare Pages + Workers
+**Deployment**: Cloudflare Workers (with Static Assets)
 
 ## Development Workflow
 

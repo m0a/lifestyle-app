@@ -401,7 +401,7 @@ app.onError((err, c) => {
 # 開発者ツール → Application → Storage → Clear site data
 
 # 2. Cloudflareキャッシュをパージ
-wrangler pages deployment tail  # 最新デプロイを確認
+wrangler deployments list  # 最新デプロイを確認
 ```
 
 ## Production URL

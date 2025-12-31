@@ -259,8 +259,7 @@
 - [x] T101 [P] Add toast notifications for actions
 - [x] T102 Run full test suite and ensure 80%+ coverage
 - [x] T103 [P] Configure CI/CD with GitHub Actions in .github/workflows/ci.yml
-- [x] T104 Deploy backend to Cloudflare Workers
-- [x] T105 Deploy frontend to Cloudflare Pages
+- [x] T104 Deploy to Cloudflare Workers (backend + frontend assets)
 - [x] T106 Run quickstart.md validation
 
 ---
