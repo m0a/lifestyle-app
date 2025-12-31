@@ -146,7 +146,7 @@ https://lifestyle-tracker.abe00makoto.workers.dev
 **ワークフロー**: `.github/workflows/ci.yml`
 
 ```
-Push to master
+Push to main
     │
     ├─► Lint & Type Check (shared のみ)
     ├─► Unit & Integration Tests (Vitest)
@@ -155,7 +155,7 @@ Push to master
          ├─► Build backend
          ├─► Build frontend → artifacts/frontend-dist
          │
-         └─► Deploy (master branch only)
+         └─► Deploy (main branch only)
               ├─► Download frontend-dist
               ├─► Copy to packages/backend/public/
               └─► wrangler deploy (Workers + Assets)
