@@ -33,5 +33,5 @@ module.exports = {
     '@typescript-eslint/explicit-function-return-type': 'off',
     '@typescript-eslint/no-explicit-any': 'error',
   },
-  ignorePatterns: ['dist', 'node_modules', 'coverage', '*.config.js', '*.config.cjs'],
+  ignorePatterns: ['dist', 'node_modules', 'coverage', '*.config.js', '*.config.cjs', 'packages/backend/public'],
 };

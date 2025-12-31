@@ -11,6 +11,7 @@ describe('DashboardService', () => {
       from: vi.fn().mockReturnThis(),
       where: vi.fn().mockReturnThis(),
       orderBy: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
       all: vi.fn(),
     };
     service = new DashboardService(mockDb);
