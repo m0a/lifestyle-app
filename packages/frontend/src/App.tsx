@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useAuthStore } from './stores/authStore';
-import { api } from './lib/client';
+import { api } from './lib/api';
+import type { AuthResponse } from '@lifestyle-app/shared';
 
 export function App() {
   const { setUser, setLoading } = useAuthStore();
@@ -8,12 +9,7 @@ export function App() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const res = await api.auth.me.$get();
-        if (!res.ok) {
-          setUser(null);
-          return;
-        }
-        const response = await res.json();
+        const response = await api.get<AuthResponse>('/api/auth/me');
         setUser(response.user);
       } catch {
         setUser(null);

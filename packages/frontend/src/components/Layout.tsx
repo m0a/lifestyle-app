@@ -1,7 +1,7 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { useAuthStore } from '../stores/authStore';
-import { api } from '../lib/client';
+import { api } from '../lib/api';
 import { SyncStatusIndicator } from './SyncStatusIndicator';
 
 interface LayoutProps {
@@ -15,7 +15,7 @@ export function Layout({ children }: LayoutProps) {
 
   const handleLogout = async () => {
     try {
-      await api.auth.logout.$post();
+      await api.post('/api/auth/logout');
     } catch {
       // Continue with logout even if API fails
     }

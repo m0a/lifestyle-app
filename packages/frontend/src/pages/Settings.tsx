@@ -1,8 +1,22 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { api } from '../lib/client';
+import { api } from '../lib/api';
 import { useAuthStore } from '../stores/authStore';
+
+interface UserProfile {
+  id: string;
+  email: string;
+  name: string | null;
+  createdAt: string;
+}
+
+interface UserStats {
+  weightRecords: number;
+  mealRecords: number;
+  exerciseRecords: number;
+  totalRecords: number;
+}
 
 export function Settings() {
   const navigate = useNavigate();
@@ -12,32 +26,20 @@ export function Settings() {
   const [exportStatus, setExportStatus] = useState<string | null>(null);
 
   // Fetch user profile
-  const { data: profile, isLoading: isProfileLoading } = useQuery({
+  const { data: profile, isLoading: isProfileLoading } = useQuery<UserProfile>({
     queryKey: ['user', 'profile'],
-    queryFn: async () => {
-      const res = await api.user.profile.$get();
-      if (!res.ok) throw new Error('Failed to fetch profile');
-      return res.json();
-    },
+    queryFn: () => api.get<UserProfile>('/api/user/profile'),
   });
 
   // Fetch user stats
-  const { data: stats } = useQuery({
+  const { data: stats } = useQuery<UserStats>({
     queryKey: ['user', 'stats'],
-    queryFn: async () => {
-      const res = await api.user.stats.$get();
-      if (!res.ok) throw new Error('Failed to fetch stats');
-      return res.json();
-    },
+    queryFn: () => api.get<UserStats>('/api/user/stats'),
   });
 
   // Delete account mutation
   const deleteMutation = useMutation({
-    mutationFn: async () => {
-      const res = await api.user.account.$delete();
-      if (!res.ok) throw new Error('Failed to delete account');
-      return res.json();
-    },
+    mutationFn: () => api.delete('/api/user/account'),
     onSuccess: () => {
       logout();
       navigate('/');

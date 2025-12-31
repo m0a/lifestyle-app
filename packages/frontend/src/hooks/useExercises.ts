@@ -1,9 +1,23 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '../lib/client';
+import { api } from '../lib/api';
 import type {
+  ExerciseRecord,
   CreateExerciseInput,
   UpdateExerciseInput,
+  ExerciseSummary,
 } from '@lifestyle-app/shared';
+
+interface ExercisesResponse {
+  exercises: ExerciseRecord[];
+}
+
+interface ExerciseResponse {
+  exercise: ExerciseRecord;
+}
+
+interface WeeklySummaryResponse {
+  summary: ExerciseSummary & { weekStart: string; weekEnd: string };
+}
 
 interface UseExercisesOptions {
   startDate?: string;
@@ -13,66 +27,43 @@ interface UseExercisesOptions {
 export function useExercises(options?: UseExercisesOptions) {
   const queryClient = useQueryClient();
 
+  const queryParams = new URLSearchParams();
+  if (options?.startDate) queryParams.set('startDate', options.startDate);
+  if (options?.endDate) queryParams.set('endDate', options.endDate);
+
+  const queryString = queryParams.toString();
+  const endpoint = `/api/exercises${queryString ? `?${queryString}` : ''}`;
+
   const exercisesQuery = useQuery({
     queryKey: ['exercises', options],
-    queryFn: async () => {
-      const res = await api.exercises.$get({
-        query: {
-          startDate: options?.startDate,
-          endDate: options?.endDate,
-        },
-      });
-      if (!res.ok) throw new Error('Failed to fetch exercises');
-      return res.json();
-    },
+    queryFn: () => api.get<ExercisesResponse>(endpoint),
     select: (data) => data.exercises,
   });
 
   const weeklySummaryQuery = useQuery({
     queryKey: ['exercises', 'weekly-summary'],
-    queryFn: async () => {
-      const res = await api.exercises.weekly.$get();
-      if (!res.ok) throw new Error('Failed to fetch weekly summary');
-      return res.json();
-    },
+    queryFn: () => api.get<WeeklySummaryResponse>('/api/exercises/weekly'),
     select: (data) => data.summary,
   });
 
   const createMutation = useMutation({
-    mutationFn: async (input: CreateExerciseInput) => {
-      const res = await api.exercises.$post({
-        json: input,
-      });
-      if (!res.ok) throw new Error('Failed to create exercise');
-      return res.json();
-    },
+    mutationFn: (input: CreateExerciseInput) =>
+      api.post<ExerciseResponse>('/api/exercises', input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['exercises'] });
     },
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, input }: { id: string; input: UpdateExerciseInput }) => {
-      const res = await api.exercises[':id'].$patch({
-        param: { id },
-        json: input,
-      });
-      if (!res.ok) throw new Error('Failed to update exercise');
-      return res.json();
-    },
+    mutationFn: ({ id, input }: { id: string; input: UpdateExerciseInput }) =>
+      api.patch<ExerciseResponse>(`/api/exercises/${id}`, input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['exercises'] });
     },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const res = await api.exercises[':id'].$delete({
-        param: { id },
-      });
-      if (!res.ok) throw new Error('Failed to delete exercise');
-      return res.json();
-    },
+    mutationFn: (id: string) => api.delete(`/api/exercises/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['exercises'] });
     },

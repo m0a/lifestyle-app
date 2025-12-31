@@ -2,8 +2,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
-import { registerSchema, type RegisterInput } from '@lifestyle-app/shared';
-import { api } from '../lib/client';
+import { registerSchema, type RegisterInput, type AuthResponse } from '@lifestyle-app/shared';
+import { api, ApiRequestError } from '../lib/api';
 import { useAuthStore } from '../stores/authStore';
 
 export function Register() {
@@ -22,17 +22,15 @@ export function Register() {
   const onSubmit = async (data: RegisterInput) => {
     setError(null);
     try {
-      const res = await api.auth.register.$post({ json: data });
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ message: '登録に失敗しました' }));
-        setError((errorData as { message?: string }).message || '登録に失敗しました');
-        return;
-      }
-      const response = await res.json();
+      const response = await api.post<AuthResponse>('/api/auth/register', data);
       setUser(response.user);
       navigate('/', { replace: true });
-    } catch {
-      setError('登録に失敗しました');
+    } catch (err) {
+      if (err instanceof ApiRequestError) {
+        setError(err.message);
+      } else {
+        setError('登録に失敗しました');
+      }
     }
   };
 
