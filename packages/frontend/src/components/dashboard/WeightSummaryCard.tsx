@@ -8,7 +8,7 @@ interface WeightSummaryCardProps {
 }
 
 export function WeightSummaryCard({
-  startWeight,
+  startWeight: _startWeight,
   endWeight,
   change,
   recordCount,

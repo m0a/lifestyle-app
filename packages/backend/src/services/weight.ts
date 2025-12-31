@@ -1,4 +1,4 @@
-import { eq, and, gte, lte, desc } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import type { Database } from '../db';
 import { schema } from '../db';
@@ -53,7 +53,7 @@ export class WeightService {
     userId: string,
     options?: { startDate?: string; endDate?: string; limit?: number }
   ) {
-    let query = this.db
+    const query = this.db
       .select()
       .from(schema.weightRecords)
       .where(eq(schema.weightRecords.userId, userId))
