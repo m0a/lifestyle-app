@@ -86,23 +86,25 @@ export function WeightList({
                   <span className="font-medium">{weight.weight.toFixed(1)} kg</span>
                 )}
               </td>
-              <td className="whitespace-nowrap px-6 py-4 text-right text-sm">
+              <td className="px-4 py-4 text-right text-sm">
                 {deleteConfirmId === weight.id ? (
-                  <div className="flex items-center justify-end gap-2">
-                    <span className="text-gray-600">削除しますか？</span>
-                    <button
-                      onClick={() => handleDelete(weight.id)}
-                      disabled={isDeleting}
-                      className="rounded bg-red-600 px-3 py-1 text-white hover:bg-red-700 disabled:opacity-50"
-                    >
-                      確認
-                    </button>
-                    <button
-                      onClick={() => setDeleteConfirmId(null)}
-                      className="rounded bg-gray-200 px-3 py-1 text-gray-700 hover:bg-gray-300"
-                    >
-                      キャンセル
-                    </button>
+                  <div className="flex flex-col items-end gap-2">
+                    <span className="text-gray-600 text-xs">削除しますか？</span>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleDelete(weight.id)}
+                        disabled={isDeleting}
+                        className="rounded bg-red-600 px-3 py-1 text-white hover:bg-red-700 disabled:opacity-50"
+                      >
+                        確認
+                      </button>
+                      <button
+                        onClick={() => setDeleteConfirmId(null)}
+                        className="rounded bg-gray-200 px-3 py-1 text-gray-700 hover:bg-gray-300"
+                      >
+                        取消
+                      </button>
+                    </div>
                   </div>
                 ) : editingId === weight.id ? (
                   <div className="flex items-center justify-end gap-2">

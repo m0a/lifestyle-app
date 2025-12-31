@@ -1,24 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '../lib/api';
+import { api } from '../lib/client';
 import type {
-  MealRecord,
   CreateMealInput,
   UpdateMealInput,
   MealType,
-  MealSummary,
 } from '@lifestyle-app/shared';
-
-interface MealsResponse {
-  meals: MealRecord[];
-}
-
-interface MealResponse {
-  meal: MealRecord;
-}
-
-interface SummaryResponse {
-  summary: MealSummary & { totalMeals: number };
-}
 
 interface UseMealsOptions {
   startDate?: string;
@@ -29,44 +15,74 @@ interface UseMealsOptions {
 export function useMeals(options?: UseMealsOptions) {
   const queryClient = useQueryClient();
 
-  const queryParams = new URLSearchParams();
-  if (options?.startDate) queryParams.set('startDate', options.startDate);
-  if (options?.endDate) queryParams.set('endDate', options.endDate);
-  if (options?.mealType) queryParams.set('mealType', options.mealType);
-
-  const queryString = queryParams.toString();
-  const endpoint = `/api/meals${queryString ? `?${queryString}` : ''}`;
-
   const mealsQuery = useQuery({
     queryKey: ['meals', options],
-    queryFn: () => api.get<MealsResponse>(endpoint),
+    queryFn: async () => {
+      const query: Record<string, string> = {};
+      if (options?.startDate) query.startDate = options.startDate;
+      if (options?.endDate) query.endDate = options.endDate;
+      if (options?.mealType) query.mealType = options.mealType;
+
+      const res = await api.meals.$get({ query });
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ message: 'Failed to fetch meals' }));
+        throw new Error((error as { message?: string }).message || 'Failed to fetch meals');
+      }
+      return res.json();
+    },
     select: (data) => data.meals,
   });
 
   const todaySummaryQuery = useQuery({
     queryKey: ['meals', 'today-summary'],
-    queryFn: () => api.get<SummaryResponse>('/api/meals/today'),
+    queryFn: async () => {
+      const res = await api.meals.today.$get();
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ message: 'Failed to fetch today summary' }));
+        throw new Error((error as { message?: string }).message || 'Failed to fetch today summary');
+      }
+      return res.json();
+    },
     select: (data) => data.summary,
   });
 
   const createMutation = useMutation({
-    mutationFn: (input: CreateMealInput) =>
-      api.post<MealResponse>('/api/meals', input),
+    mutationFn: async (input: CreateMealInput) => {
+      const res = await api.meals.$post({ json: input });
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ message: 'Failed to create meal' }));
+        throw new Error((error as { message?: string }).message || 'Failed to create meal');
+      }
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['meals'] });
     },
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, input }: { id: string; input: UpdateMealInput }) =>
-      api.patch<MealResponse>(`/api/meals/${id}`, input),
+    mutationFn: async ({ id, input }: { id: string; input: UpdateMealInput }) => {
+      const res = await api.meals[':id'].$patch({ param: { id }, json: input });
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ message: 'Failed to update meal' }));
+        throw new Error((error as { message?: string }).message || 'Failed to update meal');
+      }
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['meals'] });
     },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => api.delete(`/api/meals/${id}`),
+    mutationFn: async (id: string) => {
+      const res = await api.meals[':id'].$delete({ param: { id } });
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ message: 'Failed to delete meal' }));
+        throw new Error((error as { message?: string }).message || 'Failed to delete meal');
+      }
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['meals'] });
     },

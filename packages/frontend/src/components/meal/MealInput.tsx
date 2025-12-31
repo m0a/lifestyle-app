@@ -1,8 +1,9 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { createMealSchema, type CreateMealInput } from '@lifestyle-app/shared';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { MEAL_TYPE_LABELS } from '@lifestyle-app/shared';
+import { logValidationError } from '../../lib/errorLogger';
 
 interface MealInputProps {
   onSubmit: (data: CreateMealInput) => void;
@@ -17,6 +18,7 @@ export function MealInput({ onSubmit, isLoading, error }: MealInputProps) {
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
   } = useForm<CreateMealInput>({
     resolver: zodResolver(createMealSchema),
@@ -26,10 +28,25 @@ export function MealInput({ onSubmit, isLoading, error }: MealInputProps) {
     },
   });
 
+  const formData = watch();
+
+  // Log validation errors when they occur
+  useEffect(() => {
+    if (Object.keys(errors).length > 0) {
+      logValidationError('MealInput', errors, formData as Record<string, unknown>);
+    }
+  }, [errors, formData]);
+
   const handleFormSubmit = (data: CreateMealInput) => {
+    // Convert datetime-local format to ISO string
+    let recordedAt = data.recordedAt;
+    if (recordedAt && !recordedAt.includes('Z') && !recordedAt.includes('+')) {
+      // datetime-local returns "2025-12-31T10:13", need to convert to ISO
+      recordedAt = new Date(recordedAt).toISOString();
+    }
     onSubmit({
       ...data,
-      recordedAt: data.recordedAt || new Date().toISOString(),
+      recordedAt: recordedAt || new Date().toISOString(),
       calories: data.calories || undefined,
     });
     reset();

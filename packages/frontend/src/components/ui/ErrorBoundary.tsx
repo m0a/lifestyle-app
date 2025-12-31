@@ -1,4 +1,5 @@
 import { Component, type ReactNode } from 'react';
+import { logError } from '../../lib/errorLogger';
 
 interface Props {
   children: ReactNode;
@@ -22,6 +23,8 @@ export class ErrorBoundary extends Component<Props, State> {
 
   override componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error('ErrorBoundary caught an error:', error, errorInfo);
+    // Send error to logging service
+    logError(error, { componentStack: errorInfo.componentStack });
   }
 
   handleRetry = () => {

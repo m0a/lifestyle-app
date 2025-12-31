@@ -1,7 +1,8 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { createExerciseSchema, type CreateExerciseInput } from '@lifestyle-app/shared';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { logValidationError } from '../../lib/errorLogger';
 
 interface ExerciseInputProps {
   onSubmit: (data: CreateExerciseInput) => void;
@@ -39,6 +40,14 @@ export function ExerciseInput({ onSubmit, isLoading, error }: ExerciseInputProps
   });
 
   const exerciseType = watch('exerciseType');
+  const formData = watch();
+
+  // Log validation errors when they occur
+  useEffect(() => {
+    if (Object.keys(errors).length > 0) {
+      logValidationError('ExerciseInput', errors, formData as Record<string, unknown>);
+    }
+  }, [errors, formData]);
 
   const handleFormSubmit = (data: CreateExerciseInput) => {
     onSubmit({

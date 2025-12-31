@@ -34,6 +34,13 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'auth-storage',
       partialize: (state) => ({ user: state.user, isAuthenticated: state.isAuthenticated }),
+      onRehydrateStorage: () => (state) => {
+        // After rehydration, if we have a user from localStorage, set isLoading to false
+        // The App.tsx will still verify the session with the server
+        if (state && state.isAuthenticated) {
+          state.isLoading = false;
+        }
+      },
     }
   )
 );

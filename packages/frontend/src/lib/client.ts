@@ -19,11 +19,20 @@ const API_BASE_URL = getApiBaseUrl();
 
 // Hono RPC client with full type safety
 export const client = hc<AppType>(API_BASE_URL, {
-  fetch: (input, init) =>
-    fetch(input, {
-      ...init,
-      credentials: 'include',
-    }),
+  fetch: async (input, init) => {
+    console.log('[RPC] Request:', input, init?.method || 'GET');
+    try {
+      const response = await fetch(input, {
+        ...init,
+        credentials: 'include',
+      });
+      console.log('[RPC] Response:', response.status, response.statusText);
+      return response;
+    } catch (error) {
+      console.error('[RPC] Fetch error:', error);
+      throw error;
+    }
+  },
 });
 
 // Type-safe API client

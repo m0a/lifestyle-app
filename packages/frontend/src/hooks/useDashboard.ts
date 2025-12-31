@@ -1,67 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
-import { api } from '../lib/api';
+import { api } from '../lib/client';
 
 export type Period = 'week' | 'month' | 'quarter' | 'year';
-
-interface WeightSummary {
-  startWeight: number | null;
-  endWeight: number | null;
-  change: number | null;
-  minWeight: number | null;
-  maxWeight: number | null;
-  recordCount: number;
-}
-
-interface MealSummary {
-  totalCalories: number;
-  mealCount: number;
-  averageCalories: number;
-  byType: Record<string, number>;
-}
-
-interface ExerciseSummary {
-  totalMinutes: number;
-  sessionCount: number;
-  averageMinutes: number;
-  byType: Record<string, number>;
-}
-
-interface DashboardSummary {
-  weight: WeightSummary;
-  meals: MealSummary;
-  exercises: ExerciseSummary;
-  period: {
-    startDate: string;
-    endDate: string;
-  };
-}
-
-interface WeeklyTrendItem {
-  weekStart: string;
-  weekEnd: string;
-  weight: number | null;
-  totalCalories: number;
-  exerciseMinutes: number;
-}
-
-interface GoalProgress {
-  weight: {
-    current: number | null;
-    target: number;
-    progress: number;
-    remaining: number | null;
-  };
-  exercise: {
-    current: number;
-    target: number;
-    progress: number;
-  };
-  calories: {
-    average: number;
-    target: number;
-    difference: number;
-  };
-}
 
 interface UseDashboardOptions {
   period?: Period;
@@ -72,31 +12,46 @@ interface UseDashboardOptions {
 export function useDashboard(options: UseDashboardOptions = {}) {
   const { period = 'week', startDate, endDate } = options;
 
-  const summaryQuery = useQuery<DashboardSummary>({
+  const summaryQuery = useQuery({
     queryKey: ['dashboard', 'summary', period, startDate, endDate],
     queryFn: async () => {
-      const params = new URLSearchParams();
+      const query: Record<string, string> = {};
       if (startDate && endDate) {
-        params.set('startDate', startDate);
-        params.set('endDate', endDate);
+        query.startDate = startDate;
+        query.endDate = endDate;
       } else {
-        params.set('period', period);
+        query.period = period;
       }
-      return api.get<DashboardSummary>(`/api/dashboard/summary?${params.toString()}`);
+      const res = await api.dashboard.summary.$get({ query });
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ message: 'Failed to fetch summary' }));
+        throw new Error((error as { message?: string }).message || 'Failed to fetch summary');
+      }
+      return res.json();
     },
   });
 
-  const trendsQuery = useQuery<WeeklyTrendItem[]>({
+  const trendsQuery = useQuery({
     queryKey: ['dashboard', 'trends'],
     queryFn: async () => {
-      return api.get<WeeklyTrendItem[]>('/api/dashboard/trends?weeks=4');
+      const res = await api.dashboard.trends.$get({ query: { weeks: '4' } });
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ message: 'Failed to fetch trends' }));
+        throw new Error((error as { message?: string }).message || 'Failed to fetch trends');
+      }
+      return res.json();
     },
   });
 
-  const goalsQuery = useQuery<GoalProgress>({
+  const goalsQuery = useQuery({
     queryKey: ['dashboard', 'goals'],
     queryFn: async () => {
-      return api.get<GoalProgress>('/api/dashboard/goals');
+      const res = await api.dashboard.goals.$get({ query: {} });
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ message: 'Failed to fetch goals' }));
+        throw new Error((error as { message?: string }).message || 'Failed to fetch goals');
+      }
+      return res.json();
     },
   });
 

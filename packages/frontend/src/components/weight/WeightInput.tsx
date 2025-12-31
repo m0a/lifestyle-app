@@ -1,7 +1,8 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { createWeightSchema, type CreateWeightInput } from '@lifestyle-app/shared';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { logValidationError } from '../../lib/errorLogger';
 
 interface WeightInputProps {
   onSubmit: (data: CreateWeightInput) => void;
@@ -16,6 +17,7 @@ export function WeightInput({ onSubmit, isLoading, error }: WeightInputProps) {
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
   } = useForm<CreateWeightInput>({
     resolver: zodResolver(createWeightSchema),
@@ -23,6 +25,15 @@ export function WeightInput({ onSubmit, isLoading, error }: WeightInputProps) {
       recordedAt: new Date().toISOString(),
     },
   });
+
+  const formData = watch();
+
+  // Log validation errors when they occur
+  useEffect(() => {
+    if (Object.keys(errors).length > 0) {
+      logValidationError('WeightInput', errors, formData as Record<string, unknown>);
+    }
+  }, [errors, formData]);
 
   const handleFormSubmit = (data: CreateWeightInput) => {
     onSubmit({

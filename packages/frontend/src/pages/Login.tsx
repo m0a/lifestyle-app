@@ -2,8 +2,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useState } from 'react';
-import { loginSchema, type LoginInput, type AuthResponse } from '@lifestyle-app/shared';
-import { api, ApiRequestError } from '../lib/api';
+import { loginSchema, type LoginInput } from '@lifestyle-app/shared';
+import { api } from '../lib/client';
 import { useAuthStore } from '../stores/authStore';
 
 export function Login() {
@@ -25,11 +25,16 @@ export function Login() {
   const onSubmit = async (data: LoginInput) => {
     setError(null);
     try {
-      const response = await api.post<AuthResponse>('/api/auth/login', data);
+      const res = await api.auth.login.$post({ json: data });
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ message: 'ログインに失敗しました' }));
+        throw new Error((errorData as { message?: string }).message || 'ログインに失敗しました');
+      }
+      const response = await res.json();
       setUser(response.user);
       navigate(from, { replace: true });
     } catch (err) {
-      if (err instanceof ApiRequestError) {
+      if (err instanceof Error) {
         setError(err.message);
       } else {
         setError('ログインに失敗しました');

@@ -1,22 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { api } from '../lib/api';
+import { api } from '../lib/client';
 import { useAuthStore } from '../stores/authStore';
-
-interface UserProfile {
-  id: string;
-  email: string;
-  name: string | null;
-  createdAt: string;
-}
-
-interface UserStats {
-  weightRecords: number;
-  mealRecords: number;
-  exerciseRecords: number;
-  totalRecords: number;
-}
 
 export function Settings() {
   const navigate = useNavigate();
@@ -26,20 +12,38 @@ export function Settings() {
   const [exportStatus, setExportStatus] = useState<string | null>(null);
 
   // Fetch user profile
-  const { data: profile, isLoading: isProfileLoading } = useQuery<UserProfile>({
+  const { data: profile, isLoading: isProfileLoading } = useQuery({
     queryKey: ['user', 'profile'],
-    queryFn: () => api.get<UserProfile>('/api/user/profile'),
+    queryFn: async () => {
+      const res = await api.user.profile.$get();
+      if (!res.ok) {
+        throw new Error('Failed to fetch profile');
+      }
+      return res.json();
+    },
   });
 
   // Fetch user stats
-  const { data: stats } = useQuery<UserStats>({
+  const { data: stats } = useQuery({
     queryKey: ['user', 'stats'],
-    queryFn: () => api.get<UserStats>('/api/user/stats'),
+    queryFn: async () => {
+      const res = await api.user.stats.$get();
+      if (!res.ok) {
+        throw new Error('Failed to fetch stats');
+      }
+      return res.json();
+    },
   });
 
   // Delete account mutation
   const deleteMutation = useMutation({
-    mutationFn: () => api.delete('/api/user/account'),
+    mutationFn: async () => {
+      const res = await api.user.account.$delete();
+      if (!res.ok) {
+        throw new Error('Failed to delete account');
+      }
+      return res.json();
+    },
     onSuccess: () => {
       logout();
       navigate('/');
@@ -50,18 +54,15 @@ export function Settings() {
     try {
       setExportStatus('エクスポート中...');
 
-      const response = await fetch(`/api/user/export?format=${format}`, {
-        credentials: 'include',
-      });
+      const res = await api.user.export.$get({ query: { format } });
 
-      if (!response.ok) {
+      if (!res.ok) {
         throw new Error('Export failed');
       }
 
-      const blob = await response.blob();
-      const filename = response.headers
-        .get('Content-Disposition')
-        ?.match(/filename="(.+)"/)?.[1] || `health-data.${format}`;
+      const blob = await res.blob();
+      const contentDisposition = res.headers.get('Content-Disposition');
+      const filename = contentDisposition?.match(/filename="(.+)"/)?.[1] || `health-data.${format}`;
 
       // Create download link
       const url = URL.createObjectURL(blob);
@@ -75,7 +76,7 @@ export function Settings() {
 
       setExportStatus('エクスポートが完了しました');
       setTimeout(() => setExportStatus(null), 3000);
-    } catch (error) {
+    } catch {
       setExportStatus('エクスポートに失敗しました');
       setTimeout(() => setExportStatus(null), 3000);
     }

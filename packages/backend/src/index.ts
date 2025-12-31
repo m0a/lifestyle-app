@@ -10,6 +10,7 @@ import { meals } from './routes/meals';
 import { exercises } from './routes/exercises';
 import { dashboard } from './routes/dashboard';
 import { user } from './routes/user';
+import { logs } from './routes/logs';
 
 type Bindings = {
   DB: D1Database;
@@ -83,7 +84,8 @@ const routes = app
   .route('/api/meals', meals)
   .route('/api/exercises', exercises)
   .route('/api/dashboard', dashboard)
-  .route('/api/user', user);
+  .route('/api/user', user)
+  .route('/api/logs', logs);
 
 // Export type for RPC client
 export type AppType = typeof routes;
