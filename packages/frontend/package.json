@@ -8,7 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "deploy": "wrangler pages deploy dist"
+    "deploy": "wrangler pages deploy dist --project-name=lifestyle-app"
   },
   "dependencies": {
     "@lifestyle-app/shared": "workspace:*",
