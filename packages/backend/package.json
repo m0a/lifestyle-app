@@ -13,7 +13,7 @@
   },
   "scripts": {
     "dev": "wrangler dev",
-    "build": "tsc",
+    "build": "echo 'Build handled by Wrangler'",
     "deploy": "wrangler deploy",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
