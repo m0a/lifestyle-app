@@ -92,7 +92,9 @@ export function Register() {
                 目標体重（kg、任意）
               </label>
               <input
-                {...register('goalWeight', { valueAsNumber: true })}
+                {...register('goalWeight', {
+                  setValueAs: (v) => (v === '' ? undefined : parseFloat(v)),
+                })}
                 type="number"
                 id="goalWeight"
                 step="0.1"

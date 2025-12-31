@@ -98,7 +98,9 @@ export function MealInput({ onSubmit, isLoading, error }: MealInputProps) {
             カロリー (kcal、任意)
           </label>
           <input
-            {...register('calories', { valueAsNumber: true })}
+            {...register('calories', {
+              setValueAs: (v) => (v === '' ? undefined : parseInt(v, 10)),
+            })}
             type="number"
             id="calories"
             min="0"
