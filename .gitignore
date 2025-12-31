@@ -1,0 +1,52 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+.dev.vars
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Test
+coverage/
+.nyc_output/
+
+# Cloudflare
+.wrangler/
+.mf/
+
+# TypeScript
+*.tsbuildinfo
+
+# Drizzle
+drizzle/meta/
+
+# Playwright
+playwright-report/
+test-results/
+
+# Misc
+*.tmp
+*.temp

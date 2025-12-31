@@ -1,0 +1,87 @@
+import { createBrowserRouter, type RouteObject } from 'react-router-dom';
+import { Layout } from './components/Layout';
+import { ProtectedRoute } from './components/ProtectedRoute';
+import { Login } from './pages/Login';
+import { Register } from './pages/Register';
+import { Weight } from './pages/Weight';
+import { Meal } from './pages/Meal';
+import { Exercise } from './pages/Exercise';
+import { Dashboard } from './pages/Dashboard';
+import { Settings } from './pages/Settings';
+
+// Home component
+function Home() {
+  return (
+    <div className="text-center">
+      <h1 className="text-3xl font-bold text-gray-900">Health Tracker</h1>
+      <p className="mt-4 text-gray-600">体重・食事・運動を記録して健康管理をしましょう</p>
+    </div>
+  );
+}
+
+const routes: RouteObject[] = [
+  {
+    path: '/',
+    element: <Layout><Home /></Layout>,
+  },
+  {
+    path: '/login',
+    element: <Layout><Login /></Layout>,
+  },
+  {
+    path: '/register',
+    element: <Layout><Register /></Layout>,
+  },
+  {
+    path: '/dashboard',
+    element: (
+      <Layout>
+        <ProtectedRoute>
+          <Dashboard />
+        </ProtectedRoute>
+      </Layout>
+    ),
+  },
+  {
+    path: '/weight',
+    element: (
+      <Layout>
+        <ProtectedRoute>
+          <Weight />
+        </ProtectedRoute>
+      </Layout>
+    ),
+  },
+  {
+    path: '/meals',
+    element: (
+      <Layout>
+        <ProtectedRoute>
+          <Meal />
+        </ProtectedRoute>
+      </Layout>
+    ),
+  },
+  {
+    path: '/exercises',
+    element: (
+      <Layout>
+        <ProtectedRoute>
+          <Exercise />
+        </ProtectedRoute>
+      </Layout>
+    ),
+  },
+  {
+    path: '/settings',
+    element: (
+      <Layout>
+        <ProtectedRoute>
+          <Settings />
+        </ProtectedRoute>
+      </Layout>
+    ),
+  },
+];
+
+export const router: ReturnType<typeof createBrowserRouter> = createBrowserRouter(routes);

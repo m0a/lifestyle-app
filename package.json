@@ -1,0 +1,48 @@
+{
+  "name": "lifestyle-app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm --filter @lifestyle-app/frontend dev",
+    "dev:backend": "pnpm --filter @lifestyle-app/backend dev",
+    "dev:all": "pnpm -r --parallel dev",
+    "build": "pnpm -r build",
+    "build:shared": "pnpm --filter @lifestyle-app/shared build",
+    "build:backend": "pnpm --filter @lifestyle-app/backend build",
+    "build:frontend": "pnpm --filter @lifestyle-app/frontend build",
+    "test": "vitest",
+    "test:unit": "vitest run --dir tests/unit",
+    "test:integration": "vitest run --dir tests/integration",
+    "test:e2e": "playwright test",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "pnpm -r typecheck",
+    "db:generate": "pnpm --filter @lifestyle-app/backend db:generate",
+    "db:migrate": "pnpm --filter @lifestyle-app/backend db:migrate",
+    "deploy:backend": "pnpm --filter @lifestyle-app/backend deploy",
+    "deploy:frontend": "pnpm --filter @lifestyle-app/frontend deploy"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.40.0",
+    "@types/node": "^20.10.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.0",
+    "@typescript-eslint/parser": "^6.13.0",
+    "@vitest/coverage-v8": "^1.0.0",
+    "eslint": "^8.55.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-react": "^7.33.2",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "prettier": "^3.1.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@8.15.0"
+}
