@@ -1,14 +1,16 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const isCI = !!process.env.CI;
+
 export default defineConfig({
   testDir: './tests/e2e',
   fullyParallel: true,
-  forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  forbidOnly: isCI,
+  retries: isCI ? 2 : 0,
+  workers: isCI ? 1 : undefined,
   reporter: 'html',
   use: {
-    baseURL: 'http://localhost:5173',
+    baseURL: isCI ? 'http://localhost:4173' : 'http://localhost:5173',
     trace: 'on-first-retry',
   },
   projects: [
@@ -22,8 +24,9 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'pnpm dev',
-    url: 'http://localhost:5173',
-    reuseExistingServer: !process.env.CI,
+    command: isCI ? 'pnpm --filter @lifestyle-app/frontend preview' : 'pnpm dev',
+    url: isCI ? 'http://localhost:4173' : 'http://localhost:5173',
+    reuseExistingServer: !isCI,
+    timeout: 60000,
   },
 });
