@@ -118,14 +118,16 @@ class SyncService {
       case 'create':
         await apiClient.post(endpoint, data);
         break;
-      case 'update':
+      case 'update': {
         const updateData = data as { id: string; input: unknown };
         await apiClient.patch(`${endpoint}/${updateData.id}`, updateData.input);
         break;
-      case 'delete':
+      }
+      case 'delete': {
         const deleteId = data as string;
         await apiClient.delete(`${endpoint}/${deleteId}`);
         break;
+      }
     }
   }
 

@@ -30,6 +30,21 @@ interface ExerciseSummary {
   byType: Record<string, number>;
 }
 
+// Record types for summary calculations
+interface WeightRecord {
+  weight: number;
+}
+
+interface MealRecord {
+  mealType: string;
+  calories: number | null;
+}
+
+interface ExerciseRecord {
+  exerciseType: string;
+  durationMinutes: number;
+}
+
 interface DashboardSummary {
   weight: WeightSummary;
   meals: MealSummary;
@@ -135,7 +150,7 @@ export class DashboardService {
     };
   }
 
-  private calculateWeightSummary(records: any[]): WeightSummary {
+  private calculateWeightSummary(records: WeightRecord[]): WeightSummary {
     if (records.length === 0) {
       return {
         startWeight: null,
@@ -161,7 +176,7 @@ export class DashboardService {
     };
   }
 
-  private calculateMealSummary(records: any[]): MealSummary {
+  private calculateMealSummary(records: MealRecord[]): MealSummary {
     if (records.length === 0) {
       return {
         totalCalories: 0,
@@ -192,7 +207,7 @@ export class DashboardService {
     };
   }
 
-  private calculateExerciseSummary(records: any[]): ExerciseSummary {
+  private calculateExerciseSummary(records: ExerciseRecord[]): ExerciseSummary {
     if (records.length === 0) {
       return {
         totalMinutes: 0,
