@@ -140,3 +140,31 @@ https://lifestyle-tracker.abe00makoto.workers.dev
 **設定ファイル**:
 - `packages/backend/wrangler.toml`: Worker + assets設定
 - `packages/frontend/.env.production`: `VITE_API_URL=`（空文字列で相対パス）
+
+## CI/CD Pipeline
+
+**ワークフロー**: `.github/workflows/ci.yml`
+
+```
+Push to master
+    │
+    ├─► Lint & Type Check (shared のみ)
+    ├─► Unit & Integration Tests (Vitest)
+    └─► Build
+         ├─► Build shared package
+         ├─► Build backend
+         ├─► Build frontend → artifacts/frontend-dist
+         │
+         └─► Deploy (master branch only)
+              ├─► Download frontend-dist
+              ├─► Copy to packages/backend/public/
+              └─► wrangler deploy (Workers + Assets)
+```
+
+**デプロイ方式**: 統合デプロイ
+- ❌ Cloudflare Pages: 使用しない（クロスオリジンcookie問題）
+- ✅ Cloudflare Workers + Assets: フロントエンド・バックエンドを単一Workerで配信
+
+**必要なGitHub Secrets**:
+- `CLOUDFLARE_API_TOKEN`: Cloudflare APIトークン
+- `CLOUDFLARE_ACCOUNT_ID`: Cloudflareアカウント ID
