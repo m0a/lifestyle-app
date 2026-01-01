@@ -284,7 +284,7 @@ jobs:
         run: |
           cd packages/backend
           # Use preview database for PR deployments
-          sed -i 's/database_id = "86957e0a-04b6-4530-9b64-79ea36c64ba5"/database_id = "PREVIEW_DB_ID_PLACEHOLDER"/' wrangler.toml
+          sed -i 's/database_id = "86957e0a-04b6-4530-9b64-79ea36c64ba5"/database_id = "1c90e1fa-f2b7-4518-94b4-0ae192ff6a7b"/' wrangler.toml
 
       - name: Deploy PR Preview
         run: |
