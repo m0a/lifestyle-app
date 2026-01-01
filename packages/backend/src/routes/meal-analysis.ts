@@ -32,11 +32,13 @@ type Variables = {
 export const mealAnalysis = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
 // Photo serving (no auth required - photo keys are unguessable)
-mealAnalysis.get('/photos/:key', async (c) => {
-  const key = c.req.param('key');
+// Use wildcard to capture keys with slashes (e.g., temp/uuid)
+mealAnalysis.get('/photos/*', async (c) => {
+  const key = c.req.path.replace('/api/meals/photos/', '');
+  const decodedKey = decodeURIComponent(key);
   const photoStorage = new PhotoStorageService(c.env.PHOTOS);
 
-  const result = await photoStorage.getPhotoForServing(key);
+  const result = await photoStorage.getPhotoForServing(decodedKey);
   if (!result) {
     return c.json({ error: 'not_found', message: '写真が見つかりません' }, 404);
   }
@@ -49,8 +51,16 @@ mealAnalysis.get('/photos/:key', async (c) => {
   });
 });
 
-// All routes require auth
-mealAnalysis.use('/*', authMiddleware);
+// Auth middleware - exclude photo serving endpoint
+mealAnalysis.use('*', async (c, next) => {
+  // Skip auth for photo serving (keys are unguessable UUIDs)
+  // c.req.path in subrouter is relative, c.req.url has full path
+  const url = new URL(c.req.url);
+  if (url.pathname.startsWith('/api/meals/photos/')) {
+    return next();
+  }
+  return authMiddleware(c, next);
+});
 
 // POST /api/meals/analyze - Analyze meal photo
 mealAnalysis.post('/analyze', async (c) => {
@@ -72,7 +82,7 @@ mealAnalysis.post('/analyze', async (c) => {
   }
 
   const db = c.get('db');
-  const userId = c.get('userId');
+  const userId = c.get('user').id;
   const photoStorage = new PhotoStorageService(c.env.PHOTOS);
 
   // Upload photo for analysis
@@ -139,11 +149,38 @@ mealAnalysis.post('/analyze', async (c) => {
   }
 });
 
+// POST /api/meals/create-empty - Create empty meal for manual input
+mealAnalysis.post('/create-empty', async (c) => {
+  const db = c.get('db');
+  const userId = c.get('user').id;
+
+  const mealId = uuidv4();
+  const now = new Date().toISOString();
+
+  await db.insert(mealRecords).values({
+    id: mealId,
+    userId,
+    mealType: 'lunch', // Default, will be set when saving
+    content: '',
+    calories: 0,
+    photoKey: null,
+    totalProtein: 0,
+    totalFat: 0,
+    totalCarbs: 0,
+    analysisSource: 'manual',
+    recordedAt: now,
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  return c.json({ mealId });
+});
+
 // GET /api/meals/:mealId/food-items - Get food items for a meal
 mealAnalysis.get('/:mealId/food-items', async (c) => {
   const mealId = c.req.param('mealId');
   const db = c.get('db');
-  const userId = c.get('userId');
+  const userId = c.get('user').id;
 
   // Verify meal belongs to user
   const meal = await db.query.mealRecords.findFirst({
@@ -179,7 +216,7 @@ mealAnalysis.post(
     const mealId = c.req.param('mealId');
     const data = c.req.valid('json');
     const db = c.get('db');
-    const userId = c.get('userId');
+    const userId = c.get('user').id;
 
     // Verify meal belongs to user
     const meal = await db.query.mealRecords.findFirst({
@@ -226,7 +263,7 @@ mealAnalysis.patch(
     const foodItemId = c.req.param('foodItemId');
     const data = c.req.valid('json');
     const db = c.get('db');
-    const userId = c.get('userId');
+    const userId = c.get('user').id;
 
     // Verify meal belongs to user
     const meal = await db.query.mealRecords.findFirst({
@@ -277,7 +314,7 @@ mealAnalysis.delete('/:mealId/food-items/:foodItemId', async (c) => {
   const mealId = c.req.param('mealId');
   const foodItemId = c.req.param('foodItemId');
   const db = c.get('db');
-  const userId = c.get('userId');
+  const userId = c.get('user').id;
 
   // Verify meal belongs to user
   const meal = await db.query.mealRecords.findFirst({
@@ -306,7 +343,7 @@ mealAnalysis.post(
     const mealId = c.req.param('mealId');
     const data = c.req.valid('json');
     const db = c.get('db');
-    const userId = c.get('userId');
+    const userId = c.get('user').id;
     const photoStorage = new PhotoStorageService(c.env.PHOTOS);
 
     // Verify meal belongs to user

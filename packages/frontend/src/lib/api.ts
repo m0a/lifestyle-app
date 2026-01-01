@@ -149,6 +149,11 @@ export const mealAnalysisApi = {
     return response.json();
   },
 
+  // Create empty meal for manual input
+  async createEmptyMeal(): Promise<{ mealId: string }> {
+    return api.post('/api/meals/create-empty');
+  },
+
   // Get food items for a meal
   async getFoodItems(mealId: string): Promise<{ foodItems: FoodItem[] }> {
     return api.get(`/api/meals/${mealId}/food-items`);

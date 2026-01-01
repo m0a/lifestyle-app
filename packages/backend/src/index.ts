@@ -13,6 +13,7 @@ import { user } from './routes/user';
 import { logs } from './routes/logs';
 import { mealAnalysis } from './routes/meal-analysis';
 import { mealChat } from './routes/meal-chat';
+import { PhotoStorageService } from './services/photo-storage';
 
 type Bindings = {
   DB: D1Database;
@@ -81,6 +82,25 @@ app.get('/', (c) => {
   return c.json({
     status: 'ok',
     environment: c.env.ENVIRONMENT,
+  });
+});
+
+// Photo serving - no auth required (keys are unguessable UUIDs)
+app.get('/api/meals/photos/*', async (c) => {
+  const key = c.req.path.replace('/api/meals/photos/', '');
+  const decodedKey = decodeURIComponent(key);
+  const photoStorage = new PhotoStorageService(c.env.PHOTOS);
+
+  const result = await photoStorage.getPhotoForServing(decodedKey);
+  if (!result) {
+    return c.json({ error: 'not_found', message: '写真が見つかりません' }, 404);
+  }
+
+  return new Response(result.body, {
+    headers: {
+      'Content-Type': result.contentType,
+      'Cache-Control': 'public, max-age=31536000',
+    },
   });
 });
 

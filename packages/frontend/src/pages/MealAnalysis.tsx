@@ -21,7 +21,8 @@ function getErrorMessage(error: unknown): string {
 type AnalysisState =
   | { phase: 'capture' }
   | { phase: 'analyzing' }
-  | { phase: 'result'; mealId: string; photoUrl: string; foodItems: FoodItem[]; totals: NutritionTotals }
+  | { phase: 'creating' } // Creating empty meal for manual input
+  | { phase: 'result'; mealId: string; photoUrl?: string; foodItems: FoodItem[]; totals: NutritionTotals }
   | { phase: 'error'; message: string };
 
 export default function MealAnalysisPage() {
@@ -57,6 +58,27 @@ export default function MealAnalysisPage() {
       setState({
         phase: 'error',
         message: error instanceof Error ? error.message : '分析中にエラーが発生しました',
+      });
+    }
+  }, []);
+
+  const handleManualEntry = useCallback(async () => {
+    setState({ phase: 'creating' });
+
+    try {
+      const result = await mealAnalysisApi.createEmptyMeal();
+      setState({
+        phase: 'result',
+        mealId: result.mealId,
+        photoUrl: undefined,
+        foodItems: [],
+        totals: { calories: 0, protein: 0, fat: 0, carbs: 0 },
+      });
+    } catch (error) {
+      console.error('Create empty meal error:', error);
+      setState({
+        phase: 'error',
+        message: getErrorMessage(error),
       });
     }
   }, []);
@@ -164,7 +186,29 @@ export default function MealAnalysisPage() {
       </div>
 
       {state.phase === 'capture' && (
-        <PhotoCapture onCapture={handlePhotoCapture} onCancel={() => navigate(-1)} />
+        <div className="space-y-4">
+          <PhotoCapture onCapture={handlePhotoCapture} onCancel={() => navigate(-1)} />
+
+          <div className="flex items-center gap-4">
+            <div className="flex-1 border-t border-gray-300" />
+            <span className="text-sm text-gray-500">または</span>
+            <div className="flex-1 border-t border-gray-300" />
+          </div>
+
+          <button
+            onClick={handleManualEntry}
+            className="w-full rounded-lg border-2 border-dashed border-gray-300 py-4 text-gray-600 hover:border-blue-400 hover:text-blue-600"
+          >
+            手動で入力する
+          </button>
+        </div>
+      )}
+
+      {state.phase === 'creating' && (
+        <div className="flex flex-col items-center gap-4 py-12">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
+          <p className="text-gray-600">準備中...</p>
+        </div>
       )}
 
       {state.phase === 'analyzing' && (

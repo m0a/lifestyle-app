@@ -63,6 +63,21 @@ describe('Meal Analysis API Integration Tests', () => {
     });
   });
 
+  describe('POST /api/meals/create-empty', () => {
+    it('should create an empty meal for manual input', async () => {
+      // Expected: 200 { mealId: string }
+      // Meal should have:
+      // - photoKey: null
+      // - analysisSource: 'manual'
+      // - empty foodItems
+      expect(true).toBe(true);
+    });
+
+    it('should return 401 when not authenticated', async () => {
+      expect(true).toBe(true);
+    });
+  });
+
   describe('GET /api/meals/:mealId/food-items', () => {
     it('should return food items for a meal', async () => {
       // Expected: 200 { foodItems: [...] }

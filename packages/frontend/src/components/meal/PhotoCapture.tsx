@@ -1,4 +1,5 @@
 import { useRef, useState, useCallback } from 'react';
+import { logError } from '../../lib/errorLogger';
 
 interface PhotoCaptureProps {
   onCapture: (photo: Blob) => void;
@@ -9,6 +10,7 @@ interface PhotoCaptureProps {
 export function PhotoCapture({ onCapture, onCancel, maxSize = 1024 }: PhotoCaptureProps) {
   const [mode, setMode] = useState<'select' | 'camera'>('select');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isVideoReady, setIsVideoReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -111,7 +113,8 @@ export function PhotoCapture({ onCapture, onCancel, maxSize = 1024 }: PhotoCaptu
         onCapture(resized);
       } catch (err) {
         setError('画像の処理に失敗しました');
-        console.error(err);
+        const error = err instanceof Error ? err : new Error(String(err));
+        logError(error, { component: 'PhotoCapture', action: 'handleFileSelect' });
       } finally {
         setIsProcessing(false);
       }
@@ -122,18 +125,69 @@ export function PhotoCapture({ onCapture, onCancel, maxSize = 1024 }: PhotoCaptu
   // Start camera
   const startCamera = useCallback(async () => {
     setError(null);
+    setIsVideoReady(false);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'environment' },
       });
       streamRef.current = stream;
       if (videoRef.current) {
-        videoRef.current.srcObject = stream;
+        const video = videoRef.current;
+
+        // Multiple event handlers for better mobile compatibility
+        const markReady = () => {
+          if (video.videoWidth > 0 && video.videoHeight > 0) {
+            setIsVideoReady(true);
+            cleanup();
+          }
+        };
+
+        const cleanup = () => {
+          video.removeEventListener('playing', markReady);
+          video.removeEventListener('loadeddata', markReady);
+          video.removeEventListener('canplay', markReady);
+        };
+
+        // Try multiple events - different browsers fire different events
+        video.addEventListener('playing', markReady);
+        video.addEventListener('loadeddata', markReady);
+        video.addEventListener('canplay', markReady);
+
+        video.srcObject = stream;
+
+        // Call play() and handle the promise
+        video.play().catch((playErr) => {
+          console.warn('Video autoplay failed:', playErr);
+        });
+
+        // Fallback: check periodically if video is ready
+        let attempts = 0;
+        const checkReady = setInterval(() => {
+          attempts++;
+          if (video.videoWidth > 0 && video.videoHeight > 0) {
+            setIsVideoReady(true);
+            clearInterval(checkReady);
+            cleanup();
+          } else if (attempts > 50) {
+            // 5 seconds timeout
+            clearInterval(checkReady);
+            cleanup();
+            setError('カメラの初期化に失敗しました');
+            logError(new Error('Video ready timeout'), {
+              component: 'PhotoCapture',
+              action: 'startCamera',
+              videoWidth: video.videoWidth,
+              videoHeight: video.videoHeight,
+              readyState: video.readyState,
+            });
+          }
+        }, 100);
       }
       setMode('camera');
     } catch (err) {
       setError('カメラにアクセスできません');
-      console.error(err);
+      const error = err instanceof Error ? err : new Error(String(err));
+      logError(error, { component: 'PhotoCapture', action: 'startCamera' });
     }
   }, []);
 
@@ -143,6 +197,7 @@ export function PhotoCapture({ onCapture, onCancel, maxSize = 1024 }: PhotoCaptu
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     }
+    setIsVideoReady(false);
     setMode('select');
   }, []);
 
@@ -155,6 +210,23 @@ export function PhotoCapture({ onCapture, onCancel, maxSize = 1024 }: PhotoCaptu
 
     try {
       const video = videoRef.current;
+
+      // Wait for video to be ready if dimensions are not available
+      if (video.videoWidth === 0 || video.videoHeight === 0) {
+        await new Promise<void>((resolve, reject) => {
+          const timeout = setTimeout(() => reject(new Error('Video not ready')), 5000);
+          video.onloadedmetadata = () => {
+            clearTimeout(timeout);
+            resolve();
+          };
+        });
+      }
+
+      // Double check dimensions
+      if (video.videoWidth === 0 || video.videoHeight === 0) {
+        throw new Error('Video dimensions not available');
+      }
+
       const canvas = document.createElement('canvas');
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
@@ -179,7 +251,8 @@ export function PhotoCapture({ onCapture, onCancel, maxSize = 1024 }: PhotoCaptu
       onCapture(resized);
     } catch (err) {
       setError('撮影に失敗しました');
-      console.error(err);
+      const error = err instanceof Error ? err : new Error(String(err));
+      logError(error, { component: 'PhotoCapture', action: 'captureFromCamera' });
     } finally {
       setIsProcessing(false);
     }
@@ -192,15 +265,16 @@ export function PhotoCapture({ onCapture, onCancel, maxSize = 1024 }: PhotoCaptu
           ref={videoRef}
           autoPlay
           playsInline
+          muted
           className="w-full max-w-md rounded-lg border"
         />
         <div className="flex gap-4">
           <button
             onClick={captureFromCamera}
-            disabled={isProcessing}
+            disabled={isProcessing || !isVideoReady}
             className="rounded-full bg-blue-500 p-4 text-white hover:bg-blue-600 disabled:opacity-50"
           >
-            {isProcessing ? '処理中...' : '撮影'}
+            {isProcessing ? '処理中...' : isVideoReady ? '撮影' : '準備中...'}
           </button>
           <button
             onClick={stopCamera}
