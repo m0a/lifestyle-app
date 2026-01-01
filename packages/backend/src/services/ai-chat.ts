@@ -53,15 +53,44 @@ export class AIChatService {
 
   /**
    * Parse change proposals from AI response.
+   * Handles nested JSON objects in [CHANGE: {...}] markers.
    */
   parseChanges(response: string): FoodItemChange[] {
     const changes: FoodItemChange[] = [];
-    const changePattern = /\[CHANGE:\s*({[^}]+})\]/g;
-    let match;
 
-    while ((match = changePattern.exec(response)) !== null) {
+    // Find all [CHANGE: markers and extract balanced JSON
+    let pos = 0;
+    while (pos < response.length) {
+      const markerStart = response.indexOf('[CHANGE:', pos);
+      if (markerStart === -1) break;
+
+      // Find the start of JSON object
+      const jsonStart = response.indexOf('{', markerStart);
+      if (jsonStart === -1) break;
+
+      // Find balanced closing brace
+      let braceCount = 0;
+      let jsonEnd = -1;
+      for (let i = jsonStart; i < response.length; i++) {
+        if (response[i] === '{') braceCount++;
+        else if (response[i] === '}') {
+          braceCount--;
+          if (braceCount === 0) {
+            jsonEnd = i;
+            break;
+          }
+        }
+      }
+
+      if (jsonEnd === -1) {
+        pos = markerStart + 1;
+        continue;
+      }
+
+      const jsonStr = response.slice(jsonStart, jsonEnd + 1);
+
       try {
-        const parsed = JSON.parse(match[1]);
+        const parsed = JSON.parse(jsonStr);
         if (parsed.action === 'add' && parsed.food) {
           changes.push({
             action: 'add',
@@ -88,8 +117,10 @@ export class AIChatService {
         }
       } catch (e) {
         // Skip invalid JSON
-        console.warn('Failed to parse change:', match[1]);
+        console.warn('Failed to parse change:', jsonStr);
       }
+
+      pos = jsonEnd + 1;
     }
 
     return changes;
@@ -97,9 +128,49 @@ export class AIChatService {
 
   /**
    * Extract display text from AI response (without change markers).
+   * Handles nested JSON objects.
    */
   extractDisplayText(response: string): string {
-    return response.replace(/\[CHANGE:\s*{[^}]+}\]/g, '').trim();
+    let result = response;
+
+    // Remove all [CHANGE: {...}] markers with balanced braces
+    let pos = 0;
+    while (pos < result.length) {
+      const markerStart = result.indexOf('[CHANGE:', pos);
+      if (markerStart === -1) break;
+
+      const jsonStart = result.indexOf('{', markerStart);
+      if (jsonStart === -1) break;
+
+      // Find balanced closing brace
+      let braceCount = 0;
+      let jsonEnd = -1;
+      for (let i = jsonStart; i < result.length; i++) {
+        if (result[i] === '{') braceCount++;
+        else if (result[i] === '}') {
+          braceCount--;
+          if (braceCount === 0) {
+            jsonEnd = i;
+            break;
+          }
+        }
+      }
+
+      if (jsonEnd === -1) {
+        pos = markerStart + 1;
+        continue;
+      }
+
+      // Find closing ]
+      const closeBracket = result.indexOf(']', jsonEnd);
+      if (closeBracket !== -1) {
+        result = result.slice(0, markerStart) + result.slice(closeBracket + 1);
+      } else {
+        pos = jsonEnd + 1;
+      }
+    }
+
+    return result.trim();
   }
 
   private formatMealContext(foods: FoodItem[]): string {
