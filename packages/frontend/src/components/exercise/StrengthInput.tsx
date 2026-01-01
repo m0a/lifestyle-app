@@ -229,8 +229,11 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord }:
           </label>
           <input
             {...register('weight', {
-              valueAsNumber: true,
-              setValueAs: (v) => v === '' || v === undefined ? null : Number(v)
+              setValueAs: (v) => {
+                if (v === '' || v === undefined || v === null) return null;
+                const num = Number(v);
+                return isNaN(num) ? null : num;
+              }
             })}
             type="number"
             id="weight"
