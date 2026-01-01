@@ -62,7 +62,7 @@ export function Meal() {
 
       {/* Smart Meal Input (T018) */}
       <div>
-        <h2 className="mb-3 text-lg font-semibold text-gray-900">AI食事記録</h2>
+        <h2 className="mb-3 text-lg font-semibold text-gray-900">食事記録</h2>
         <SmartMealInput onSave={handleSmartSave} onRefresh={refresh} />
       </div>
 

@@ -223,7 +223,7 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
               disabled={!text.trim()}
               className="shrink-0 rounded-lg bg-blue-500 px-6 py-3 font-medium text-white hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
             >
-              AI計算
+              記録推論
             </button>
           </div>
 
@@ -246,7 +246,7 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
       {inputState === 'analyzing' && (
         <div className="flex flex-col items-center gap-4 py-8">
           <div className="h-12 w-12 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
-          <p className="text-gray-600">AI が食事を分析中...</p>
+          <p className="text-gray-600">食事を分析中...</p>
         </div>
       )}
 
