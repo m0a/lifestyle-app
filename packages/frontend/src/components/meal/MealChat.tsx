@@ -155,7 +155,7 @@ export function MealChat({ mealId, currentFoodItems: _currentFoodItems, onUpdate
   return (
     <div className="rounded-lg border">
       {/* Messages */}
-      <div className="h-64 overflow-y-auto p-4">
+      <div className="h-80 overflow-y-auto p-4 sm:h-96">
         {messages.length === 0 && (
           <div className="text-center text-gray-400">
             <p>AIアシスタントに質問してください</p>

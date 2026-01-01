@@ -199,27 +199,29 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
       {/* Input State: idle or error */}
       {(inputState === 'idle' || inputState === 'error') && (
         <div className="space-y-3">
-          <div className="flex gap-2">
-            {/* Photo button (T024) */}
-            <button
-              onClick={() => setShowPhotoCapture(true)}
-              className="rounded-lg border border-gray-300 px-3 py-3 text-xl hover:bg-gray-50"
-              title="写真で分析"
-            >
-              📷
-            </button>
-            <input
-              type="text"
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
-              placeholder="食事内容を入力 (例: カレーライス、ラーメン)"
-              className="flex-1 rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <div className="flex flex-1 gap-2">
+              {/* Photo button (T024) */}
+              <button
+                onClick={() => setShowPhotoCapture(true)}
+                className="shrink-0 rounded-lg border border-gray-300 px-3 py-3 text-xl hover:bg-gray-50"
+                title="写真で分析"
+              >
+                📷
+              </button>
+              <input
+                type="text"
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+                placeholder="食事内容を入力 (例: カレーライス)"
+                className="min-w-0 flex-1 rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
             <button
               onClick={handleSubmit}
               disabled={!text.trim()}
-              className="rounded-lg bg-blue-500 px-6 py-3 font-medium text-white hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
+              className="shrink-0 rounded-lg bg-blue-500 px-6 py-3 font-medium text-white hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
             >
               AI計算
             </button>
