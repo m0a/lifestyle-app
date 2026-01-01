@@ -161,15 +161,16 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord }:
             その他
           </button>
         </div>
-        {showCustomInput && (
+        {showCustomInput ? (
           <input
             {...register('exerciseType')}
             type="text"
             placeholder="種目名を入力"
             className="mt-2 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
           />
+        ) : (
+          <input type="hidden" {...register('exerciseType')} />
         )}
-        <input type="hidden" {...register('exerciseType')} />
         {errors.exerciseType && (
           <p className="mt-1 text-sm text-red-600">{errors.exerciseType.message}</p>
         )}
