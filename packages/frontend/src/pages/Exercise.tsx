@@ -11,6 +11,7 @@ export function Exercise() {
   const {
     exercises,
     weeklySummary,
+    exerciseTypes,
     isLoading,
     error,
     create,
@@ -72,6 +73,7 @@ export function Exercise() {
           isLoading={isCreating}
           error={createError}
           onFetchLastRecord={fetchLastRecord}
+          customTypes={exerciseTypes}
         />
       </div>
 

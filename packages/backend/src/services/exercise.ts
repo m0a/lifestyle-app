@@ -216,4 +216,23 @@ export class ExerciseService {
 
     await this.db.delete(schema.exerciseRecords).where(eq(schema.exerciseRecords.id, id));
   }
+
+  async getExerciseTypes(userId: string): Promise<string[]> {
+    const records = await this.db
+      .select({ exerciseType: schema.exerciseRecords.exerciseType })
+      .from(schema.exerciseRecords)
+      .where(eq(schema.exerciseRecords.userId, userId))
+      .orderBy(desc(schema.exerciseRecords.recordedAt));
+
+    // Get unique types preserving most recent order
+    const seen = new Set<string>();
+    const types: string[] = [];
+    for (const record of records) {
+      if (!seen.has(record.exerciseType)) {
+        seen.add(record.exerciseType);
+        types.push(record.exerciseType);
+      }
+    }
+    return types;
+  }
 }

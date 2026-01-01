@@ -46,6 +46,19 @@ export function useExercises(options?: UseExercisesOptions) {
     select: (data) => data.summary,
   });
 
+  const exerciseTypesQuery = useQuery({
+    queryKey: ['exercises', 'types'],
+    queryFn: async () => {
+      const res = await api.exercises.types.$get();
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ message: 'Failed to fetch exercise types' }));
+        throw new Error((error as { message?: string }).message || 'Failed to fetch exercise types');
+      }
+      return res.json();
+    },
+    select: (data) => data.types,
+  });
+
   const createMutation = useMutation({
     mutationFn: async (input: CreateExerciseInput) => {
       const res = await api.exercises.$post({ json: input });
@@ -101,6 +114,7 @@ export function useExercises(options?: UseExercisesOptions) {
   return {
     exercises: exercisesQuery.data ?? [],
     weeklySummary: weeklySummaryQuery.data,
+    exerciseTypes: exerciseTypesQuery.data ?? [],
     isLoading: exercisesQuery.isLoading,
     error: exercisesQuery.error,
     create: createMutation.mutate,

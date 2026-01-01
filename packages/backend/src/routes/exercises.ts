@@ -75,6 +75,15 @@ export const exercises = new Hono<{ Bindings: Bindings; Variables: Variables }>(
 
     return c.json({ exercise });
   })
+  .get('/types', async (c) => {
+    const db = c.get('db');
+    const user = c.get('user');
+
+    const exerciseService = new ExerciseService(db);
+    const types = await exerciseService.getExerciseTypes(user.id);
+
+    return c.json({ types });
+  })
   .get('/:id', async (c) => {
     const id = c.req.param('id');
     const db = c.get('db');

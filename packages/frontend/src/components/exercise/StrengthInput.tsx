@@ -1,7 +1,7 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { createExerciseSchema, type CreateExerciseInput, type ExerciseRecord, EXERCISE_PRESETS, MUSCLE_GROUPS, MUSCLE_GROUP_LABELS, type MuscleGroup } from '@lifestyle-app/shared';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { logValidationError } from '../../lib/errorLogger';
 import { LastRecordBadge } from './LastRecordBadge';
 
@@ -10,9 +10,10 @@ interface StrengthInputProps {
   isLoading?: boolean;
   error?: Error | null;
   onFetchLastRecord?: (exerciseType: string) => Promise<ExerciseRecord | null>;
+  customTypes?: string[];
 }
 
-export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord }: StrengthInputProps) {
+export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, customTypes = [] }: StrengthInputProps) {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [selectedMuscleGroup, setSelectedMuscleGroup] = useState<MuscleGroup>('chest');
@@ -104,6 +105,12 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord }:
     (preset) => preset.muscleGroup === selectedMuscleGroup
   );
 
+  // Filter out preset names to get only custom types
+  const recentCustomTypes = useMemo(() => {
+    const presetNames = new Set(EXERCISE_PRESETS.map(p => p.name));
+    return customTypes.filter(type => !presetNames.has(type));
+  }, [customTypes]);
+
   return (
     <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
       {/* Muscle Group Tabs */}
@@ -161,6 +168,31 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord }:
             その他
           </button>
         </div>
+
+        {/* Recent Custom Types */}
+        {recentCustomTypes.length > 0 && (
+          <div className="mt-3">
+            <label className="block text-xs font-medium text-gray-500 mb-1">
+              最近使用した種目
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {recentCustomTypes.map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => handleExerciseTypeSelect(type)}
+                  className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
+                    exerciseType === type
+                      ? 'bg-orange-600 text-white'
+                      : 'bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200'
+                  }`}
+                >
+                  {type}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         {showCustomInput ? (
           <input
             {...register('exerciseType')}
