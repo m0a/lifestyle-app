@@ -18,6 +18,7 @@ type Bindings = {
   DB: D1Database;
   ENVIRONMENT: string;
   PHOTOS: R2Bucket;
+  ASSETS: Fetcher;
   GOOGLE_GENERATIVE_AI_API_KEY?: string;
   AI_PROVIDER?: string;
   AI_MODEL?: string;
@@ -94,6 +95,12 @@ const routes = app
   .route('/api/dashboard', dashboard)
   .route('/api/user', user)
   .route('/api/logs', logs);
+
+// SPA fallback - serve index.html for non-API routes
+app.get('*', async (c) => {
+  // Let ASSETS handle static files and SPA routing
+  return c.env.ASSETS.fetch(c.req.raw);
+});
 
 // Export type for RPC client
 export type AppType = typeof routes;
