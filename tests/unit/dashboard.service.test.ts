@@ -38,9 +38,9 @@ describe('DashboardService', () => {
 
       // Mock exercise data
       mockDb.all.mockResolvedValueOnce([
-        { exerciseType: 'ランニング', durationMinutes: 30 },
-        { exerciseType: 'ランニング', durationMinutes: 45 },
-        { exerciseType: '筋トレ', durationMinutes: 60 },
+        { exerciseType: 'ベンチプレス', sets: 3, reps: 10 },
+        { exerciseType: 'ベンチプレス', sets: 4, reps: 8 },
+        { exerciseType: 'スクワット', sets: 3, reps: 12 },
       ]);
 
       const result = await service.getSummary(userId, { startDate, endDate });
@@ -100,19 +100,19 @@ describe('DashboardService', () => {
       mockDb.all.mockResolvedValueOnce([]);
       mockDb.all.mockResolvedValueOnce([]);
       mockDb.all.mockResolvedValueOnce([
-        { exerciseType: 'ランニング', durationMinutes: 30 },
-        { exerciseType: 'ランニング', durationMinutes: 45 },
-        { exerciseType: '筋トレ', durationMinutes: 60 },
-        { exerciseType: 'ヨガ', durationMinutes: 20 },
+        { exerciseType: 'ベンチプレス', sets: 3, reps: 10 },
+        { exerciseType: 'ベンチプレス', sets: 4, reps: 8 },
+        { exerciseType: 'スクワット', sets: 3, reps: 12 },
+        { exerciseType: 'ランジ', sets: 2, reps: 15 },
       ]);
 
       const result = await service.getSummary(userId, { startDate, endDate });
 
-      expect(result.exercises.totalMinutes).toBe(155);
+      expect(result.exercises.totalSets).toBe(12); // 3+4+3+2
       expect(result.exercises.sessionCount).toBe(4);
-      expect(result.exercises.byType['ランニング']).toBe(75);
-      expect(result.exercises.byType['筋トレ']).toBe(60);
-      expect(result.exercises.byType['ヨガ']).toBe(20);
+      expect(result.exercises.byType['ベンチプレス'].sets).toBe(7); // 3+4
+      expect(result.exercises.byType['スクワット'].sets).toBe(3);
+      expect(result.exercises.byType['ランジ'].sets).toBe(2);
     });
 
     it('should handle empty data gracefully', async () => {
@@ -129,7 +129,7 @@ describe('DashboardService', () => {
       expect(result.weight.change).toBeNull();
       expect(result.meals.totalCalories).toBe(0);
       expect(result.meals.mealCount).toBe(0);
-      expect(result.exercises.totalMinutes).toBe(0);
+      expect(result.exercises.totalSets).toBe(0);
       expect(result.exercises.sessionCount).toBe(0);
     });
   });

@@ -116,9 +116,9 @@ export function Dashboard() {
               byType={summary?.meals.byType ?? {}}
             />
             <ExerciseSummaryCard
-              totalMinutes={summary?.exercises.totalMinutes ?? 0}
+              totalSets={summary?.exercises.totalSets ?? 0}
+              totalReps={summary?.exercises.totalReps ?? 0}
               sessionCount={summary?.exercises.sessionCount ?? 0}
-              averageMinutes={summary?.exercises.averageMinutes ?? 0}
               byType={summary?.exercises.byType ?? {}}
             />
           </div>

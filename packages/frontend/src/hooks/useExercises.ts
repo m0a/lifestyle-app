@@ -3,11 +3,13 @@ import { api } from '../lib/client';
 import type {
   CreateExerciseInput,
   UpdateExerciseInput,
+  ExerciseRecord,
 } from '@lifestyle-app/shared';
 
 interface UseExercisesOptions {
   startDate?: string;
   endDate?: string;
+  exerciseType?: string;
 }
 
 export function useExercises(options?: UseExercisesOptions) {
@@ -19,6 +21,7 @@ export function useExercises(options?: UseExercisesOptions) {
       const query: Record<string, string> = {};
       if (options?.startDate) query.startDate = options.startDate;
       if (options?.endDate) query.endDate = options.endDate;
+      if (options?.exerciseType) query.exerciseType = options.exerciseType;
 
       const res = await api.exercises.$get({ query });
       if (!res.ok) {
@@ -85,6 +88,16 @@ export function useExercises(options?: UseExercisesOptions) {
     },
   });
 
+  const fetchLastRecord = async (exerciseType: string): Promise<ExerciseRecord | null> => {
+    const encodedType = encodeURIComponent(exerciseType);
+    const res = await api.exercises.last[':exerciseType'].$get({ param: { exerciseType: encodedType } });
+    if (!res.ok) {
+      return null;
+    }
+    const data = await res.json();
+    return data.exercise;
+  };
+
   return {
     exercises: exercisesQuery.data ?? [],
     weeklySummary: weeklySummaryQuery.data,
@@ -99,5 +112,6 @@ export function useExercises(options?: UseExercisesOptions) {
     createError: createMutation.error,
     updateError: updateMutation.error,
     deleteError: deleteMutation.error,
+    fetchLastRecord,
   };
 }

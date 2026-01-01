@@ -1,4 +1,4 @@
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, and } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import type { Database } from '../db';
 import { schema } from '../db';
@@ -16,7 +16,9 @@ export class ExerciseService {
       id,
       userId,
       exerciseType: input.exerciseType,
-      durationMinutes: input.durationMinutes,
+      sets: input.sets,
+      reps: input.reps,
+      weight: input.weight ?? null,
       recordedAt: input.recordedAt,
       createdAt: now,
       updatedAt: now,
@@ -26,7 +28,9 @@ export class ExerciseService {
       id,
       userId,
       exerciseType: input.exerciseType,
-      durationMinutes: input.durationMinutes,
+      sets: input.sets,
+      reps: input.reps,
+      weight: input.weight ?? null,
       recordedAt: input.recordedAt,
       createdAt: now,
       updatedAt: now,
@@ -53,7 +57,7 @@ export class ExerciseService {
 
   async findByUserId(
     userId: string,
-    options?: { startDate?: string; endDate?: string; limit?: number }
+    options?: { startDate?: string; endDate?: string; limit?: number; exerciseType?: string }
   ) {
     const records = await this.db
       .select()
@@ -63,6 +67,10 @@ export class ExerciseService {
       .all();
 
     let filtered = records;
+
+    if (options?.exerciseType) {
+      filtered = filtered.filter((r) => r.exerciseType === options.exerciseType);
+    }
 
     if (options?.startDate) {
       filtered = filtered.filter((r) => r.recordedAt >= options.startDate!);
@@ -79,6 +87,23 @@ export class ExerciseService {
     return filtered;
   }
 
+  async getLastByType(userId: string, exerciseType: string) {
+    const record = await this.db
+      .select()
+      .from(schema.exerciseRecords)
+      .where(
+        and(
+          eq(schema.exerciseRecords.userId, userId),
+          eq(schema.exerciseRecords.exerciseType, exerciseType)
+        )
+      )
+      .orderBy(desc(schema.exerciseRecords.recordedAt))
+      .limit(1)
+      .get();
+
+    return record || null;
+  }
+
   async getWeeklySummary(userId: string) {
     const now = new Date();
     const startOfWeek = new Date(now);
@@ -93,19 +118,25 @@ export class ExerciseService {
       endDate: endOfWeek.toISOString(),
     });
 
-    const totalMinutes = exercises.reduce((sum, e) => sum + e.durationMinutes, 0);
+    const totalSets = exercises.reduce((sum, e) => sum + e.sets, 0);
+    const totalReps = exercises.reduce((sum, e) => sum + e.reps * e.sets, 0);
     const count = exercises.length;
 
     const byType = exercises.reduce(
       (acc, e) => {
-        acc[e.exerciseType] = (acc[e.exerciseType] || 0) + e.durationMinutes;
+        if (!acc[e.exerciseType]) {
+          acc[e.exerciseType] = { sets: 0, reps: 0 };
+        }
+        acc[e.exerciseType].sets += e.sets;
+        acc[e.exerciseType].reps += e.reps * e.sets;
         return acc;
       },
-      {} as Record<string, number>
+      {} as Record<string, { sets: number; reps: number }>
     );
 
     return {
-      totalMinutes,
+      totalSets,
+      totalReps,
       count,
       byType,
       weekStart: startOfWeek.toISOString(),
@@ -119,19 +150,25 @@ export class ExerciseService {
   ) {
     const exercises = await this.findByUserId(userId, options);
 
-    const totalMinutes = exercises.reduce((sum, e) => sum + e.durationMinutes, 0);
+    const totalSets = exercises.reduce((sum, e) => sum + e.sets, 0);
+    const totalReps = exercises.reduce((sum, e) => sum + e.reps * e.sets, 0);
     const count = exercises.length;
 
     const byType = exercises.reduce(
       (acc, e) => {
-        acc[e.exerciseType] = (acc[e.exerciseType] || 0) + e.durationMinutes;
+        if (!acc[e.exerciseType]) {
+          acc[e.exerciseType] = { sets: 0, reps: 0 };
+        }
+        acc[e.exerciseType].sets += e.sets;
+        acc[e.exerciseType].reps += e.reps * e.sets;
         return acc;
       },
-      {} as Record<string, number>
+      {} as Record<string, { sets: number; reps: number }>
     );
 
     return {
-      totalMinutes,
+      totalSets,
+      totalReps,
       count,
       byType,
     };
@@ -150,8 +187,16 @@ export class ExerciseService {
       updateData.exerciseType = input.exerciseType;
     }
 
-    if (input.durationMinutes !== undefined) {
-      updateData.durationMinutes = input.durationMinutes;
+    if (input.sets !== undefined) {
+      updateData.sets = input.sets;
+    }
+
+    if (input.reps !== undefined) {
+      updateData.reps = input.reps;
+    }
+
+    if (input.weight !== undefined) {
+      updateData.weight = input.weight;
     }
 
     if (input.recordedAt !== undefined) {

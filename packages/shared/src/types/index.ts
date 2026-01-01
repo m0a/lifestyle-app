@@ -63,7 +63,9 @@ export interface ExerciseRecord {
   id: string;
   userId: string;
   exerciseType: string;
-  durationMinutes: number;
+  sets: number;
+  reps: number;
+  weight: number | null;
   recordedAt: string;
   createdAt: string;
   updatedAt: string;
@@ -93,9 +95,10 @@ export interface MealSummary {
 }
 
 export interface ExerciseSummary {
-  totalMinutes: number;
+  totalSets: number;
+  totalReps: number;
   count: number;
-  byType: Record<string, number>;
+  byType: Record<string, { sets: number; reps: number }>;
 }
 
 export interface DashboardSummary {

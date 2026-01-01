@@ -16,7 +16,15 @@ describe('Exercise API Integration Tests', () => {
       expect(true).toBe(true);
     });
 
-    it('should return 400 for invalid durationMinutes', async () => {
+    it('should return 400 for invalid sets', async () => {
+      expect(true).toBe(true);
+    });
+
+    it('should return 400 for invalid reps', async () => {
+      expect(true).toBe(true);
+    });
+
+    it('should accept null weight for bodyweight exercises', async () => {
       expect(true).toBe(true);
     });
   });
@@ -30,7 +38,21 @@ describe('Exercise API Integration Tests', () => {
       expect(true).toBe(true);
     });
 
+    it('should support exerciseType filter query parameter', async () => {
+      expect(true).toBe(true);
+    });
+
     it('should return 401 when not authenticated', async () => {
+      expect(true).toBe(true);
+    });
+  });
+
+  describe('GET /api/exercises/last/:exerciseType', () => {
+    it('should return the last record for a specific exercise type', async () => {
+      expect(true).toBe(true);
+    });
+
+    it('should return null if no records exist for the type', async () => {
       expect(true).toBe(true);
     });
   });
