@@ -88,6 +88,7 @@ export const exerciseRecords = sqliteTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     exerciseType: text('exercise_type').notNull(),
+    muscleGroup: text('muscle_group'), // 'chest' | 'back' | 'legs' | 'shoulders' | 'arms' | 'core' | 'other'
     sets: integer('sets').notNull(),
     reps: integer('reps').notNull(),
     weight: real('weight'),

@@ -5,12 +5,17 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { logValidationError } from '../../lib/errorLogger';
 import { LastRecordBadge } from './LastRecordBadge';
 
+interface ExerciseTypeWithMuscleGroup {
+  exerciseType: string;
+  muscleGroup: string | null;
+}
+
 interface StrengthInputProps {
   onSubmit: (data: CreateExerciseInput) => void;
   isLoading?: boolean;
   error?: Error | null;
   onFetchLastRecord?: (exerciseType: string) => Promise<ExerciseRecord | null>;
-  customTypes?: string[];
+  customTypes?: ExerciseTypeWithMuscleGroup[];
 }
 
 export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, customTypes = [] }: StrengthInputProps) {
@@ -49,6 +54,7 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, c
   const handleFormSubmit = (data: CreateExerciseInput) => {
     onSubmit({
       ...data,
+      muscleGroup: selectedMuscleGroup,
       recordedAt: data.recordedAt || new Date().toISOString(),
     });
     reset({
@@ -105,11 +111,14 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, c
     (preset) => preset.muscleGroup === selectedMuscleGroup
   );
 
-  // Filter out preset names to get only custom types
+  // Filter out preset names and filter by selected muscle group
   const recentCustomTypes = useMemo(() => {
     const presetNames = new Set(EXERCISE_PRESETS.map(p => p.name));
-    return customTypes.filter(type => !presetNames.has(type));
-  }, [customTypes]);
+    return customTypes
+      .filter(item => !presetNames.has(item.exerciseType))
+      .filter(item => item.muscleGroup === selectedMuscleGroup)
+      .map(item => item.exerciseType);
+  }, [customTypes, selectedMuscleGroup]);
 
   return (
     <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">

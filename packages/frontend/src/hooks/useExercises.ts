@@ -56,7 +56,7 @@ export function useExercises(options?: UseExercisesOptions) {
       }
       return res.json();
     },
-    select: (data) => data.types,
+    select: (data) => data.types as { exerciseType: string; muscleGroup: string | null }[],
   });
 
   const createMutation = useMutation({

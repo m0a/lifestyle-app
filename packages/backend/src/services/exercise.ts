@@ -16,6 +16,7 @@ export class ExerciseService {
       id,
       userId,
       exerciseType: input.exerciseType,
+      muscleGroup: input.muscleGroup ?? null,
       sets: input.sets,
       reps: input.reps,
       weight: input.weight ?? null,
@@ -28,6 +29,7 @@ export class ExerciseService {
       id,
       userId,
       exerciseType: input.exerciseType,
+      muscleGroup: input.muscleGroup ?? null,
       sets: input.sets,
       reps: input.reps,
       weight: input.weight ?? null,
@@ -187,6 +189,10 @@ export class ExerciseService {
       updateData.exerciseType = input.exerciseType;
     }
 
+    if (input.muscleGroup !== undefined) {
+      updateData.muscleGroup = input.muscleGroup;
+    }
+
     if (input.sets !== undefined) {
       updateData.sets = input.sets;
     }
@@ -217,20 +223,26 @@ export class ExerciseService {
     await this.db.delete(schema.exerciseRecords).where(eq(schema.exerciseRecords.id, id));
   }
 
-  async getExerciseTypes(userId: string): Promise<string[]> {
+  async getExerciseTypes(userId: string): Promise<{ exerciseType: string; muscleGroup: string | null }[]> {
     const records = await this.db
-      .select({ exerciseType: schema.exerciseRecords.exerciseType })
+      .select({
+        exerciseType: schema.exerciseRecords.exerciseType,
+        muscleGroup: schema.exerciseRecords.muscleGroup,
+      })
       .from(schema.exerciseRecords)
       .where(eq(schema.exerciseRecords.userId, userId))
       .orderBy(desc(schema.exerciseRecords.recordedAt));
 
     // Get unique types preserving most recent order
     const seen = new Set<string>();
-    const types: string[] = [];
+    const types: { exerciseType: string; muscleGroup: string | null }[] = [];
     for (const record of records) {
       if (!seen.has(record.exerciseType)) {
         seen.add(record.exerciseType);
-        types.push(record.exerciseType);
+        types.push({
+          exerciseType: record.exerciseType,
+          muscleGroup: record.muscleGroup,
+        });
       }
     }
     return types;

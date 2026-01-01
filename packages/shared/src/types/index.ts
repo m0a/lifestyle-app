@@ -63,6 +63,7 @@ export interface ExerciseRecord {
   id: string;
   userId: string;
   exerciseType: string;
+  muscleGroup: string | null;
   sets: number;
   reps: number;
   weight: number | null;

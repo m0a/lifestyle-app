@@ -75,9 +75,13 @@ export const updateMealSchema = z.object({
   recordedAt: datetimeSchema.optional(),
 });
 
+// Muscle group schema
+export const muscleGroupSchema = z.enum(['chest', 'back', 'legs', 'shoulders', 'arms', 'core', 'other']);
+
 // Exercise schemas (strength training optimized)
 export const createExerciseSchema = z.object({
   exerciseType: z.string().min(1, '種目を選択してください').max(100),
+  muscleGroup: muscleGroupSchema.optional(),
   sets: z.number().int().min(1, '1セット以上で入力してください').max(20, '20セット以下で入力してください'),
   reps: z.number().int().min(1, '1回以上で入力してください').max(100, '100回以下で入力してください'),
   weight: z.number().min(0).max(500).nullable().optional(),
@@ -86,6 +90,7 @@ export const createExerciseSchema = z.object({
 
 export const updateExerciseSchema = z.object({
   exerciseType: z.string().min(1).max(100).optional(),
+  muscleGroup: muscleGroupSchema.optional(),
   sets: z.number().int().min(1).max(20).optional(),
   reps: z.number().int().min(1).max(100).optional(),
   weight: z.number().min(0).max(500).nullable().optional(),
