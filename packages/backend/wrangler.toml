@@ -10,7 +10,7 @@ not_found_handling = "single-page-application"
 [vars]
 ENVIRONMENT = "production"
 AI_PROVIDER = "google"
-AI_MODEL = "gemini-3-flash-preview"
+AI_MODEL = "gemini-2.0-flash"
 
 [[d1_databases]]
 binding = "DB"
@@ -29,7 +29,7 @@ name = "lifestyle-tracker-preview"
 [env.preview.vars]
 ENVIRONMENT = "preview"
 AI_PROVIDER = "google"
-AI_MODEL = "gemini-3-flash-preview"
+AI_MODEL = "gemini-2.0-flash"
 
 [[env.preview.d1_databases]]
 binding = "DB"

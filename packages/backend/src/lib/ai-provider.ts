@@ -39,7 +39,7 @@ export function getAIConfigFromEnv(env: {
   AI_MODEL?: string;
 }): AIConfig {
   const provider = (env.AI_PROVIDER || 'google') as AIProvider;
-  const model = env.AI_MODEL || 'gemini-3-flash-preview';
+  const model = env.AI_MODEL || 'gemini-2.0-flash';
 
   let apiKey: string;
   switch (provider) {
