@@ -87,12 +87,16 @@ export class PhotoStorageService {
 
   /**
    * Get photo for serving (used by the photo serving endpoint).
+   * Returns body as ReadableStream for efficient streaming.
    */
-  async getPhotoForServing(key: string): Promise<{ data: ArrayBuffer; mimeType: string } | null> {
-    // Only allow serving permanent photos (not temp)
-    if (key.startsWith('temp/')) {
+  async getPhotoForServing(key: string): Promise<{ body: ReadableStream; contentType: string } | null> {
+    const object = await this.r2.get(key);
+    if (!object || !object.body) {
       return null;
     }
-    return this.getPhotoForAnalysis(key);
+    return {
+      body: object.body,
+      contentType: object.httpMetadata?.contentType || 'image/jpeg',
+    };
   }
 }
