@@ -24,7 +24,8 @@
     "db:generate": "pnpm --filter @lifestyle-app/backend db:generate",
     "db:migrate": "pnpm --filter @lifestyle-app/backend db:migrate",
     "deploy:backend": "pnpm --filter @lifestyle-app/backend deploy",
-    "deploy:frontend": "pnpm --filter @lifestyle-app/frontend deploy"
+    "deploy:frontend": "pnpm --filter @lifestyle-app/frontend deploy",
+    "deploy": "pnpm build && cp -r packages/frontend/dist/* packages/backend/public/ && pnpm deploy:backend"
   },
   "devDependencies": {
     "@playwright/test": "^1.40.0",

@@ -11,6 +11,8 @@ const CHAT_SYSTEM_PROMPT = `あなたは食事の栄養アドバイザーです�
   [CHANGE: {"action": "add", "food": {"name": "食材名", "portion": "medium", "calories": 100, "protein": 5.0, "fat": 2.0, "carbs": 10.0}}]
   [CHANGE: {"action": "remove", "foodItemId": "uuid-of-food-to-remove"}]
   [CHANGE: {"action": "update", "foodItemId": "uuid-of-food", "food": {"portion": "small", "calories": 80}}]
+- **重要**: portionは必ず "small", "medium", "large" のいずれかを使用してください。"3つ"や"1パック"などの表現は使用しないでください。
+- caloriesは整数で指定してください
 - 栄養バランスについて質問された場合は、具体的な数値で説明してください
 - 食事と無関係な質問には、食事内容の調整に関する質問のみ対応可能であることを案内してください
 - 日本語で応答してください`;
@@ -96,8 +98,8 @@ export class AIChatService {
             action: 'add',
             foodItem: {
               name: parsed.food.name,
-              portion: parsed.food.portion || 'medium',
-              calories: parsed.food.calories || 0,
+              portion: this.normalizePortion(parsed.food.portion),
+              calories: Math.round(parsed.food.calories || 0),
               protein: parsed.food.protein || 0,
               fat: parsed.food.fat || 0,
               carbs: parsed.food.carbs || 0,
@@ -109,10 +111,19 @@ export class AIChatService {
             foodItemId: parsed.foodItemId,
           });
         } else if (parsed.action === 'update' && parsed.foodItemId && parsed.food) {
+          // Normalize update foodItem fields
+          const normalizedFood: Record<string, unknown> = {};
+          if (parsed.food.name !== undefined) normalizedFood.name = parsed.food.name;
+          if (parsed.food.portion !== undefined) normalizedFood.portion = this.normalizePortion(parsed.food.portion);
+          if (parsed.food.calories !== undefined) normalizedFood.calories = Math.round(parsed.food.calories);
+          if (parsed.food.protein !== undefined) normalizedFood.protein = parsed.food.protein;
+          if (parsed.food.fat !== undefined) normalizedFood.fat = parsed.food.fat;
+          if (parsed.food.carbs !== undefined) normalizedFood.carbs = parsed.food.carbs;
+
           changes.push({
             action: 'update',
             foodItemId: parsed.foodItemId,
-            foodItem: parsed.food,
+            foodItem: normalizedFood,
           });
         }
       } catch (e) {
@@ -171,6 +182,18 @@ export class AIChatService {
     }
 
     return result.trim();
+  }
+
+  /**
+   * Normalize portion value to valid enum.
+   * AI sometimes returns custom portion descriptions instead of enum values.
+   */
+  private normalizePortion(portion: unknown): 'small' | 'medium' | 'large' {
+    if (portion === 'small' || portion === 'medium' || portion === 'large') {
+      return portion;
+    }
+    // Default to medium for any invalid or missing value
+    return 'medium';
   }
 
   private formatMealContext(foods: FoodItem[]): string {

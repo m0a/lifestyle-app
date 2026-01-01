@@ -75,31 +75,33 @@ export const aiMealAnalysisResponseSchema = z.object({
 });
 export type AIMealAnalysisResponse = z.infer<typeof aiMealAnalysisResponseSchema>;
 
+// Food item change (from chat) - discriminated union based on action
+export const foodItemChangeSchema = z.discriminatedUnion('action', [
+  z.object({
+    action: z.literal('add'),
+    foodItem: createFoodItemSchema,
+  }),
+  z.object({
+    action: z.literal('update'),
+    foodItemId: z.string().uuid(),
+    foodItem: updateFoodItemSchema, // Partial update
+  }),
+  z.object({
+    action: z.literal('remove'),
+    foodItemId: z.string().uuid(),
+  }),
+]);
+export type FoodItemChange = z.infer<typeof foodItemChangeSchema>;
+
 // Chat message
 export const chatMessageSchema = z.object({
   id: z.string().uuid(),
   role: chatRoleSchema,
   content: z.string().min(1).max(5000),
-  appliedChanges: z
-    .array(
-      z.object({
-        action: foodItemChangeActionSchema,
-        foodItem: createFoodItemSchema.optional(),
-        foodItemId: z.string().uuid().optional(),
-      })
-    )
-    .optional(),
+  appliedChanges: z.array(foodItemChangeSchema).optional(),
   createdAt: z.string().datetime(),
 });
 export type ChatMessage = z.infer<typeof chatMessageSchema>;
-
-// Food item change (from chat)
-export const foodItemChangeSchema = z.object({
-  action: foodItemChangeActionSchema,
-  foodItem: createFoodItemSchema.optional(),
-  foodItemId: z.string().uuid().optional(),
-});
-export type FoodItemChange = z.infer<typeof foodItemChangeSchema>;
 
 // Save meal request
 export const saveMealAnalysisSchema = z.object({

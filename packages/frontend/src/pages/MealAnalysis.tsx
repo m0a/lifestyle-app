@@ -48,7 +48,7 @@ export default function MealAnalysisPage() {
       setState({
         phase: 'result',
         mealId: analysisResult.mealId,
-        photoUrl: `/api/photos/${encodeURIComponent(analysisResult.photoKey)}`,
+        photoUrl: `/api/meals/photos/${encodeURIComponent(analysisResult.photoKey)}`,
         foodItems: analysisResult.foodItems,
         totals: analysisResult.totals,
       });
@@ -135,7 +135,7 @@ export default function MealAnalysisPage() {
     try {
       await mealAnalysisApi.saveMealAnalysis(state.mealId, selectedMealType);
       toast.success('食事を記録しました');
-      navigate('/meal');
+      navigate('/meals');
     } catch (error) {
       console.error('Save error:', error);
       toast.error(getErrorMessage(error));

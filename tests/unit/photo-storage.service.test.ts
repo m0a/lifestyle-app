@@ -148,24 +148,40 @@ describe('PhotoStorageService', () => {
   });
 
   describe('getPhotoForServing', () => {
-    it('should return photo data for permanent photos', async () => {
-      const mockData = new ArrayBuffer(100);
+    it('should return photo body for permanent photos', async () => {
+      const mockBody = new ReadableStream();
       mockR2.get.mockResolvedValueOnce({
-        arrayBuffer: vi.fn().mockResolvedValue(mockData),
+        body: mockBody,
         httpMetadata: { contentType: 'image/jpeg' },
       });
 
       const result = await service.getPhotoForServing('meals/meal-123/photo.jpg');
 
       expect(result).not.toBeNull();
-      expect(result?.data).toBe(mockData);
+      expect(result?.body).toBe(mockBody);
+      expect(result?.contentType).toBe('image/jpeg');
     });
 
-    it('should reject temp photos for security', async () => {
+    it('should return photo body for temp photos (needed during analysis)', async () => {
+      const mockBody = new ReadableStream();
+      mockR2.get.mockResolvedValueOnce({
+        body: mockBody,
+        httpMetadata: { contentType: 'image/png' },
+      });
+
       const result = await service.getPhotoForServing('temp/temp-key');
 
+      expect(result).not.toBeNull();
+      expect(result?.body).toBe(mockBody);
+      expect(result?.contentType).toBe('image/png');
+    });
+
+    it('should return null when photo not found', async () => {
+      mockR2.get.mockResolvedValueOnce(null);
+
+      const result = await service.getPhotoForServing('meals/nonexistent/photo.jpg');
+
       expect(result).toBeNull();
-      expect(mockR2.get).not.toHaveBeenCalled();
     });
   });
 });

@@ -105,6 +105,26 @@ describe('AIChatService', () => {
       expect(changes[0].foodItem?.calories).toBe(0);
       expect(changes[0].foodItem?.protein).toBe(0);
     });
+
+    it('should normalize invalid portion values to medium', () => {
+      const response = `[CHANGE: {"action": "add", "food": {"name": "餅", "portion": "3つ", "calories": 495, "protein": 9, "fat": 1.5, "carbs": 108}}]`;
+
+      const changes = service.parseChanges(response);
+
+      expect(changes).toHaveLength(1);
+      expect(changes[0].foodItem?.name).toBe('餅');
+      expect(changes[0].foodItem?.portion).toBe('medium'); // Invalid "3つ" normalized to "medium"
+      expect(changes[0].foodItem?.calories).toBe(495);
+    });
+
+    it('should round calories to integer', () => {
+      const response = `[CHANGE: {"action": "add", "food": {"name": "サラダ", "portion": "small", "calories": 45.7, "protein": 2.0, "fat": 0.5, "carbs": 5.0}}]`;
+
+      const changes = service.parseChanges(response);
+
+      expect(changes).toHaveLength(1);
+      expect(changes[0].foodItem?.calories).toBe(46); // 45.7 rounded to 46
+    });
   });
 
   describe('extractDisplayText', () => {

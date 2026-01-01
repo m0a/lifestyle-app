@@ -37,7 +37,7 @@ mealChat.use('/*', authMiddleware);
 mealChat.get('/:mealId/chat', async (c) => {
   const mealId = c.req.param('mealId');
   const db = c.get('db');
-  const userId = c.get('userId');
+  const userId = c.get('user').id;
 
   // Verify meal belongs to user
   const meal = await db.query.mealRecords.findFirst({
@@ -72,7 +72,7 @@ mealChat.post(
     const mealId = c.req.param('mealId');
     const { message } = c.req.valid('json');
     const db = c.get('db');
-    const userId = c.get('userId');
+    const userId = c.get('user').id;
 
     // Verify meal belongs to user
     const meal = await db.query.mealRecords.findFirst({
@@ -188,12 +188,22 @@ mealChat.post(
 // POST /api/meals/:mealId/chat/apply - Apply chat suggestions
 mealChat.post(
   '/:mealId/chat/apply',
-  zValidator('json', applyChatSuggestionSchema),
+  zValidator('json', applyChatSuggestionSchema, (result, c) => {
+    if (!result.success) {
+      console.error('[Chat Apply] Validation failed:', JSON.stringify(result.error.errors, null, 2));
+      console.error('[Chat Apply] Request body:', JSON.stringify(result.data, null, 2));
+      return c.json({
+        message: 'バリデーションエラー',
+        code: 'VALIDATION_ERROR',
+        errors: result.error.errors.map((e) => ({ path: e.path.join('.'), message: e.message })),
+      }, 400);
+    }
+  }),
   async (c) => {
     const mealId = c.req.param('mealId');
     const { changes } = c.req.valid('json');
     const db = c.get('db');
-    const userId = c.get('userId');
+    const userId = c.get('user').id;
 
     // Verify meal belongs to user
     const meal = await db.query.mealRecords.findFirst({
@@ -206,48 +216,50 @@ mealChat.post(
 
     const now = new Date().toISOString();
 
-    // Apply each change
+    // Apply each change (discriminated union - each action has specific required fields)
     for (const change of changes) {
       switch (change.action) {
         case 'add':
-          if (change.foodItem) {
-            await db.insert(mealFoodItems).values({
-              id: uuidv4(),
-              mealId,
-              name: change.foodItem.name,
-              portion: change.foodItem.portion,
-              calories: change.foodItem.calories,
-              protein: change.foodItem.protein,
-              fat: change.foodItem.fat,
-              carbs: change.foodItem.carbs,
-              createdAt: now,
-            });
-          }
+          // For 'add', foodItem is required by schema
+          await db.insert(mealFoodItems).values({
+            id: uuidv4(),
+            mealId,
+            name: change.foodItem.name,
+            portion: change.foodItem.portion,
+            calories: change.foodItem.calories,
+            protein: change.foodItem.protein,
+            fat: change.foodItem.fat,
+            carbs: change.foodItem.carbs,
+            createdAt: now,
+          });
           break;
         case 'remove':
-          if (change.foodItemId) {
-            await db.delete(mealFoodItems).where(
-              and(eq(mealFoodItems.id, change.foodItemId), eq(mealFoodItems.mealId, mealId))
-            );
-          }
+          // For 'remove', foodItemId is required by schema
+          await db.delete(mealFoodItems).where(
+            and(eq(mealFoodItems.id, change.foodItemId), eq(mealFoodItems.mealId, mealId))
+          );
           break;
-        case 'update':
-          if (change.foodItemId && change.foodItem) {
+        case 'update': {
+          // For 'update', foodItemId and foodItem are required by schema
+          // foodItem is partial - only update fields that are defined
+          const updateData: Record<string, unknown> = {};
+          if (change.foodItem.name !== undefined) updateData.name = change.foodItem.name;
+          if (change.foodItem.portion !== undefined) updateData.portion = change.foodItem.portion;
+          if (change.foodItem.calories !== undefined) updateData.calories = change.foodItem.calories;
+          if (change.foodItem.protein !== undefined) updateData.protein = change.foodItem.protein;
+          if (change.foodItem.fat !== undefined) updateData.fat = change.foodItem.fat;
+          if (change.foodItem.carbs !== undefined) updateData.carbs = change.foodItem.carbs;
+
+          if (Object.keys(updateData).length > 0) {
             await db
               .update(mealFoodItems)
-              .set({
-                name: change.foodItem.name,
-                portion: change.foodItem.portion,
-                calories: change.foodItem.calories,
-                protein: change.foodItem.protein,
-                fat: change.foodItem.fat,
-                carbs: change.foodItem.carbs,
-              })
+              .set(updateData)
               .where(
                 and(eq(mealFoodItems.id, change.foodItemId), eq(mealFoodItems.mealId, mealId))
               );
           }
           break;
+        }
       }
     }
 
