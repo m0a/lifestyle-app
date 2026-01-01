@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { mealAnalysisApi, type MealChatEvent } from '../../lib/api';
+import { mealAnalysisApi } from '../../lib/api';
 import { useToast } from '../ui/Toast';
 import type { FoodItem, NutritionTotals, FoodItemChange, ChatMessage } from '@lifestyle-app/shared';
 
@@ -17,7 +17,7 @@ interface DisplayMessage {
   isStreaming?: boolean;
 }
 
-export function MealChat({ mealId, currentFoodItems, onUpdate }: MealChatProps) {
+export function MealChat({ mealId, currentFoodItems: _currentFoodItems, onUpdate }: MealChatProps) {
   const toast = useToast();
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [input, setInput] = useState('');
