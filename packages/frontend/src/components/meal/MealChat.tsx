@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { mealAnalysisApi, type MealChatEvent } from '../../lib/api';
+import { useToast } from '../ui/Toast';
 import type { FoodItem, NutritionTotals, FoodItemChange, ChatMessage } from '@lifestyle-app/shared';
 
 interface MealChatProps {
@@ -17,6 +18,7 @@ interface DisplayMessage {
 }
 
 export function MealChat({ mealId, currentFoodItems, onUpdate }: MealChatProps) {
+  const toast = useToast();
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -38,10 +40,14 @@ export function MealChat({ mealId, currentFoodItems, onUpdate }: MealChatProps) 
         );
       } catch (error) {
         console.error('Failed to load chat history:', error);
+        // Show error but don't block chat functionality
+        if (error instanceof TypeError && (error as TypeError).message === 'Failed to fetch') {
+          toast.warning('チャット履歴の読み込みに失敗しました');
+        }
       }
     };
     loadHistory();
-  }, [mealId]);
+  }, [mealId, toast]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -125,11 +131,16 @@ export function MealChat({ mealId, currentFoodItems, onUpdate }: MealChatProps) 
       const result = await mealAnalysisApi.applyChatSuggestion(mealId, pendingChanges);
       onUpdate(result.foodItems, result.updatedTotals);
       setPendingChanges([]);
+      toast.success('変更を適用しました');
     } catch (error) {
       console.error('Apply changes error:', error);
-      alert('変更の適用に失敗しました');
+      if (error instanceof TypeError && (error as TypeError).message === 'Failed to fetch') {
+        toast.error('ネットワークに接続できません');
+      } else {
+        toast.error('変更の適用に失敗しました');
+      }
     }
-  }, [mealId, pendingChanges, onUpdate]);
+  }, [mealId, pendingChanges, onUpdate, toast]);
 
   const handleKeyPress = useCallback(
     (e: React.KeyboardEvent) => {

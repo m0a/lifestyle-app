@@ -288,11 +288,16 @@
 - **Files**: `tests/e2e/meal-photo-analysis.spec.ts` (42 tests across chromium and mobile)
 
 ### Task 9.4: Error handling & edge cases
-- [ ] Non-food photo detection handling
-- [ ] Network error handling
-- [ ] AI service error handling
-- [ ] File size/type validation errors
-- **Files**: Various
+- [x] Non-food photo detection handling (backend returns 422 with 'not_food' error)
+- [x] Network error handling (frontend shows user-friendly error messages)
+- [x] AI service error handling (backend catches and returns proper error responses)
+- [x] File size/type validation errors (backend validates, frontend shows errors)
+- **Files**: `packages/frontend/src/pages/MealAnalysis.tsx`, `packages/frontend/src/components/meal/MealChat.tsx`
+- **Improvements**:
+  - Added try-catch to all food item CRUD handlers
+  - Replaced alert() with Toast notifications
+  - Added network error detection with Japanese messages
+  - Added success toast for save and apply actions
 
 ### Task 9.5: Performance optimization
 - [ ] Verify analysis completes within 10 seconds

@@ -3,8 +3,20 @@ import { useNavigate } from 'react-router-dom';
 import { PhotoCapture } from '../components/meal/PhotoCapture';
 import { AnalysisResult } from '../components/meal/AnalysisResult';
 import { MealChat } from '../components/meal/MealChat';
+import { useToast } from '../components/ui/Toast';
 import { mealAnalysisApi, type MealAnalysisResponse } from '../lib/api';
 import type { FoodItem, NutritionTotals, MealType, AnalysisFailure } from '@lifestyle-app/shared';
+
+// Helper to get user-friendly error message
+function getErrorMessage(error: unknown): string {
+  if (error instanceof TypeError && error.message === 'Failed to fetch') {
+    return 'ネットワークに接続できません。インターネット接続を確認してください。';
+  }
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return '予期しないエラーが発生しました';
+}
 
 type AnalysisState =
   | { phase: 'capture' }
@@ -14,6 +26,7 @@ type AnalysisState =
 
 export default function MealAnalysisPage() {
   const navigate = useNavigate();
+  const toast = useToast();
   const [state, setState] = useState<AnalysisState>({ phase: 'capture' });
   const [showChat, setShowChat] = useState(false);
   const [selectedMealType, setSelectedMealType] = useState<MealType>('lunch');
@@ -52,44 +65,59 @@ export default function MealAnalysisPage() {
     async (itemId: string, updates: Partial<FoodItem>) => {
       if (state.phase !== 'result') return;
 
-      const result = await mealAnalysisApi.updateFoodItem(state.mealId, itemId, updates);
-      setState({
-        ...state,
-        foodItems: state.foodItems.map((item) =>
-          item.id === itemId ? result.foodItem : item
-        ),
-        totals: result.updatedTotals,
-      });
+      try {
+        const result = await mealAnalysisApi.updateFoodItem(state.mealId, itemId, updates);
+        setState({
+          ...state,
+          foodItems: state.foodItems.map((item) =>
+            item.id === itemId ? result.foodItem : item
+          ),
+          totals: result.updatedTotals,
+        });
+      } catch (error) {
+        console.error('Update item error:', error);
+        toast.error(getErrorMessage(error));
+      }
     },
-    [state]
+    [state, toast]
   );
 
   const handleDeleteItem = useCallback(
     async (itemId: string) => {
       if (state.phase !== 'result') return;
 
-      const result = await mealAnalysisApi.deleteFoodItem(state.mealId, itemId);
-      setState({
-        ...state,
-        foodItems: state.foodItems.filter((item) => item.id !== itemId),
-        totals: result.updatedTotals,
-      });
+      try {
+        const result = await mealAnalysisApi.deleteFoodItem(state.mealId, itemId);
+        setState({
+          ...state,
+          foodItems: state.foodItems.filter((item) => item.id !== itemId),
+          totals: result.updatedTotals,
+        });
+      } catch (error) {
+        console.error('Delete item error:', error);
+        toast.error(getErrorMessage(error));
+      }
     },
-    [state]
+    [state, toast]
   );
 
   const handleAddItem = useCallback(
     async (item: Omit<FoodItem, 'id'>) => {
       if (state.phase !== 'result') return;
 
-      const result = await mealAnalysisApi.addFoodItem(state.mealId, item);
-      setState({
-        ...state,
-        foodItems: [...state.foodItems, result.foodItem],
-        totals: result.updatedTotals,
-      });
+      try {
+        const result = await mealAnalysisApi.addFoodItem(state.mealId, item);
+        setState({
+          ...state,
+          foodItems: [...state.foodItems, result.foodItem],
+          totals: result.updatedTotals,
+        });
+      } catch (error) {
+        console.error('Add item error:', error);
+        toast.error(getErrorMessage(error));
+      }
     },
-    [state]
+    [state, toast]
   );
 
   const handleChatUpdate = useCallback(
@@ -106,14 +134,15 @@ export default function MealAnalysisPage() {
     setIsSaving(true);
     try {
       await mealAnalysisApi.saveMealAnalysis(state.mealId, selectedMealType);
+      toast.success('食事を記録しました');
       navigate('/meal');
     } catch (error) {
       console.error('Save error:', error);
-      alert('保存に失敗しました');
+      toast.error(getErrorMessage(error));
     } finally {
       setIsSaving(false);
     }
-  }, [state, selectedMealType, navigate]);
+  }, [state, selectedMealType, navigate, toast]);
 
   const handleReset = useCallback(() => {
     setState({ phase: 'capture' });
