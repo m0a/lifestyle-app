@@ -114,7 +114,7 @@
 - [x] T032 Remove unused imports and dead code from modified files
 - [x] T033 Run pnpm lint and fix any linting errors
 - [x] T034 Run pnpm test and ensure all tests pass
-- [ ] T035 Manual E2E test following quickstart.md scenarios
+- [x] T035 Manual E2E test following quickstart.md scenarios
 
 ---
 
