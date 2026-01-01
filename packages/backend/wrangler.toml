@@ -19,3 +19,19 @@ database_id = "86957e0a-04b6-4530-9b64-79ea36c64ba5"
 [[r2_buckets]]
 binding = "PHOTOS"
 bucket_name = "lifestyle-app-photos"
+
+# Preview environment configuration
+[env.preview]
+name = "lifestyle-tracker-preview"
+
+[env.preview.vars]
+ENVIRONMENT = "preview"
+
+[[env.preview.d1_databases]]
+binding = "DB"
+database_name = "health-tracker-preview-db"
+database_id = "PREVIEW_DB_ID_PLACEHOLDER"
+
+[[env.preview.r2_buckets]]
+binding = "PHOTOS"
+bucket_name = "lifestyle-app-photos"
