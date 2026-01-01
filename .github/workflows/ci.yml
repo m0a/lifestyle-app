@@ -293,7 +293,7 @@ jobs:
           pnpm exec wrangler deploy --name lifestyle-tracker-pr-${{ github.event.pull_request.number }} \
             --var ENVIRONMENT:preview \
             --var AI_PROVIDER:google \
-            --var AI_MODEL:gemini-3-flash
+            --var AI_MODEL:gemini-3-flash-preview
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
