@@ -1,6 +1,8 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import type { MealRecord, UpdateMealInput } from '@lifestyle-app/shared';
 import { MEAL_TYPE_LABELS } from '@lifestyle-app/shared';
+import { getPhotoUrl } from '../../lib/api';
 
 interface MealListProps {
   meals: MealRecord[];
@@ -151,43 +153,79 @@ export function MealList({
                     </div>
                   </div>
                 ) : (
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3">
-                        <span
-                          className={`rounded-full px-2 py-1 text-xs font-medium ${getMealTypeColor(
-                            meal.mealType
-                          )}`}
+                  <div className="flex gap-3">
+                    {/* Photo thumbnail - clickable to detail */}
+                    {meal.photoKey && (
+                      <Link to={`/meals/${meal.id}`} className="flex-shrink-0">
+                        <img
+                          src={getPhotoUrl(meal.photoKey) || undefined}
+                          alt={meal.content}
+                          className="h-16 w-16 rounded-lg object-cover hover:opacity-80 transition-opacity"
+                        />
+                      </Link>
+                    )}
+                    <div className="flex flex-1 items-start justify-between">
+                      <Link to={`/meals/${meal.id}`} className="flex-1 hover:opacity-80 transition-opacity">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span
+                            className={`rounded-full px-2 py-1 text-xs font-medium ${getMealTypeColor(
+                              meal.mealType
+                            )}`}
+                          >
+                            {MEAL_TYPE_LABELS[meal.mealType as keyof typeof MEAL_TYPE_LABELS]}
+                          </span>
+                          {/* Analysis source badge */}
+                          {meal.analysisSource && (
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-xs ${
+                                meal.analysisSource === 'ai'
+                                  ? 'bg-purple-100 text-purple-700'
+                                  : 'bg-gray-100 text-gray-600'
+                              }`}
+                            >
+                              {meal.analysisSource === 'ai' ? 'AI分析' : '手動入力'}
+                            </span>
+                          )}
+                          <span className="text-sm text-gray-500">
+                            {new Date(meal.recordedAt).toLocaleTimeString('ja-JP', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-gray-900">{meal.content}</p>
+                        {/* Nutrition info */}
+                        <div className="mt-1 flex flex-wrap gap-2 text-sm text-gray-500">
+                          {meal.calories != null && (
+                            <span className="font-medium text-gray-700">
+                              {meal.calories.toLocaleString()} kcal
+                            </span>
+                          )}
+                          {meal.totalProtein != null && (
+                            <span>P: {meal.totalProtein}g</span>
+                          )}
+                          {meal.totalFat != null && (
+                            <span>F: {meal.totalFat}g</span>
+                          )}
+                          {meal.totalCarbs != null && (
+                            <span>C: {meal.totalCarbs}g</span>
+                          )}
+                        </div>
+                      </Link>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleEdit(meal)}
+                          className="text-sm text-blue-600 hover:text-blue-800"
                         >
-                          {MEAL_TYPE_LABELS[meal.mealType as keyof typeof MEAL_TYPE_LABELS]}
-                        </span>
-                        <span className="text-sm text-gray-500">
-                          {new Date(meal.recordedAt).toLocaleTimeString('ja-JP', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </span>
+                          編集
+                        </button>
+                        <button
+                          onClick={() => setDeleteConfirmId(meal.id)}
+                          className="text-sm text-red-600 hover:text-red-800"
+                        >
+                          削除
+                        </button>
                       </div>
-                      <p className="mt-2 text-gray-900">{meal.content}</p>
-                      {meal.calories && (
-                        <p className="mt-1 text-sm text-gray-500">
-                          {meal.calories.toLocaleString()} kcal
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleEdit(meal)}
-                        className="text-sm text-blue-600 hover:text-blue-800"
-                      >
-                        編集
-                      </button>
-                      <button
-                        onClick={() => setDeleteConfirmId(meal.id)}
-                        className="text-sm text-red-600 hover:text-red-800"
-                      >
-                        削除
-                      </button>
                     </div>
                   </div>
                 )}

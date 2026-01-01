@@ -1,0 +1,562 @@
+openapi: 3.1.0
+info:
+  title: AI Meal Analysis API
+  version: 1.0.0
+  description: 食事写真のAI分析とチャット調整機能のAPI
+
+servers:
+  - url: /api
+    description: Backend API
+
+paths:
+  /meals/analyze:
+    post:
+      summary: 食事写真をAI分析
+      description: アップロードされた写真から食事内容を識別し、カロリー・栄養素を推定
+      operationId: analyzeMealPhoto
+      tags:
+        - Meal Analysis
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - photo
+              properties:
+                photo:
+                  type: string
+                  format: binary
+                  description: 食事写真（JPEG/PNG、最大10MB）
+                mealType:
+                  $ref: '#/components/schemas/MealType'
+      responses:
+        '200':
+          description: 分析成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalysisResult'
+        '400':
+          description: 無効なリクエスト（非画像ファイル等）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: 食事を識別できなかった
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalysisFailure'
+
+  /meals/{mealId}/food-items:
+    get:
+      summary: 食材一覧取得
+      operationId: getMealFoodItems
+      tags:
+        - Meal Analysis
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: mealId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  foodItems:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/FoodItem'
+
+    post:
+      summary: 食材追加
+      operationId: addFoodItem
+      tags:
+        - Meal Analysis
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: mealId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateFoodItem'
+      responses:
+        '201':
+          description: 追加成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  foodItem:
+                    $ref: '#/components/schemas/FoodItem'
+                  updatedTotals:
+                    $ref: '#/components/schemas/NutritionTotals'
+
+  /meals/{mealId}/food-items/{foodItemId}:
+    patch:
+      summary: 食材更新
+      operationId: updateFoodItem
+      tags:
+        - Meal Analysis
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: mealId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: foodItemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateFoodItem'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  foodItem:
+                    $ref: '#/components/schemas/FoodItem'
+                  updatedTotals:
+                    $ref: '#/components/schemas/NutritionTotals'
+
+    delete:
+      summary: 食材削除
+      operationId: deleteFoodItem
+      tags:
+        - Meal Analysis
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: mealId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: foodItemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 削除成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  updatedTotals:
+                    $ref: '#/components/schemas/NutritionTotals'
+
+  /meals/{mealId}/chat:
+    get:
+      summary: チャット履歴取得
+      operationId: getMealChatHistory
+      tags:
+        - Meal Chat
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: mealId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  messages:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ChatMessage'
+
+    post:
+      summary: チャットメッセージ送信
+      description: ストリーミング応答を返す
+      operationId: sendChatMessage
+      tags:
+        - Meal Chat
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: mealId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - message
+              properties:
+                message:
+                  type: string
+                  minLength: 1
+                  maxLength: 1000
+      responses:
+        '200':
+          description: ストリーミング応答
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: Server-Sent Events形式のストリーミング応答
+
+  /meals/{mealId}/chat/apply:
+    post:
+      summary: チャット提案を適用
+      operationId: applyChatSuggestion
+      tags:
+        - Meal Chat
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: mealId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - changes
+              properties:
+                changes:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/FoodItemChange'
+      responses:
+        '200':
+          description: 適用成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  foodItems:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/FoodItem'
+                  updatedTotals:
+                    $ref: '#/components/schemas/NutritionTotals'
+
+  /meals/{mealId}/save:
+    post:
+      summary: 分析結果を食事記録として保存
+      operationId: saveMealAnalysis
+      tags:
+        - Meal Analysis
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: mealId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mealType
+              properties:
+                mealType:
+                  $ref: '#/components/schemas/MealType'
+                recordedAt:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: 保存成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  meal:
+                    $ref: '#/components/schemas/MealRecord'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+
+  schemas:
+    MealType:
+      type: string
+      enum: [breakfast, lunch, dinner, snack]
+
+    Portion:
+      type: string
+      enum: [small, medium, large]
+
+    FoodItem:
+      type: object
+      required:
+        - id
+        - name
+        - portion
+        - calories
+        - protein
+        - fat
+        - carbs
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        portion:
+          $ref: '#/components/schemas/Portion'
+        calories:
+          type: integer
+        protein:
+          type: number
+        fat:
+          type: number
+        carbs:
+          type: number
+
+    CreateFoodItem:
+      type: object
+      required:
+        - name
+        - portion
+        - calories
+        - protein
+        - fat
+        - carbs
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        portion:
+          $ref: '#/components/schemas/Portion'
+        calories:
+          type: integer
+          minimum: 0
+          maximum: 5000
+        protein:
+          type: number
+          minimum: 0
+          maximum: 200
+        fat:
+          type: number
+          minimum: 0
+          maximum: 200
+        carbs:
+          type: number
+          minimum: 0
+          maximum: 500
+
+    UpdateFoodItem:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        portion:
+          $ref: '#/components/schemas/Portion'
+        calories:
+          type: integer
+          minimum: 0
+          maximum: 5000
+        protein:
+          type: number
+          minimum: 0
+          maximum: 200
+        fat:
+          type: number
+          minimum: 0
+          maximum: 200
+        carbs:
+          type: number
+          minimum: 0
+          maximum: 500
+
+    NutritionTotals:
+      type: object
+      properties:
+        calories:
+          type: integer
+        protein:
+          type: number
+        fat:
+          type: number
+        carbs:
+          type: number
+
+    AnalysisResult:
+      type: object
+      required:
+        - mealId
+        - photoKey
+        - foodItems
+        - totals
+      properties:
+        mealId:
+          type: string
+          format: uuid
+        photoKey:
+          type: string
+        foodItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/FoodItem'
+        totals:
+          $ref: '#/components/schemas/NutritionTotals'
+
+    AnalysisFailure:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          enum: [not_food, analysis_failed]
+        message:
+          type: string
+
+    ChatMessage:
+      type: object
+      required:
+        - id
+        - role
+        - content
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum: [user, assistant]
+        content:
+          type: string
+        appliedChanges:
+          type: array
+          items:
+            $ref: '#/components/schemas/FoodItemChange'
+        createdAt:
+          type: string
+          format: date-time
+
+    FoodItemChange:
+      type: object
+      required:
+        - action
+      properties:
+        action:
+          type: string
+          enum: [add, remove, update]
+        foodItem:
+          $ref: '#/components/schemas/CreateFoodItem'
+        foodItemId:
+          type: string
+          format: uuid
+
+    MealRecord:
+      type: object
+      required:
+        - id
+        - mealType
+        - content
+        - recordedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        mealType:
+          $ref: '#/components/schemas/MealType'
+        content:
+          type: string
+        calories:
+          type: integer
+        photoKey:
+          type: string
+        totalProtein:
+          type: number
+        totalFat:
+          type: number
+        totalCarbs:
+          type: number
+        analysisSource:
+          type: string
+          enum: [ai, manual]
+        recordedAt:
+          type: string
+          format: date-time
+
+    Error:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+        message:
+          type: string

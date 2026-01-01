@@ -97,3 +97,6 @@ export const dateRangeSchema = z.object({
 // Dashboard schema
 export const dashboardPeriodSchema = z.enum(['week', 'month']);
 export type DashboardPeriod = z.infer<typeof dashboardPeriodSchema>;
+
+// Meal analysis schemas
+export * from './meal-analysis';

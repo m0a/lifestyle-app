@@ -11,10 +11,16 @@ import { exercises } from './routes/exercises';
 import { dashboard } from './routes/dashboard';
 import { user } from './routes/user';
 import { logs } from './routes/logs';
+import { mealAnalysis } from './routes/meal-analysis';
+import { mealChat } from './routes/meal-chat';
 
 type Bindings = {
   DB: D1Database;
   ENVIRONMENT: string;
+  PHOTOS: R2Bucket;
+  GOOGLE_GENERATIVE_AI_API_KEY?: string;
+  AI_PROVIDER?: string;
+  AI_MODEL?: string;
 };
 
 type Variables = {
@@ -82,6 +88,8 @@ const routes = app
   .route('/api/auth', auth)
   .route('/api/weights', weights)
   .route('/api/meals', meals)
+  .route('/api/meals', mealAnalysis)
+  .route('/api/meals', mealChat)
   .route('/api/exercises', exercises)
   .route('/api/dashboard', dashboard)
   .route('/api/user', user)
