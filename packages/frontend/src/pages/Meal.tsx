@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useMeals } from '../hooks/useMeals';
 import { MealInput } from '../components/meal/MealInput';
 import { MealList } from '../components/meal/MealList';
@@ -56,9 +57,21 @@ export function Meal() {
         />
       )}
 
+      {/* AI Analysis Link */}
+      <Link
+        to="/meals/analyze"
+        className="flex items-center justify-center gap-3 rounded-lg bg-gradient-to-r from-blue-500 to-purple-500 p-4 text-white shadow-md hover:from-blue-600 hover:to-purple-600"
+      >
+        <span className="text-2xl">📸</span>
+        <div>
+          <div className="font-semibold">AI食事分析</div>
+          <div className="text-sm opacity-90">写真を撮ってカロリーを自動計算</div>
+        </div>
+      </Link>
+
       {/* Input Form */}
       <div className="rounded-lg border border-gray-200 bg-white p-6">
-        <h2 className="mb-4 text-lg font-semibold text-gray-900">食事を記録</h2>
+        <h2 className="mb-4 text-lg font-semibold text-gray-900">食事を記録（手動入力）</h2>
         <MealInput
           onSubmit={create}
           isLoading={isCreating}

@@ -1,4 +1,5 @@
 import { createBrowserRouter, type RouteObject } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
 import { Layout } from './components/Layout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Login } from './pages/Login';
@@ -8,6 +9,10 @@ import { Meal } from './pages/Meal';
 import { Exercise } from './pages/Exercise';
 import { Dashboard } from './pages/Dashboard';
 import { Settings } from './pages/Settings';
+
+// Lazy load meal pages
+const MealAnalysis = lazy(() => import('./pages/MealAnalysis'));
+const MealDetail = lazy(() => import('./pages/MealDetail'));
 
 // Home component
 function Home() {
@@ -58,6 +63,30 @@ const routes: RouteObject[] = [
       <Layout>
         <ProtectedRoute>
           <Meal />
+        </ProtectedRoute>
+      </Layout>
+    ),
+  },
+  {
+    path: '/meals/analyze',
+    element: (
+      <Layout>
+        <ProtectedRoute>
+          <Suspense fallback={<div className="p-4 text-center">読み込み中...</div>}>
+            <MealAnalysis />
+          </Suspense>
+        </ProtectedRoute>
+      </Layout>
+    ),
+  },
+  {
+    path: '/meals/:mealId',
+    element: (
+      <Layout>
+        <ProtectedRoute>
+          <Suspense fallback={<div className="p-4 text-center">読み込み中...</div>}>
+            <MealDetail />
+          </Suspense>
         </ProtectedRoute>
       </Layout>
     ),

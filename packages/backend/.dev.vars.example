@@ -1,0 +1,7 @@
+# AI Configuration
+# Get your API key from https://makersuite.google.com/app/apikey
+GOOGLE_GENERATIVE_AI_API_KEY=your-google-ai-api-key-here
+
+# AI Provider settings
+AI_PROVIDER=google
+AI_MODEL=gemini-3-flash

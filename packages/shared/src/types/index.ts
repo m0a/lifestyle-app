@@ -49,6 +49,11 @@ export interface MealRecord {
   mealType: MealType;
   content: string;
   calories: number | null;
+  photoKey: string | null;
+  totalProtein: number | null;
+  totalFat: number | null;
+  totalCarbs: number | null;
+  analysisSource: 'ai' | 'manual' | null;
   recordedAt: string;
   createdAt: string;
   updatedAt: string;

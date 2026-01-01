@@ -14,3 +14,8 @@ ENVIRONMENT = "production"
 binding = "DB"
 database_name = "health-tracker-db"
 database_id = "86957e0a-04b6-4530-9b64-79ea36c64ba5"
+
+# R2 bucket for meal photos
+[[r2_buckets]]
+binding = "PHOTOS"
+bucket_name = "lifestyle-app-photos"
