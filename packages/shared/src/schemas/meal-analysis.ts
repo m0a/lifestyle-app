@@ -121,3 +121,31 @@ export const applyChatSuggestionSchema = z.object({
   changes: z.array(foodItemChangeSchema),
 });
 export type ApplyChatSuggestion = z.infer<typeof applyChatSuggestionSchema>;
+
+// Text analysis request (T001, T003)
+export const textAnalysisRequestSchema = z.object({
+  text: z.string().min(1, 'テキストを入力してください').max(500),
+  currentTime: z.string().datetime().optional(),
+});
+export type TextAnalysisRequest = z.infer<typeof textAnalysisRequestSchema>;
+
+// Meal type source for text analysis
+export const mealTypeSourceSchema = z.enum(['text', 'time']);
+export type MealTypeSource = z.infer<typeof mealTypeSourceSchema>;
+
+// Text analysis response (T002)
+export const textAnalysisResponseSchema = z.object({
+  mealId: z.string().uuid(),
+  foodItems: z.array(foodItemSchema),
+  totals: nutritionTotalsSchema,
+  inferredMealType: z.enum(['breakfast', 'lunch', 'dinner', 'snack']),
+  mealTypeSource: mealTypeSourceSchema,
+});
+export type TextAnalysisResponse = z.infer<typeof textAnalysisResponseSchema>;
+
+// Text analysis error
+export const textAnalysisErrorSchema = z.object({
+  error: z.enum(['analysis_failed', 'timeout', 'invalid_input']),
+  message: z.string(),
+});
+export type TextAnalysisError = z.infer<typeof textAnalysisErrorSchema>;

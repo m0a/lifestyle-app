@@ -1,0 +1,193 @@
+openapi: 3.0.3
+info:
+  title: 食事入力フロー改善 API
+  version: 1.0.0
+  description: テキスト入力からAI分析を行う新規エンドポイント
+
+servers:
+  - url: /api
+
+paths:
+  /meals/analyze-text:
+    post:
+      summary: テキストから食事を分析
+      description: |
+        ユーザーが入力したテキストからAIがカロリー・栄養素を推定し、
+        食事タイプも自動判定する。
+      operationId: analyzeMealText
+      tags:
+        - meals
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TextAnalysisRequest'
+            examples:
+              simple:
+                summary: シンプルな入力
+                value:
+                  text: "ラーメン"
+              withMealType:
+                summary: 食事タイプを含む
+                value:
+                  text: "昼にカレーライス食べた"
+              withTime:
+                summary: 時刻指定
+                value:
+                  text: "カツ丼"
+                  currentTime: "2026-01-01T12:30:00Z"
+      responses:
+        '200':
+          description: 分析成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TextAnalysisResponse'
+        '400':
+          description: 入力エラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TextAnalysisError'
+        '422':
+          description: 分析失敗
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TextAnalysisError'
+        '408':
+          description: タイムアウト
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TextAnalysisError'
+        '401':
+          description: 認証エラー
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+
+  schemas:
+    TextAnalysisRequest:
+      type: object
+      required:
+        - text
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 500
+          description: 食事内容のテキスト
+          example: "昼にラーメン食べた"
+        currentTime:
+          type: string
+          format: date-time
+          description: 現在時刻（省略時はサーバー時刻）
+          example: "2026-01-01T12:30:00Z"
+
+    TextAnalysisResponse:
+      type: object
+      required:
+        - mealId
+        - foodItems
+        - totals
+        - inferredMealType
+        - mealTypeSource
+      properties:
+        mealId:
+          type: string
+          format: uuid
+          description: 作成された食事記録のID
+        foodItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/FoodItem'
+        totals:
+          $ref: '#/components/schemas/NutritionTotals'
+        inferredMealType:
+          $ref: '#/components/schemas/MealType'
+        mealTypeSource:
+          type: string
+          enum: [text, time]
+          description: 食事タイプの推定ソース
+
+    TextAnalysisError:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          enum: [analysis_failed, timeout, invalid_input]
+        message:
+          type: string
+          description: エラーメッセージ（日本語）
+
+    FoodItem:
+      type: object
+      required:
+        - id
+        - name
+        - portion
+        - calories
+        - protein
+        - fat
+        - carbs
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: "ラーメン"
+        portion:
+          type: string
+          enum: [small, medium, large]
+        calories:
+          type: integer
+          minimum: 0
+          example: 450
+        protein:
+          type: number
+          minimum: 0
+          example: 20.0
+        fat:
+          type: number
+          minimum: 0
+          example: 15.0
+        carbs:
+          type: number
+          minimum: 0
+          example: 60.0
+
+    NutritionTotals:
+      type: object
+      required:
+        - calories
+        - protein
+        - fat
+        - carbs
+      properties:
+        calories:
+          type: integer
+          minimum: 0
+        protein:
+          type: number
+          minimum: 0
+        fat:
+          type: number
+          minimum: 0
+        carbs:
+          type: number
+          minimum: 0
+
+    MealType:
+      type: string
+      enum: [breakfast, lunch, dinner, snack]

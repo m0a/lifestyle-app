@@ -1,9 +1,10 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useCallback } from 'react';
 import { useMeals } from '../hooks/useMeals';
 import { MealInput } from '../components/meal/MealInput';
 import { MealList } from '../components/meal/MealList';
 import { CalorieSummary } from '../components/meal/CalorieSummary';
+import { SmartMealInput } from '../components/meal/SmartMealInput';
+import { mealAnalysisApi } from '../lib/api';
 import type { MealType } from '@lifestyle-app/shared';
 import { MEAL_TYPE_LABELS } from '@lifestyle-app/shared';
 
@@ -18,11 +19,17 @@ export function Meal() {
     create,
     update,
     remove,
+    refresh,
     isCreating,
     isUpdating,
     isDeleting,
     createError,
   } = useMeals(filterType ? { mealType: filterType } : undefined);
+
+  // Save meal from SmartMealInput
+  const handleSmartSave = useCallback(async (mealId: string, mealType: MealType) => {
+    await mealAnalysisApi.saveMealAnalysis(mealId, mealType);
+  }, []);
 
   if (isLoading) {
     return (
@@ -57,17 +64,11 @@ export function Meal() {
         />
       )}
 
-      {/* AI Analysis Link */}
-      <Link
-        to="/meals/analyze"
-        className="flex items-center justify-center gap-3 rounded-lg bg-gradient-to-r from-blue-500 to-purple-500 p-4 text-white shadow-md hover:from-blue-600 hover:to-purple-600"
-      >
-        <span className="text-2xl">📸</span>
-        <div>
-          <div className="font-semibold">AI食事分析</div>
-          <div className="text-sm opacity-90">写真を撮ってカロリーを自動計算</div>
-        </div>
-      </Link>
+      {/* Smart Meal Input (T018) */}
+      <div>
+        <h2 className="mb-3 text-lg font-semibold text-gray-900">AI食事記録</h2>
+        <SmartMealInput onSave={handleSmartSave} onRefresh={refresh} />
+      </div>
 
       {/* Input Form */}
       <div className="rounded-lg border border-gray-200 bg-white p-6">

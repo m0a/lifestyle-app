@@ -12,8 +12,10 @@ import {
   createFoodItemSchema,
   updateFoodItemSchema,
   saveMealAnalysisSchema,
+  textAnalysisRequestSchema,
   type FoodItem,
   type NutritionTotals,
+  type TextAnalysisResponse,
 } from '@lifestyle-app/shared';
 
 type Bindings = {
@@ -148,6 +150,70 @@ mealAnalysis.post('/analyze', async (c) => {
     throw error;
   }
 });
+
+// POST /api/meals/analyze-text - Analyze meal from text input (T007)
+mealAnalysis.post(
+  '/analyze-text',
+  zValidator('json', textAnalysisRequestSchema),
+  async (c) => {
+    const data = c.req.valid('json');
+    const db = c.get('db');
+    const userId = c.get('user').id;
+
+    const aiConfig = getAIConfigFromEnv(c.env);
+    const aiService = new AIAnalysisService(aiConfig);
+    const analysisResult = await aiService.analyzeMealText(data.text, data.currentTime);
+
+    if (!analysisResult.success) {
+      return c.json(analysisResult.failure, 422);
+    }
+
+    // Create meal record
+    const mealId = uuidv4();
+    const now = new Date().toISOString();
+
+    await db.insert(mealRecords).values({
+      id: mealId,
+      userId,
+      mealType: analysisResult.result.inferredMealType,
+      content: analysisResult.result.foodItems.map((f) => f.name).join(', '),
+      calories: analysisResult.result.totals.calories,
+      photoKey: null,
+      totalProtein: analysisResult.result.totals.protein,
+      totalFat: analysisResult.result.totals.fat,
+      totalCarbs: analysisResult.result.totals.carbs,
+      analysisSource: 'ai',
+      recordedAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // Insert food items
+    for (const item of analysisResult.result.foodItems) {
+      await db.insert(mealFoodItems).values({
+        id: item.id,
+        mealId,
+        name: item.name,
+        portion: item.portion,
+        calories: item.calories,
+        protein: item.protein,
+        fat: item.fat,
+        carbs: item.carbs,
+        createdAt: now,
+      });
+    }
+
+    const response: TextAnalysisResponse = {
+      mealId,
+      foodItems: analysisResult.result.foodItems,
+      totals: analysisResult.result.totals,
+      inferredMealType: analysisResult.result.inferredMealType,
+      mealTypeSource: analysisResult.result.mealTypeSource,
+    };
+
+    return c.json(response);
+  }
+);
 
 // POST /api/meals/create-empty - Create empty meal for manual input
 mealAnalysis.post('/create-empty', async (c) => {

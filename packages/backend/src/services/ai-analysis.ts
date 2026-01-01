@@ -2,7 +2,15 @@ import { generateObject } from 'ai';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 import { getAIProvider, getModelId, type AIConfig } from '../lib/ai-provider';
-import type { FoodItem, NutritionTotals, AnalysisResult, AnalysisFailure } from '@lifestyle-app/shared';
+import type {
+  FoodItem,
+  NutritionTotals,
+  AnalysisResult,
+  AnalysisFailure,
+  TextAnalysisResponse,
+  TextAnalysisError,
+  MealTypeSource,
+} from '@lifestyle-app/shared';
 
 // Schema for AI response validation
 const aiResponseSchema = z.object({
@@ -19,6 +27,49 @@ const aiResponseSchema = z.object({
   isFood: z.boolean(),
   message: z.string().optional(),
 });
+
+// Schema for text-based AI response validation (T005)
+const aiTextResponseSchema = z.object({
+  foods: z.array(
+    z.object({
+      name: z.string(),
+      portion: z.enum(['small', 'medium', 'large']),
+      calories: z.number().int(),
+      protein: z.number(),
+      fat: z.number(),
+      carbs: z.number(),
+    })
+  ),
+  mealType: z.enum(['breakfast', 'lunch', 'dinner', 'snack']).nullable(),
+  mealTypeFromText: z.boolean(),
+});
+
+const TEXT_ANALYSIS_PROMPT = `あなたは食事の栄養分析の専門家です。
+ユーザーが入力したテキストから食事内容を分析し、以下のJSON形式で結果を返してください。
+
+## 出力形式
+{
+  "foods": [
+    {
+      "name": "食材名（日本語）",
+      "portion": "small" | "medium" | "large",
+      "calories": 推定カロリー（整数）,
+      "protein": タンパク質g（小数点1桁）,
+      "fat": 脂質g（小数点1桁）,
+      "carbs": 炭水化物g（小数点1桁）
+    }
+  ],
+  "mealType": "breakfast" | "lunch" | "dinner" | "snack" | null,
+  "mealTypeFromText": true/false
+}
+
+## ルール
+- テキストから全ての食材を識別してください
+- カロリーと栄養素は一般的な量を基準に推定してください
+- portion は「大盛り」「小さめ」などのテキストがあれば反映、なければ medium
+- 「朝ごはん」「昼食」「ランチ」「夕飯」「夜食」「おやつ」などのキーワードがあれば mealType を設定し mealTypeFromText を true に
+- キーワードがなければ mealType は null、mealTypeFromText は false
+- 日本の食事に対応してください（和食、洋食、中華等）`;
 
 const MEAL_ANALYSIS_PROMPT = `あなたは食事の栄養分析の専門家です。
 提供された食事の写真を分析し、以下のJSON形式で結果を返してください。
@@ -138,6 +189,88 @@ export class AIAnalysisService {
     );
   }
 
+  /**
+   * Analyze meal from text input and return nutritional info with meal type (T005).
+   */
+  async analyzeMealText(
+    text: string,
+    currentTime?: string
+  ): Promise<
+    | { success: true; result: Omit<TextAnalysisResponse, 'mealId'> }
+    | { success: false; failure: TextAnalysisError }
+  > {
+    try {
+      const provider = getAIProvider(this.config);
+      const modelId = getModelId(this.config);
+
+      const { object } = await generateObject({
+        model: provider(modelId),
+        schema: aiTextResponseSchema,
+        messages: [
+          {
+            role: 'user',
+            content: `${TEXT_ANALYSIS_PROMPT}\n\n入力テキスト: ${text}`,
+          },
+        ],
+      });
+
+      if (object.foods.length === 0) {
+        return {
+          success: false,
+          failure: {
+            error: 'analysis_failed',
+            message: '食事内容を識別できませんでした。もう一度入力してください。',
+          },
+        };
+      }
+
+      // Convert AI response to FoodItem format with UUIDs
+      const foodItems: FoodItem[] = object.foods.map((food) => ({
+        id: uuidv4(),
+        name: food.name,
+        portion: food.portion,
+        calories: food.calories,
+        protein: Math.round(food.protein * 10) / 10,
+        fat: Math.round(food.fat * 10) / 10,
+        carbs: Math.round(food.carbs * 10) / 10,
+      }));
+
+      // Calculate totals
+      const totals = this.calculateTotals(foodItems);
+
+      // Determine meal type and source
+      let inferredMealType: 'breakfast' | 'lunch' | 'dinner' | 'snack';
+      let mealTypeSource: MealTypeSource;
+
+      if (object.mealTypeFromText && object.mealType) {
+        inferredMealType = object.mealType;
+        mealTypeSource = 'text';
+      } else {
+        inferredMealType = inferMealType(currentTime);
+        mealTypeSource = 'time';
+      }
+
+      return {
+        success: true,
+        result: {
+          foodItems,
+          totals,
+          inferredMealType,
+          mealTypeSource,
+        },
+      };
+    } catch (error) {
+      console.error('AI text analysis error:', error);
+      return {
+        success: false,
+        failure: {
+          error: 'analysis_failed',
+          message: '分析中にエラーが発生しました。しばらくしてからお試しください。',
+        },
+      };
+    }
+  }
+
   private arrayBufferToBase64(buffer: ArrayBuffer): string {
     const bytes = new Uint8Array(buffer);
     let binary = '';
@@ -145,5 +278,24 @@ export class AIAnalysisService {
       binary += String.fromCharCode(bytes[i]);
     }
     return btoa(binary);
+  }
+}
+
+/**
+ * Infer meal type from current time (T006).
+ * 6-10 → breakfast, 11-14 → lunch, 17-21 → dinner, else → snack
+ */
+export function inferMealType(currentTime?: string): 'breakfast' | 'lunch' | 'dinner' | 'snack' {
+  const date = currentTime ? new Date(currentTime) : new Date();
+  const hour = date.getHours();
+
+  if (hour >= 6 && hour < 10) {
+    return 'breakfast';
+  } else if (hour >= 11 && hour < 14) {
+    return 'lunch';
+  } else if (hour >= 17 && hour < 21) {
+    return 'dinner';
+  } else {
+    return 'snack';
   }
 }
