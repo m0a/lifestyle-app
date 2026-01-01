@@ -1,52 +1,30 @@
 interface ExerciseSummaryProps {
-  totalMinutes: number;
+  totalSets: number;
+  totalReps: number;
   count: number;
-  byType: Record<string, number>;
-  targetMinutes?: number;
+  byType: Record<string, { sets: number; reps: number }>;
 }
 
 export function ExerciseSummary({
-  totalMinutes,
+  totalSets,
+  totalReps,
   count,
   byType,
-  targetMinutes = 150, // WHO recommended: 150 minutes/week
 }: ExerciseSummaryProps) {
-  const progress = Math.min((totalMinutes / targetMinutes) * 100, 100);
-  const isAchieved = totalMinutes >= targetMinutes;
-
-  const formatDuration = (minutes: number) => {
-    if (minutes < 60) {
-      return `${minutes}分`;
-    }
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return mins > 0 ? `${hours}時間${mins}分` : `${hours}時間`;
-  };
-
-  // Sort by duration descending
-  const sortedTypes = Object.entries(byType).sort(([, a], [, b]) => b - a);
+  // Sort by sets descending
+  const sortedTypes = Object.entries(byType).sort(([, a], [, b]) => b.sets - a.sets);
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {/* Total Time */}
+      {/* Total Sets */}
       <div className="rounded-lg border border-gray-200 bg-white p-4">
-        <p className="text-sm text-gray-500">今週の運動時間</p>
+        <p className="text-sm text-gray-500">今週の総セット数</p>
         <p className="mt-1 text-2xl font-bold text-gray-900">
-          {formatDuration(totalMinutes)}
+          {totalSets} <span className="text-sm font-normal">セット</span>
         </p>
-        <div className="mt-2">
-          <div className="h-2 overflow-hidden rounded-full bg-gray-200">
-            <div
-              className={`h-full rounded-full transition-all ${
-                isAchieved ? 'bg-green-500' : 'bg-orange-500'
-              }`}
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-          <p className="mt-1 text-xs text-gray-500">
-            目標: {formatDuration(targetMinutes)}/週
-          </p>
-        </div>
+        <p className="mt-2 text-xs text-gray-500">
+          総レップ数: {totalReps}回
+        </p>
       </div>
 
       {/* Session Count */}
@@ -56,7 +34,7 @@ export function ExerciseSummary({
           {count} <span className="text-sm font-normal">回</span>
         </p>
         <p className="mt-2 text-xs text-gray-500">
-          平均: {count > 0 ? formatDuration(Math.round(totalMinutes / count)) : '-'}/回
+          平均: {count > 0 ? Math.round(totalSets / count) : 0}セット/回
         </p>
       </div>
 
@@ -65,11 +43,11 @@ export function ExerciseSummary({
         <p className="text-sm text-gray-500 mb-2">種目別</p>
         {sortedTypes.length > 0 ? (
           <div className="space-y-2">
-            {sortedTypes.slice(0, 4).map(([type, minutes]) => (
+            {sortedTypes.slice(0, 4).map(([type, stats]) => (
               <div key={type} className="flex items-center justify-between">
                 <span className="text-sm text-gray-700">{type}</span>
                 <span className="text-sm font-medium text-gray-900">
-                  {formatDuration(minutes)}
+                  {stats.sets}×{Math.round(stats.reps / stats.sets)}
                 </span>
               </div>
             ))}

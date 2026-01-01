@@ -8,6 +8,61 @@ export const MEAL_TYPE_LABELS: Record<(typeof MEAL_TYPES)[number], string> = {
   snack: '間食',
 };
 
+// Muscle groups for strength training
+export const MUSCLE_GROUPS = [
+  'chest',
+  'back',
+  'legs',
+  'shoulders',
+  'arms',
+  'core',
+  'other',
+] as const;
+
+export type MuscleGroup = (typeof MUSCLE_GROUPS)[number];
+
+export const MUSCLE_GROUP_LABELS: Record<MuscleGroup, string> = {
+  chest: '胸',
+  back: '背中',
+  legs: '脚',
+  shoulders: '肩',
+  arms: '腕',
+  core: '体幹',
+  other: 'その他',
+};
+
+export interface ExercisePreset {
+  name: string;
+  muscleGroup: MuscleGroup;
+}
+
+export const EXERCISE_PRESETS: ExercisePreset[] = [
+  // Chest
+  { name: 'ベンチプレス', muscleGroup: 'chest' },
+  { name: 'ダンベルフライ', muscleGroup: 'chest' },
+  { name: 'プッシュアップ', muscleGroup: 'chest' },
+  // Back
+  { name: 'デッドリフト', muscleGroup: 'back' },
+  { name: 'ラットプルダウン', muscleGroup: 'back' },
+  { name: 'ベントオーバーロウ', muscleGroup: 'back' },
+  // Legs
+  { name: 'スクワット', muscleGroup: 'legs' },
+  { name: 'レッグプレス', muscleGroup: 'legs' },
+  { name: 'ランジ', muscleGroup: 'legs' },
+  { name: 'カーフレイズ', muscleGroup: 'legs' },
+  // Shoulders
+  { name: 'ショルダープレス', muscleGroup: 'shoulders' },
+  { name: 'サイドレイズ', muscleGroup: 'shoulders' },
+  { name: 'フロントレイズ', muscleGroup: 'shoulders' },
+  // Arms
+  { name: 'バイセップカール', muscleGroup: 'arms' },
+  { name: 'トライセップエクステンション', muscleGroup: 'arms' },
+  // Core
+  { name: 'プランク', muscleGroup: 'core' },
+  { name: 'クランチ', muscleGroup: 'core' },
+  { name: 'レッグレイズ', muscleGroup: 'core' },
+];
+
 // Validation limits
 export const VALIDATION_LIMITS = {
   weight: {
@@ -18,9 +73,17 @@ export const VALIDATION_LIMITS = {
     min: 0,
     max: 10000,
   },
-  exerciseDuration: {
+  exerciseSets: {
     min: 1,
-    max: 1440, // 24 hours in minutes
+    max: 20,
+  },
+  exerciseReps: {
+    min: 1,
+    max: 100,
+  },
+  exerciseWeight: {
+    min: 0,
+    max: 500,
   },
   password: {
     min: 8,

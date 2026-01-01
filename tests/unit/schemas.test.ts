@@ -80,8 +80,10 @@ describe('Schema datetime validation', () => {
   describe('createExerciseSchema', () => {
     it('should accept datetime-local format', () => {
       const result = createExerciseSchema.safeParse({
-        exerciseType: 'ランニング',
-        durationMinutes: 30,
+        exerciseType: 'ベンチプレス',
+        sets: 3,
+        reps: 10,
+        weight: 60,
         recordedAt: '2025-12-31T07:00',
       });
       expect(result.success).toBe(true);
@@ -89,9 +91,21 @@ describe('Schema datetime validation', () => {
 
     it('should accept full ISO datetime format', () => {
       const result = createExerciseSchema.safeParse({
-        exerciseType: 'ウォーキング',
-        durationMinutes: 60,
+        exerciseType: 'スクワット',
+        sets: 4,
+        reps: 12,
+        weight: null,
         recordedAt: '2025-12-31T18:30:00Z',
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('should accept exercise without weight (bodyweight)', () => {
+      const result = createExerciseSchema.safeParse({
+        exerciseType: '腕立て伏せ',
+        sets: 3,
+        reps: 20,
+        recordedAt: '2025-12-31T07:00',
       });
       expect(result.success).toBe(true);
     });

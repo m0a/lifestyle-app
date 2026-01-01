@@ -1,0 +1,280 @@
+openapi: 3.0.3
+info:
+  title: Exercise Records API
+  description: 筋トレ記録用API（筋トレ最適化版）
+  version: 2.0.0
+
+paths:
+  /api/exercises:
+    get:
+      summary: 運動記録一覧取得
+      description: ユーザーの運動記録を取得
+      parameters:
+        - name: exerciseType
+          in: query
+          description: 種目でフィルタ
+          schema:
+            type: string
+        - name: startDate
+          in: query
+          description: 開始日 (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          description: 終了日 (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  exercises:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ExerciseRecord'
+                  summary:
+                    $ref: '#/components/schemas/ExerciseSummary'
+
+    post:
+      summary: 運動記録作成
+      description: 新しい筋トレ記録を作成
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateExerciseInput'
+      responses:
+        '201':
+          description: 作成成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExerciseRecord'
+        '400':
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+  /api/exercises/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+
+    get:
+      summary: 運動記録取得
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExerciseRecord'
+        '404':
+          description: 記録が見つからない
+
+    put:
+      summary: 運動記録更新
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateExerciseInput'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExerciseRecord'
+        '404':
+          description: 記録が見つからない
+
+    delete:
+      summary: 運動記録削除
+      responses:
+        '204':
+          description: 削除成功
+        '404':
+          description: 記録が見つからない
+
+  /api/exercises/last/{exerciseType}:
+    get:
+      summary: 種目の前回記録取得
+      description: 指定種目の直近の記録を取得
+      parameters:
+        - name: exerciseType
+          in: path
+          required: true
+          description: 種目名（URLエンコード必須）
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  lastRecord:
+                    $ref: '#/components/schemas/ExerciseRecord'
+                    nullable: true
+        '404':
+          description: 記録が見つからない（lastRecord: null）
+
+components:
+  schemas:
+    ExerciseRecord:
+      type: object
+      required:
+        - id
+        - userId
+        - exerciseType
+        - sets
+        - reps
+        - recordedAt
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        exerciseType:
+          type: string
+          example: "ベンチプレス"
+        sets:
+          type: integer
+          minimum: 1
+          maximum: 20
+          example: 3
+        reps:
+          type: integer
+          minimum: 1
+          maximum: 100
+          example: 10
+        weight:
+          type: number
+          nullable: true
+          minimum: 0
+          maximum: 500
+          example: 60
+          description: 重量(kg)、自重トレはnull
+        recordedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateExerciseInput:
+      type: object
+      required:
+        - exerciseType
+        - sets
+        - reps
+        - recordedAt
+      properties:
+        exerciseType:
+          type: string
+          minLength: 1
+          maxLength: 100
+        sets:
+          type: integer
+          minimum: 1
+          maximum: 20
+        reps:
+          type: integer
+          minimum: 1
+          maximum: 100
+        weight:
+          type: number
+          nullable: true
+          minimum: 0
+          maximum: 500
+        recordedAt:
+          type: string
+          format: date-time
+
+    UpdateExerciseInput:
+      type: object
+      properties:
+        exerciseType:
+          type: string
+          minLength: 1
+          maxLength: 100
+        sets:
+          type: integer
+          minimum: 1
+          maximum: 20
+        reps:
+          type: integer
+          minimum: 1
+          maximum: 100
+        weight:
+          type: number
+          nullable: true
+          minimum: 0
+          maximum: 500
+        recordedAt:
+          type: string
+          format: date-time
+
+    ExerciseSummary:
+      type: object
+      properties:
+        totalSets:
+          type: integer
+          description: 合計セット数
+        totalReps:
+          type: integer
+          description: 合計レップ数
+        count:
+          type: integer
+          description: 記録数
+        byType:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              sets:
+                type: integer
+              reps:
+                type: integer
+
+    ValidationError:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string

@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
-import { createExerciseSchema, updateExerciseSchema, dateRangeSchema } from '@lifestyle-app/shared';
+import { createExerciseSchema, updateExerciseSchema, dateRangeSchema, exerciseQuerySchema } from '@lifestyle-app/shared';
 import { ExerciseService } from '../services/exercise';
 import { authMiddleware } from '../middleware/auth';
 import type { Database } from '../db';
@@ -28,7 +28,7 @@ export const exercises = new Hono<{ Bindings: Bindings; Variables: Variables }>(
 
     return c.json({ exercise }, 201);
   })
-  .get('/', zValidator('query', dateRangeSchema), async (c) => {
+  .get('/', zValidator('query', exerciseQuerySchema), async (c) => {
     const query = c.req.valid('query');
     const db = c.get('db');
     const user = c.get('user');
@@ -37,6 +37,8 @@ export const exercises = new Hono<{ Bindings: Bindings; Variables: Variables }>(
     const exercisesList = await exerciseService.findByUserId(user.id, {
       startDate: query.startDate,
       endDate: query.endDate,
+      exerciseType: query.exerciseType,
+      limit: query.limit,
     });
 
     return c.json({ exercises: exercisesList });
@@ -62,6 +64,16 @@ export const exercises = new Hono<{ Bindings: Bindings; Variables: Variables }>(
     });
 
     return c.json({ summary });
+  })
+  .get('/last/:exerciseType', async (c) => {
+    const exerciseType = decodeURIComponent(c.req.param('exerciseType'));
+    const db = c.get('db');
+    const user = c.get('user');
+
+    const exerciseService = new ExerciseService(db);
+    const exercise = await exerciseService.getLastByType(user.id, exerciseType);
+
+    return c.json({ exercise });
   })
   .get('/:id', async (c) => {
     const id = c.req.param('id');

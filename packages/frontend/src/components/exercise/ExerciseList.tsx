@@ -18,13 +18,17 @@ export function ExerciseList({
 }: ExerciseListProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editType, setEditType] = useState<string>('');
-  const [editDuration, setEditDuration] = useState<number>(0);
+  const [editSets, setEditSets] = useState<number>(0);
+  const [editReps, setEditReps] = useState<number>(0);
+  const [editWeight, setEditWeight] = useState<number | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const handleEdit = (exercise: ExerciseRecord) => {
     setEditingId(exercise.id);
     setEditType(exercise.exerciseType);
-    setEditDuration(exercise.durationMinutes);
+    setEditSets(exercise.sets);
+    setEditReps(exercise.reps);
+    setEditWeight(exercise.weight);
   };
 
   const handleSave = (id: string) => {
@@ -32,7 +36,9 @@ export function ExerciseList({
       id,
       input: {
         exerciseType: editType,
-        durationMinutes: editDuration,
+        sets: editSets,
+        reps: editReps,
+        weight: editWeight,
       },
     });
     setEditingId(null);
@@ -43,13 +49,9 @@ export function ExerciseList({
     setDeleteConfirmId(null);
   };
 
-  const formatDuration = (minutes: number) => {
-    if (minutes < 60) {
-      return `${minutes}分`;
-    }
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return mins > 0 ? `${hours}時間${mins}分` : `${hours}時間`;
+  const formatExercise = (exercise: ExerciseRecord) => {
+    const weightStr = exercise.weight ? ` ${exercise.weight}kg` : '';
+    return `${exercise.sets}×${exercise.reps}${weightStr}`;
   };
 
   if (exercises.length === 0) {
@@ -114,16 +116,40 @@ export function ExerciseList({
                       value={editType}
                       onChange={(e) => setEditType(e.target.value)}
                       className="w-full rounded border border-gray-300 px-3 py-2"
+                      placeholder="種目名"
                     />
                     <div className="flex items-center gap-4">
-                      <input
-                        type="number"
-                        value={editDuration}
-                        onChange={(e) => setEditDuration(parseInt(e.target.value) || 0)}
-                        min="1"
-                        className="w-24 rounded border border-gray-300 px-3 py-2"
-                      />
-                      <span className="text-gray-500">分</span>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          value={editSets}
+                          onChange={(e) => setEditSets(parseInt(e.target.value) || 0)}
+                          min="1"
+                          max="20"
+                          className="w-16 rounded border border-gray-300 px-3 py-2"
+                        />
+                        <span className="text-gray-500">×</span>
+                        <input
+                          type="number"
+                          value={editReps}
+                          onChange={(e) => setEditReps(parseInt(e.target.value) || 0)}
+                          min="1"
+                          max="100"
+                          className="w-16 rounded border border-gray-300 px-3 py-2"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          value={editWeight ?? ''}
+                          onChange={(e) => setEditWeight(e.target.value ? parseFloat(e.target.value) : null)}
+                          min="0"
+                          step="0.5"
+                          placeholder="自重"
+                          className="w-20 rounded border border-gray-300 px-3 py-2"
+                        />
+                        <span className="text-gray-500">kg</span>
+                      </div>
                       <div className="ml-auto flex gap-2">
                         <button
                           onClick={() => handleSave(exercise.id)}
@@ -148,7 +174,7 @@ export function ExerciseList({
                         {exercise.exerciseType}
                       </span>
                       <span className="font-medium text-gray-900">
-                        {formatDuration(exercise.durationMinutes)}
+                        {formatExercise(exercise)}
                       </span>
                       <span className="text-sm text-gray-500">
                         {new Date(exercise.recordedAt).toLocaleTimeString('ja-JP', {

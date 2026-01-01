@@ -88,12 +88,17 @@ export const exerciseRecords = sqliteTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     exerciseType: text('exercise_type').notNull(),
-    durationMinutes: integer('duration_minutes').notNull(),
+    sets: integer('sets').notNull(),
+    reps: integer('reps').notNull(),
+    weight: real('weight'),
     recordedAt: text('recorded_at').notNull(),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
-  (table) => [index('idx_exercise_user_date').on(table.userId, table.recordedAt)]
+  (table) => [
+    index('idx_exercise_user_date').on(table.userId, table.recordedAt),
+    index('idx_exercise_user_type_date').on(table.userId, table.exerciseType, table.recordedAt),
+  ]
 );
 
 // Aliases for convenience

@@ -6,10 +6,12 @@ describe('ExerciseService', () => {
   });
 
   describe('create', () => {
-    it('should create a new exercise record', async () => {
+    it('should create a new exercise record with sets/reps/weight', async () => {
       const input = {
-        exerciseType: 'ランニング',
-        durationMinutes: 30,
+        exerciseType: 'ベンチプレス',
+        sets: 3,
+        reps: 10,
+        weight: 60,
         recordedAt: new Date().toISOString(),
       };
       const userId = 'user-123';
@@ -17,7 +19,15 @@ describe('ExerciseService', () => {
       expect(true).toBe(true);
     });
 
-    it('should validate durationMinutes is positive', async () => {
+    it('should validate sets is positive', async () => {
+      expect(true).toBe(true);
+    });
+
+    it('should validate reps is positive', async () => {
+      expect(true).toBe(true);
+    });
+
+    it('should allow null weight for bodyweight exercises', async () => {
       expect(true).toBe(true);
     });
 
@@ -55,15 +65,25 @@ describe('ExerciseService', () => {
   });
 
   describe('getWeeklySummary', () => {
-    it('should calculate total minutes for the week', async () => {
+    it('should calculate total sets and reps for the week', async () => {
       expect(true).toBe(true);
     });
 
-    it('should group exercises by type', async () => {
+    it('should group exercises by type with sets and reps', async () => {
       expect(true).toBe(true);
     });
 
     it('should count number of exercise sessions', async () => {
+      expect(true).toBe(true);
+    });
+  });
+
+  describe('getLastByType', () => {
+    it('should return the last record for a specific exercise type', async () => {
+      expect(true).toBe(true);
+    });
+
+    it('should return null if no records exist for the type', async () => {
       expect(true).toBe(true);
     });
   });

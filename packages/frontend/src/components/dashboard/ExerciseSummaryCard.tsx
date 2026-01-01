@@ -1,35 +1,22 @@
 import { Link } from 'react-router-dom';
 
 interface ExerciseSummaryCardProps {
-  totalMinutes: number;
+  totalSets: number;
+  totalReps: number;
   sessionCount: number;
-  averageMinutes: number;
-  byType: Record<string, number>;
-  targetMinutes?: number;
+  byType: Record<string, { sets: number; reps: number }>;
 }
 
 export function ExerciseSummaryCard({
-  totalMinutes,
+  totalSets,
+  totalReps,
   sessionCount,
-  averageMinutes,
   byType,
-  targetMinutes = 150, // WHO recommendation
 }: ExerciseSummaryCardProps) {
   const hasData = sessionCount > 0;
-  const progress = Math.min((totalMinutes / targetMinutes) * 100, 100);
-  const isAchieved = totalMinutes >= targetMinutes;
 
-  const formatDuration = (minutes: number) => {
-    if (minutes < 60) {
-      return `${minutes}分`;
-    }
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return mins > 0 ? `${hours}時間${mins}分` : `${hours}時間`;
-  };
-
-  // Sort by duration descending
-  const sortedTypes = Object.entries(byType).sort(([, a], [, b]) => b - a);
+  // Sort by sets descending
+  const sortedTypes = Object.entries(byType).sort(([, a], [, b]) => b.sets - a.sets);
 
   return (
     <div
@@ -37,7 +24,7 @@ export function ExerciseSummaryCard({
       data-testid="exercise-summary-card"
     >
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">運動サマリー</h3>
+        <h3 className="text-lg font-semibold text-gray-900">筋トレサマリー</h3>
         <Link
           to="/exercises"
           className="text-sm text-blue-600 hover:text-blue-800"
@@ -50,23 +37,9 @@ export function ExerciseSummaryCard({
         <div className="space-y-4">
           <div className="flex items-baseline gap-2">
             <span className="text-3xl font-bold text-gray-900">
-              {formatDuration(totalMinutes)}
+              {totalSets}
             </span>
-          </div>
-
-          {/* Progress bar toward weekly goal */}
-          <div>
-            <div className="h-2 overflow-hidden rounded-full bg-gray-200">
-              <div
-                className={`h-full rounded-full transition-all ${
-                  isAchieved ? 'bg-green-500' : 'bg-orange-500'
-                }`}
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-            <p className="mt-1 text-xs text-gray-500">
-              週間目標: {formatDuration(targetMinutes)} ({Math.round(progress)}%)
-            </p>
+            <span className="text-lg text-gray-600">セット</span>
           </div>
 
           <div className="grid grid-cols-2 gap-4 text-sm">
@@ -75,10 +48,8 @@ export function ExerciseSummaryCard({
               <p className="font-medium text-gray-900">{sessionCount}回</p>
             </div>
             <div>
-              <p className="text-gray-500">平均時間</p>
-              <p className="font-medium text-gray-900">
-                {formatDuration(Math.round(averageMinutes))}
-              </p>
+              <p className="text-gray-500">総レップ数</p>
+              <p className="font-medium text-gray-900">{totalReps}回</p>
             </div>
           </div>
 
@@ -86,14 +57,14 @@ export function ExerciseSummaryCard({
             <div className="space-y-2">
               <p className="text-xs text-gray-500">種目別</p>
               <div className="space-y-1">
-                {sortedTypes.slice(0, 3).map(([type, minutes]) => (
+                {sortedTypes.slice(0, 3).map(([type, stats]) => (
                   <div
                     key={type}
                     className="flex items-center justify-between text-sm"
                   >
                     <span className="text-gray-700">{type}</span>
                     <span className="font-medium text-gray-900">
-                      {formatDuration(minutes)}
+                      {stats.sets}×{Math.round(stats.reps / stats.sets)}
                     </span>
                   </div>
                 ))}
@@ -113,7 +84,7 @@ export function ExerciseSummaryCard({
             to="/exercises"
             className="mt-2 inline-block text-sm text-blue-600 hover:text-blue-800"
           >
-            運動を記録する →
+            筋トレを記録する →
           </Link>
         </div>
       )}

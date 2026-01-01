@@ -75,16 +75,20 @@ export const updateMealSchema = z.object({
   recordedAt: datetimeSchema.optional(),
 });
 
-// Exercise schemas
+// Exercise schemas (strength training optimized)
 export const createExerciseSchema = z.object({
-  exerciseType: z.string().min(1, '運動種目を入力してください').max(100),
-  durationMinutes: z.number().int().min(1, '1分以上で入力してください').max(1440),
+  exerciseType: z.string().min(1, '種目を選択してください').max(100),
+  sets: z.number().int().min(1, '1セット以上で入力してください').max(20, '20セット以下で入力してください'),
+  reps: z.number().int().min(1, '1回以上で入力してください').max(100, '100回以下で入力してください'),
+  weight: z.number().min(0).max(500).nullable().optional(),
   recordedAt: datetimeSchema,
 });
 
 export const updateExerciseSchema = z.object({
   exerciseType: z.string().min(1).max(100).optional(),
-  durationMinutes: z.number().int().min(1).max(1440).optional(),
+  sets: z.number().int().min(1).max(20).optional(),
+  reps: z.number().int().min(1).max(100).optional(),
+  weight: z.number().min(0).max(500).nullable().optional(),
   recordedAt: datetimeSchema.optional(),
 });
 
@@ -92,6 +96,14 @@ export const updateExerciseSchema = z.object({
 export const dateRangeSchema = z.object({
   startDate: z.string().date().optional(),
   endDate: z.string().date().optional(),
+});
+
+// Exercise query schema (extends date range with exerciseType filter)
+export const exerciseQuerySchema = z.object({
+  startDate: z.string().date().optional(),
+  endDate: z.string().date().optional(),
+  exerciseType: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
 });
 
 // Dashboard schema

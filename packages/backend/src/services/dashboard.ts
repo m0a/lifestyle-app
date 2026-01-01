@@ -24,10 +24,10 @@ interface MealSummary {
 }
 
 interface ExerciseSummary {
-  totalMinutes: number;
+  totalSets: number;
+  totalReps: number;
   sessionCount: number;
-  averageMinutes: number;
-  byType: Record<string, number>;
+  byType: Record<string, { sets: number; reps: number }>;
 }
 
 // Record types for summary calculations
@@ -42,7 +42,8 @@ interface MealRecord {
 
 interface ExerciseRecord {
   exerciseType: string;
-  durationMinutes: number;
+  sets: number;
+  reps: number;
 }
 
 interface DashboardSummary {
@@ -60,7 +61,7 @@ interface WeeklyTrendItem {
   weekEnd: string;
   weight: number | null;
   totalCalories: number;
-  exerciseMinutes: number;
+  exerciseSets: number;
 }
 
 interface GoalProgress {
@@ -71,8 +72,8 @@ interface GoalProgress {
     remaining: number | null;
   };
   exercise: {
-    current: number;
-    target: number;
+    currentSets: number;
+    targetSets: number;
     progress: number;
   };
   calories: {
@@ -210,29 +211,31 @@ export class DashboardService {
   private calculateExerciseSummary(records: ExerciseRecord[]): ExerciseSummary {
     if (records.length === 0) {
       return {
-        totalMinutes: 0,
+        totalSets: 0,
+        totalReps: 0,
         sessionCount: 0,
-        averageMinutes: 0,
         byType: {},
       };
     }
 
-    const totalMinutes = records.reduce((sum, r) => sum + r.durationMinutes, 0);
+    const totalSets = records.reduce((sum, r) => sum + r.sets, 0);
+    const totalReps = records.reduce((sum, r) => sum + r.sets * r.reps, 0);
 
     // Group by exercise type
-    const byType: Record<string, number> = {};
+    const byType: Record<string, { sets: number; reps: number }> = {};
     for (const record of records) {
       const type = record.exerciseType;
       if (!byType[type]) {
-        byType[type] = 0;
+        byType[type] = { sets: 0, reps: 0 };
       }
-      byType[type] += record.durationMinutes;
+      byType[type].sets += record.sets;
+      byType[type].reps += record.sets * record.reps;
     }
 
     return {
-      totalMinutes,
+      totalSets,
+      totalReps,
       sessionCount: records.length,
-      averageMinutes: totalMinutes / records.length,
       byType,
     };
   }
@@ -295,14 +298,14 @@ export class DashboardService {
         .filter((m) => m.calories != null)
         .reduce((sum, m) => sum + (m.calories || 0), 0);
 
-      const exerciseMinutes = weekExercises.reduce((sum, e) => sum + e.durationMinutes, 0);
+      const exerciseSets = weekExercises.reduce((sum, e) => sum + e.sets, 0);
 
       result.unshift({
         weekStart: weekStart.toISOString().split('T')[0],
         weekEnd: weekEnd.toISOString().split('T')[0],
         weight: weekWeights.length > 0 ? weekWeights[0].weight : null,
         totalCalories,
-        exerciseMinutes,
+        exerciseSets,
       });
     }
 
@@ -356,8 +359,8 @@ export class DashboardService {
 
     const currentWeight = latestWeight.length > 0 ? latestWeight[0].weight : null;
     const targetWeight = goals.targetWeight || 65;
-    const weeklyExerciseMinutes = weeklyExercises.reduce((sum, e) => sum + e.durationMinutes, 0);
-    const targetExerciseMinutes = goals.weeklyExerciseMinutes || 150;
+    const weeklyExerciseSets = weeklyExercises.reduce((sum, e) => sum + e.sets, 0);
+    const targetExerciseSets = 30; // Default weekly target: 30 sets
 
     const mealsWithCalories = weeklyMeals.filter((m) => m.calories != null);
     const totalCalories = mealsWithCalories.reduce((sum, m) => sum + (m.calories || 0), 0);
@@ -378,9 +381,9 @@ export class DashboardService {
         remaining: currentWeight !== null ? currentWeight - targetWeight : null,
       },
       exercise: {
-        current: weeklyExerciseMinutes,
-        target: targetExerciseMinutes,
-        progress: Math.min(100, (weeklyExerciseMinutes / targetExerciseMinutes) * 100),
+        currentSets: weeklyExerciseSets,
+        targetSets: targetExerciseSets,
+        progress: Math.min(100, (weeklyExerciseSets / targetExerciseSets) * 100),
       },
       calories: {
         average: Math.round(averageCalories),
