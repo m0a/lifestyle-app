@@ -11,7 +11,6 @@ import { Dashboard } from './pages/Dashboard';
 import { Settings } from './pages/Settings';
 
 // Lazy load meal pages
-const MealAnalysis = lazy(() => import('./pages/MealAnalysis'));
 const MealDetail = lazy(() => import('./pages/MealDetail'));
 
 // Home component
@@ -63,18 +62,6 @@ const routes: RouteObject[] = [
       <Layout>
         <ProtectedRoute>
           <Meal />
-        </ProtectedRoute>
-      </Layout>
-    ),
-  },
-  {
-    path: '/meals/analyze',
-    element: (
-      <Layout>
-        <ProtectedRoute>
-          <Suspense fallback={<div className="p-4 text-center">読み込み中...</div>}>
-            <MealAnalysis />
-          </Suspense>
         </ProtectedRoute>
       </Layout>
     ),

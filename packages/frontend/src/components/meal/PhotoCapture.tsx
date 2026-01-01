@@ -8,12 +8,8 @@ interface PhotoCaptureProps {
 }
 
 export function PhotoCapture({ onCapture, onCancel, maxSize = 1024 }: PhotoCaptureProps) {
-  const [mode, setMode] = useState<'select' | 'camera'>('select');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [isVideoReady, setIsVideoReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Resize image using Canvas API with memory management
@@ -122,176 +118,11 @@ export function PhotoCapture({ onCapture, onCancel, maxSize = 1024 }: PhotoCaptu
     [maxSize, onCapture, resizeImage]
   );
 
-  // Start camera
-  const startCamera = useCallback(async () => {
-    setError(null);
-    setIsVideoReady(false);
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' },
-      });
-      streamRef.current = stream;
-      if (videoRef.current) {
-        const video = videoRef.current;
-
-        // Multiple event handlers for better mobile compatibility
-        const markReady = () => {
-          if (video.videoWidth > 0 && video.videoHeight > 0) {
-            setIsVideoReady(true);
-            cleanup();
-          }
-        };
-
-        const cleanup = () => {
-          video.removeEventListener('playing', markReady);
-          video.removeEventListener('loadeddata', markReady);
-          video.removeEventListener('canplay', markReady);
-        };
-
-        // Try multiple events - different browsers fire different events
-        video.addEventListener('playing', markReady);
-        video.addEventListener('loadeddata', markReady);
-        video.addEventListener('canplay', markReady);
-
-        video.srcObject = stream;
-
-        // Call play() and handle the promise
-        video.play().catch((playErr) => {
-          console.warn('Video autoplay failed:', playErr);
-        });
-
-        // Fallback: check periodically if video is ready
-        let attempts = 0;
-        const checkReady = setInterval(() => {
-          attempts++;
-          if (video.videoWidth > 0 && video.videoHeight > 0) {
-            setIsVideoReady(true);
-            clearInterval(checkReady);
-            cleanup();
-          } else if (attempts > 50) {
-            // 5 seconds timeout
-            clearInterval(checkReady);
-            cleanup();
-            setError('カメラの初期化に失敗しました');
-            logError(new Error('Video ready timeout'), {
-              component: 'PhotoCapture',
-              action: 'startCamera',
-              videoWidth: video.videoWidth,
-              videoHeight: video.videoHeight,
-              readyState: video.readyState,
-            });
-          }
-        }, 100);
-      }
-      setMode('camera');
-    } catch (err) {
-      setError('カメラにアクセスできません');
-      const error = err instanceof Error ? err : new Error(String(err));
-      logError(error, { component: 'PhotoCapture', action: 'startCamera' });
-    }
-  }, []);
-
-  // Stop camera
-  const stopCamera = useCallback(() => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
-    }
-    setIsVideoReady(false);
-    setMode('select');
-  }, []);
-
-  // Capture photo from camera
-  const captureFromCamera = useCallback(async () => {
-    if (!videoRef.current) return;
-
-    setIsProcessing(true);
-    setError(null);
-
-    try {
-      const video = videoRef.current;
-
-      // Wait for video to be ready if dimensions are not available
-      if (video.videoWidth === 0 || video.videoHeight === 0) {
-        await new Promise<void>((resolve, reject) => {
-          const timeout = setTimeout(() => reject(new Error('Video not ready')), 5000);
-          video.onloadedmetadata = () => {
-            clearTimeout(timeout);
-            resolve();
-          };
-        });
-      }
-
-      // Double check dimensions
-      if (video.videoWidth === 0 || video.videoHeight === 0) {
-        throw new Error('Video dimensions not available');
-      }
-
-      const canvas = document.createElement('canvas');
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-
-      const ctx = canvas.getContext('2d');
-      if (!ctx) {
-        throw new Error('Canvas context not available');
-      }
-
-      ctx.drawImage(video, 0, 0);
-
-      const blob = await new Promise<Blob>((resolve, reject) => {
-        canvas.toBlob(
-          (b) => (b ? resolve(b) : reject(new Error('Failed to create blob'))),
-          'image/jpeg',
-          0.9
-        );
-      });
-
-      const resized = await resizeImage(blob, maxSize);
-      stopCamera();
-      onCapture(resized);
-    } catch (err) {
-      setError('撮影に失敗しました');
-      const error = err instanceof Error ? err : new Error(String(err));
-      logError(error, { component: 'PhotoCapture', action: 'captureFromCamera' });
-    } finally {
-      setIsProcessing(false);
-    }
-  }, [maxSize, onCapture, resizeImage, stopCamera]);
-
-  if (mode === 'camera') {
-    return (
-      <div className="flex flex-col items-center gap-4">
-        <video
-          ref={videoRef}
-          autoPlay
-          playsInline
-          muted
-          className="w-full max-w-md rounded-lg border"
-        />
-        <div className="flex gap-4">
-          <button
-            onClick={captureFromCamera}
-            disabled={isProcessing || !isVideoReady}
-            className="rounded-full bg-blue-500 p-4 text-white hover:bg-blue-600 disabled:opacity-50"
-          >
-            {isProcessing ? '処理中...' : isVideoReady ? '撮影' : '準備中...'}
-          </button>
-          <button
-            onClick={stopCamera}
-            className="rounded-lg border px-4 py-2 hover:bg-gray-100"
-          >
-            キャンセル
-          </button>
-        </div>
-        {error && <p className="text-sm text-red-500">{error}</p>}
-      </div>
-    );
-  }
-
   return (
     <div className="flex flex-col items-center gap-4 p-4">
       <h3 className="text-lg font-semibold">食事の写真を追加</h3>
 
+      {/* Hidden file inputs */}
       <input
         ref={fileInputRef}
         type="file"
@@ -299,24 +130,34 @@ export function PhotoCapture({ onCapture, onCancel, maxSize = 1024 }: PhotoCaptu
         onChange={handleFileSelect}
         className="hidden"
       />
+      {/* Native camera input for mobile - more reliable than getUserMedia */}
+      <input
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={handleFileSelect}
+        className="hidden"
+        id="camera-input"
+      />
 
-      <div className="flex gap-4">
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          disabled={isProcessing}
-          className="flex items-center gap-2 rounded-lg border px-4 py-3 hover:bg-gray-100 disabled:opacity-50"
-        >
-          <span>📁</span>
-          <span>ファイルを選択</span>
-        </button>
-
-        <button
-          onClick={startCamera}
-          disabled={isProcessing}
-          className="flex items-center gap-2 rounded-lg border px-4 py-3 hover:bg-gray-100 disabled:opacity-50"
+      <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
+        {/* Primary: Native camera (works best on mobile) */}
+        <label
+          htmlFor="camera-input"
+          className={`flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-blue-500 px-4 py-3 text-white hover:bg-blue-600 ${isProcessing ? 'pointer-events-none opacity-50' : ''}`}
         >
           <span>📷</span>
           <span>カメラで撮影</span>
+        </label>
+
+        {/* Secondary: File picker */}
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          disabled={isProcessing}
+          className="flex items-center justify-center gap-2 rounded-lg border px-4 py-3 hover:bg-gray-100 disabled:opacity-50"
+        >
+          <span>📁</span>
+          <span>ライブラリから選択</span>
         </button>
       </div>
 

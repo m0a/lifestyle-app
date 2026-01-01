@@ -114,6 +114,9 @@ import type {
   MealType,
   CreateFoodItem,
   UpdateFoodItem,
+  TextAnalysisRequest,
+  TextAnalysisResponse,
+  TextAnalysisError,
 } from '@lifestyle-app/shared';
 
 export interface MealAnalysisResponse extends AnalysisResult {}
@@ -127,6 +130,45 @@ export interface MealChatEvent {
 }
 
 export const mealAnalysisApi = {
+  // Analyze meal from text input with 10s timeout (T008)
+  async analyzeText(
+    request: TextAnalysisRequest,
+    signal?: AbortSignal
+  ): Promise<TextAnalysisResponse | TextAnalysisError> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/meals/analyze-text`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request),
+        credentials: 'include',
+        signal: signal || controller.signal,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        if (response.status === 422) {
+          return error as TextAnalysisError;
+        }
+        throw new ApiRequestError(error.message || 'Analysis failed', response.status);
+      }
+
+      return response.json();
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        return {
+          error: 'timeout',
+          message: 'タイムアウトしました。手動で入力してください。',
+        } as TextAnalysisError;
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  },
+
   // Analyze meal photo
   async analyzeMealPhoto(photo: Blob): Promise<MealAnalysisResponse | AnalysisFailure> {
     const formData = new FormData();

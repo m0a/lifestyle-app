@@ -88,6 +88,10 @@ export function useMeals(options?: UseMealsOptions) {
     },
   });
 
+  const refresh = () => {
+    queryClient.invalidateQueries({ queryKey: ['meals'] });
+  };
+
   return {
     meals: mealsQuery.data ?? [],
     todaySummary: todaySummaryQuery.data,
@@ -96,6 +100,7 @@ export function useMeals(options?: UseMealsOptions) {
     create: createMutation.mutate,
     update: updateMutation.mutate,
     remove: deleteMutation.mutate,
+    refresh,
     isCreating: createMutation.isPending,
     isUpdating: updateMutation.isPending,
     isDeleting: deleteMutation.isPending,
