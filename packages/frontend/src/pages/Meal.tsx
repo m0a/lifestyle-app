@@ -1,6 +1,5 @@
 import { useState, useCallback } from 'react';
 import { useMeals } from '../hooks/useMeals';
-import { MealInput } from '../components/meal/MealInput';
 import { MealList } from '../components/meal/MealList';
 import { CalorieSummary } from '../components/meal/CalorieSummary';
 import { SmartMealInput } from '../components/meal/SmartMealInput';
@@ -16,14 +15,11 @@ export function Meal() {
     todaySummary,
     isLoading,
     error,
-    create,
     update,
     remove,
     refresh,
-    isCreating,
     isUpdating,
     isDeleting,
-    createError,
   } = useMeals(filterType ? { mealType: filterType } : undefined);
 
   // Save meal from SmartMealInput
@@ -68,16 +64,6 @@ export function Meal() {
       <div>
         <h2 className="mb-3 text-lg font-semibold text-gray-900">AI食事記録</h2>
         <SmartMealInput onSave={handleSmartSave} onRefresh={refresh} />
-      </div>
-
-      {/* Input Form */}
-      <div className="rounded-lg border border-gray-200 bg-white p-6">
-        <h2 className="mb-4 text-lg font-semibold text-gray-900">食事を記録（手動入力）</h2>
-        <MealInput
-          onSubmit={create}
-          isLoading={isCreating}
-          error={createError}
-        />
       </div>
 
       {/* Filter and History */}
