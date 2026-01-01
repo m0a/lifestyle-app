@@ -9,6 +9,8 @@ not_found_handling = "single-page-application"
 
 [vars]
 ENVIRONMENT = "production"
+AI_PROVIDER = "google"
+AI_MODEL = "gemini-3-flash-preview"
 
 [[d1_databases]]
 binding = "DB"
@@ -17,5 +19,23 @@ database_id = "86957e0a-04b6-4530-9b64-79ea36c64ba5"
 
 # R2 bucket for meal photos
 [[r2_buckets]]
+binding = "PHOTOS"
+bucket_name = "lifestyle-app-photos"
+
+# Preview environment configuration
+[env.preview]
+name = "lifestyle-tracker-preview"
+
+[env.preview.vars]
+ENVIRONMENT = "preview"
+AI_PROVIDER = "google"
+AI_MODEL = "gemini-3-flash-preview"
+
+[[env.preview.d1_databases]]
+binding = "DB"
+database_name = "health-tracker-preview-db"
+database_id = "1c90e1fa-f2b7-4518-94b4-0ae192ff6a7b"
+
+[[env.preview.r2_buckets]]
 binding = "PHOTOS"
 bucket_name = "lifestyle-app-photos"
