@@ -14,40 +14,81 @@ export function PhotoCapture({ onCapture, onCancel, maxSize = 1024 }: PhotoCaptu
   const streamRef = useRef<MediaStream | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Resize image using Canvas API
+  // Resize image using Canvas API with memory management
   const resizeImage = useCallback(async (file: Blob, maxDimension: number): Promise<Blob> => {
     return new Promise((resolve, reject) => {
+      const objectUrl = URL.createObjectURL(file);
       const img = new Image();
-      img.onload = () => {
-        const scale = Math.min(1, maxDimension / Math.max(img.width, img.height));
-        const width = Math.round(img.width * scale);
-        const height = Math.round(img.height * scale);
 
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          reject(new Error('Canvas context not available'));
-          return;
-        }
-
-        ctx.drawImage(img, 0, 0, width, height);
-        canvas.toBlob(
-          (blob) => {
-            if (blob) {
-              resolve(blob);
-            } else {
-              reject(new Error('Failed to create blob'));
-            }
-          },
-          'image/jpeg',
-          0.8
-        );
+      const cleanup = () => {
+        URL.revokeObjectURL(objectUrl);
       };
-      img.onerror = () => reject(new Error('Failed to load image'));
-      img.src = URL.createObjectURL(file);
+
+      img.onload = () => {
+        try {
+          const scale = Math.min(1, maxDimension / Math.max(img.width, img.height));
+          const width = Math.round(img.width * scale);
+          const height = Math.round(img.height * scale);
+
+          // Use OffscreenCanvas if available for better performance on mobile
+          let canvas: HTMLCanvasElement | OffscreenCanvas;
+          let ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null;
+
+          if (typeof OffscreenCanvas !== 'undefined') {
+            canvas = new OffscreenCanvas(width, height);
+            ctx = canvas.getContext('2d');
+          } else {
+            canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            ctx = canvas.getContext('2d');
+          }
+
+          if (!ctx) {
+            cleanup();
+            reject(new Error('Canvas context not available'));
+            return;
+          }
+
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Convert to blob
+          if (canvas instanceof OffscreenCanvas) {
+            canvas.convertToBlob({ type: 'image/jpeg', quality: 0.8 })
+              .then((blob) => {
+                cleanup();
+                resolve(blob);
+              })
+              .catch((err) => {
+                cleanup();
+                reject(err);
+              });
+          } else {
+            canvas.toBlob(
+              (blob) => {
+                cleanup();
+                if (blob) {
+                  resolve(blob);
+                } else {
+                  reject(new Error('Failed to create blob'));
+                }
+              },
+              'image/jpeg',
+              0.8
+            );
+          }
+        } catch (err) {
+          cleanup();
+          reject(err);
+        }
+      };
+
+      img.onerror = () => {
+        cleanup();
+        reject(new Error('Failed to load image'));
+      };
+
+      img.src = objectUrl;
     });
   }, []);
 
