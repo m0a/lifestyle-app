@@ -15,10 +15,8 @@ export function Meal() {
     todaySummary,
     isLoading,
     error,
-    update,
     remove,
     refresh,
-    isUpdating,
     isDeleting,
   } = useMeals(filterType ? { mealType: filterType } : undefined);
 
@@ -91,9 +89,7 @@ export function Meal() {
         </div>
         <MealList
           meals={meals}
-          onUpdate={update}
           onDelete={remove}
-          isUpdating={isUpdating}
           isDeleting={isDeleting}
         />
       </div>
