@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/client';
 import type {
-  CreateExerciseInput,
+  CreateExerciseSetsInput,
   UpdateExerciseInput,
   ExerciseRecord,
 } from '@lifestyle-app/shared';
@@ -60,7 +60,7 @@ export function useExercises(options?: UseExercisesOptions) {
   });
 
   const createMutation = useMutation({
-    mutationFn: async (input: CreateExerciseInput) => {
+    mutationFn: async (input: CreateExerciseSetsInput) => {
       const res = await api.exercises.$post({ json: input });
       if (!res.ok) {
         const error = await res.json().catch(() => ({ message: 'Failed to create exercise' }));

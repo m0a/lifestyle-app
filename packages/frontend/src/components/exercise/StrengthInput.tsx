@@ -1,9 +1,22 @@
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { createExerciseSchema, type CreateExerciseInput, type ExerciseRecord, EXERCISE_PRESETS, MUSCLE_GROUPS, MUSCLE_GROUP_LABELS, type MuscleGroup } from '@lifestyle-app/shared';
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { logValidationError } from '../../lib/errorLogger';
+import { useState, useCallback, useMemo } from 'react';
+import { EXERCISE_PRESETS, MUSCLE_GROUPS, MUSCLE_GROUP_LABELS, type MuscleGroup, type ExerciseRecord } from '@lifestyle-app/shared';
+import { SetRow } from './SetRow';
 import { LastRecordBadge } from './LastRecordBadge';
+import { SessionListModal } from './SessionListModal';
+import { logValidationError } from '../../lib/errorLogger';
+
+interface SetInput {
+  reps: number;
+  weight: number | null;
+  variation?: string;
+}
+
+interface CreateExerciseSetsInput {
+  exerciseType: string;
+  muscleGroup?: MuscleGroup;
+  sets: SetInput[];
+  recordedAt: string;
+}
 
 interface ExerciseTypeWithMuscleGroup {
   exerciseType: string;
@@ -11,11 +24,27 @@ interface ExerciseTypeWithMuscleGroup {
 }
 
 interface StrengthInputProps {
-  onSubmit: (data: CreateExerciseInput) => void;
+  onSubmit: (data: CreateExerciseSetsInput) => void;
   isLoading?: boolean;
   error?: Error | null;
   onFetchLastRecord?: (exerciseType: string) => Promise<ExerciseRecord | null>;
   customTypes?: ExerciseTypeWithMuscleGroup[];
+}
+
+interface SessionExercise {
+  exerciseType: string;
+  muscleGroup: string | null;
+  sets: {
+    setNumber: number;
+    reps: number;
+    weight: number | null;
+    variation: string | null;
+  }[];
+}
+
+interface Session {
+  date: string;
+  exercises: SessionExercise[];
 }
 
 export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, customTypes = [] }: StrengthInputProps) {
@@ -24,50 +53,16 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, c
   const [selectedMuscleGroup, setSelectedMuscleGroup] = useState<MuscleGroup>('chest');
   const [lastRecord, setLastRecord] = useState<ExerciseRecord | null>(null);
   const [isLoadingLastRecord, setIsLoadingLastRecord] = useState(false);
+  const [showSessionModal, setShowSessionModal] = useState(false);
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    setValue,
-    watch,
-    formState: { errors },
-  } = useForm<CreateExerciseInput>({
-    resolver: zodResolver(createExerciseSchema),
-    defaultValues: {
-      sets: 3,
-      reps: 10,
-      recordedAt: new Date().toISOString().slice(0, 16),
-    },
-  });
+  // Form state
+  const [exerciseType, setExerciseType] = useState('');
+  const [customExerciseName, setCustomExerciseName] = useState('');
+  const [sets, setSets] = useState<SetInput[]>([{ reps: 10, weight: null }]);
+  const [recordedAt, setRecordedAt] = useState(new Date().toISOString().slice(0, 16));
+  const [validationError, setValidationError] = useState<string | null>(null);
 
-  const exerciseType = watch('exerciseType');
-  const formData = watch();
-
-  // Log validation errors when they occur
-  useEffect(() => {
-    if (Object.keys(errors).length > 0) {
-      logValidationError('StrengthInput', errors, formData as Record<string, unknown>);
-    }
-  }, [errors, formData]);
-
-  const handleFormSubmit = (data: CreateExerciseInput) => {
-    onSubmit({
-      ...data,
-      muscleGroup: selectedMuscleGroup,
-      recordedAt: data.recordedAt || new Date().toISOString(),
-    });
-    reset({
-      exerciseType: '',
-      sets: 3,
-      reps: 10,
-      weight: undefined,
-      recordedAt: new Date().toISOString().slice(0, 16),
-    });
-    setShowCustomInput(false);
-    setSuccessMessage('運動を記録しました');
-    setTimeout(() => setSuccessMessage(null), 3000);
-  };
+  const actualExerciseType = showCustomInput ? customExerciseName : exerciseType;
 
   const fetchLastRecordForType = useCallback(async (type: string) => {
     if (!onFetchLastRecord || !type) {
@@ -88,30 +83,101 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, c
   const handleExerciseTypeSelect = (type: string) => {
     if (type === 'その他') {
       setShowCustomInput(true);
-      setValue('exerciseType', '');
+      setExerciseType('');
       setLastRecord(null);
     } else {
       setShowCustomInput(false);
-      setValue('exerciseType', type);
+      setExerciseType(type);
       fetchLastRecordForType(type);
     }
   };
 
   const handleCopyLastRecord = () => {
     if (lastRecord) {
-      setValue('sets', lastRecord.sets);
-      setValue('reps', lastRecord.reps);
-      if (lastRecord.weight !== null) {
-        setValue('weight', lastRecord.weight);
+      // Copy the last record's values to the first set
+      const newSets = [...sets];
+      if (newSets.length > 0) {
+        newSets[0] = {
+          reps: lastRecord.reps,
+          weight: lastRecord.weight,
+        };
+        setSets(newSets);
       }
     }
+  };
+
+  const addSet = () => {
+    // Copy values from the last set
+    const lastSet = sets[sets.length - 1];
+    setSets([...sets, { reps: lastSet?.reps || 10, weight: lastSet?.weight || null }]);
+  };
+
+  const removeSet = (index: number) => {
+    if (sets.length > 1) {
+      setSets(sets.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateSet = (index: number, field: keyof SetInput, value: number | string | null) => {
+    const newSets = [...sets];
+    if (field === 'reps') {
+      newSets[index].reps = value as number;
+    } else if (field === 'weight') {
+      newSets[index].weight = value as number | null;
+    } else if (field === 'variation') {
+      newSets[index].variation = value as string;
+    }
+    setSets(newSets);
+  };
+
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setValidationError(null);
+
+    // Validation
+    if (!actualExerciseType) {
+      setValidationError('種目を選択してください');
+      return;
+    }
+
+    if (sets.length === 0) {
+      setValidationError('1セット以上入力してください');
+      return;
+    }
+
+    for (let i = 0; i < sets.length; i++) {
+      if (sets[i].reps < 1 || sets[i].reps > 100) {
+        setValidationError(`セット${i + 1}: 回数は1〜100の範囲で入力してください`);
+        logValidationError('StrengthInput', { reps: { message: 'Invalid reps' } }, { setIndex: i, reps: sets[i].reps });
+        return;
+      }
+    }
+
+    onSubmit({
+      exerciseType: actualExerciseType,
+      muscleGroup: selectedMuscleGroup,
+      sets: sets.map(s => ({
+        reps: s.reps,
+        weight: s.weight,
+        variation: s.variation,
+      })),
+      recordedAt: recordedAt || new Date().toISOString(),
+    });
+
+    // Reset form
+    setExerciseType('');
+    setCustomExerciseName('');
+    setSets([{ reps: 10, weight: null }]);
+    setRecordedAt(new Date().toISOString().slice(0, 16));
+    setShowCustomInput(false);
+    setSuccessMessage('運動を記録しました');
+    setTimeout(() => setSuccessMessage(null), 3000);
   };
 
   const filteredPresets = EXERCISE_PRESETS.filter(
     (preset) => preset.muscleGroup === selectedMuscleGroup
   );
 
-  // Filter out preset names and filter by selected muscle group
   const recentCustomTypes = useMemo(() => {
     const presetNames = new Set(EXERCISE_PRESETS.map(p => p.name));
     return customTypes
@@ -120,8 +186,40 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, c
       .map(item => item.exerciseType);
   }, [customTypes, selectedMuscleGroup]);
 
+  const handleSessionSelect = (session: Session) => {
+    // Take the first exercise from the session and populate the form
+    if (session.exercises.length > 0) {
+      const firstExercise = session.exercises[0];
+
+      // Set exercise type
+      const isPreset = EXERCISE_PRESETS.some(p => p.name === firstExercise.exerciseType);
+      if (isPreset) {
+        setExerciseType(firstExercise.exerciseType);
+        setShowCustomInput(false);
+      } else {
+        setCustomExerciseName(firstExercise.exerciseType);
+        setShowCustomInput(true);
+      }
+
+      // Set muscle group if available
+      if (firstExercise.muscleGroup) {
+        setSelectedMuscleGroup(firstExercise.muscleGroup as MuscleGroup);
+      }
+
+      // Copy sets
+      setSets(firstExercise.sets.map(s => ({
+        reps: s.reps,
+        weight: s.weight,
+        variation: s.variation || undefined,
+      })));
+
+      setSuccessMessage(`「${firstExercise.exerciseType}」のセット構成を取り込みました`);
+      setTimeout(() => setSuccessMessage(null), 3000);
+    }
+  };
+
   return (
-    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
+    <form onSubmit={handleFormSubmit} className="space-y-4">
       {/* Muscle Group Tabs */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -157,7 +255,7 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, c
               type="button"
               onClick={() => handleExerciseTypeSelect(preset.name)}
               className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-                exerciseType === preset.name
+                exerciseType === preset.name && !showCustomInput
                   ? 'bg-orange-600 text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
@@ -191,7 +289,7 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, c
                   type="button"
                   onClick={() => handleExerciseTypeSelect(type)}
                   className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
-                    exerciseType === type
+                    exerciseType === type && !showCustomInput
                       ? 'bg-orange-600 text-white'
                       : 'bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200'
                   }`}
@@ -202,22 +300,19 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, c
             </div>
           </div>
         )}
-        {showCustomInput ? (
+
+        {showCustomInput && (
           <input
-            {...register('exerciseType')}
             type="text"
+            value={customExerciseName}
+            onChange={(e) => setCustomExerciseName(e.target.value)}
             placeholder="種目名を入力"
             className="mt-2 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
           />
-        ) : (
-          <input type="hidden" {...register('exerciseType')} />
-        )}
-        {errors.exerciseType && (
-          <p className="mt-1 text-sm text-red-600">{errors.exerciseType.message}</p>
         )}
 
         {/* Last Record Badge */}
-        {exerciseType && !showCustomInput && (
+        {actualExerciseType && !showCustomInput && (
           <div className="mt-3">
             <LastRecordBadge
               record={lastRecord}
@@ -228,65 +323,45 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, c
         )}
       </div>
 
-      {/* Sets, Reps, Weight */}
-      <div className="grid gap-4 grid-cols-3">
-        <div>
-          <label htmlFor="sets" className="block text-sm font-medium text-gray-700">
+      {/* Sets Input */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <label className="block text-sm font-medium text-gray-700">
             セット
           </label>
-          <input
-            {...register('sets', { valueAsNumber: true })}
-            type="number"
-            id="sets"
-            min="1"
-            max="20"
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
-          />
-          {errors.sets && (
-            <p className="mt-1 text-sm text-red-600">{errors.sets.message}</p>
-          )}
+          <button
+            type="button"
+            onClick={addSet}
+            className="text-sm text-orange-600 hover:text-orange-700 font-medium"
+          >
+            + セット追加
+          </button>
         </div>
 
-        <div>
-          <label htmlFor="reps" className="block text-sm font-medium text-gray-700">
-            レップ
-          </label>
-          <input
-            {...register('reps', { valueAsNumber: true })}
-            type="number"
-            id="reps"
-            min="1"
-            max="100"
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
-          />
-          {errors.reps && (
-            <p className="mt-1 text-sm text-red-600">{errors.reps.message}</p>
-          )}
+        {/* Set Headers */}
+        <div className="flex items-center gap-2 mb-1 text-xs text-gray-500">
+          <div className="w-8 text-center">#</div>
+          <div className="flex-1">回数</div>
+          <div className="flex-1">重量(kg)</div>
+          <div className="w-16"></div>
+          <div className="w-6"></div>
         </div>
 
-        <div>
-          <label htmlFor="weight" className="block text-sm font-medium text-gray-700">
-            重量 (kg)
-          </label>
-          <input
-            {...register('weight', {
-              setValueAs: (v) => {
-                if (v === '' || v === undefined || v === null) return null;
-                const num = Number(v);
-                return isNaN(num) ? null : num;
-              }
-            })}
-            type="number"
-            id="weight"
-            min="0"
-            max="500"
-            step="0.5"
-            placeholder="自重"
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
-          />
-          {errors.weight && (
-            <p className="mt-1 text-sm text-red-600">{errors.weight.message}</p>
-          )}
+        {/* Set Rows */}
+        <div className="bg-gray-50 rounded-lg p-2">
+          {sets.map((set, index) => (
+            <SetRow
+              key={index}
+              setNumber={index + 1}
+              reps={set.reps}
+              weight={set.weight}
+              variation={set.variation}
+              onRepsChange={(reps) => updateSet(index, 'reps', reps)}
+              onWeightChange={(weight) => updateSet(index, 'weight', weight)}
+              onRemove={() => removeSet(index)}
+              isRemovable={sets.length > 1}
+            />
+          ))}
         </div>
       </div>
 
@@ -296,17 +371,15 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, c
           記録日時
         </label>
         <input
-          {...register('recordedAt')}
           type="datetime-local"
           id="recordedAt"
+          value={recordedAt}
+          onChange={(e) => setRecordedAt(e.target.value)}
           className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
         />
-        {errors.recordedAt && (
-          <p className="mt-1 text-sm text-red-600">{errors.recordedAt.message}</p>
-        )}
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 flex-wrap">
         <button
           type="submit"
           disabled={isLoading}
@@ -315,14 +388,29 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, c
           {isLoading ? '記録中...' : '記録する'}
         </button>
 
-        {error && (
-          <p className="text-sm text-red-600">{error.message}</p>
+        <button
+          type="button"
+          onClick={() => setShowSessionModal(true)}
+          className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
+        >
+          過去のトレーニングから取り込む
+        </button>
+
+        {(error || validationError) && (
+          <p className="text-sm text-red-600">{error?.message || validationError}</p>
         )}
 
         {successMessage && (
           <p className="text-sm text-green-600">{successMessage}</p>
         )}
       </div>
+
+      {/* Session Import Modal */}
+      <SessionListModal
+        isOpen={showSessionModal}
+        onClose={() => setShowSessionModal(false)}
+        onSelect={handleSessionSelect}
+      />
     </form>
   );
 }

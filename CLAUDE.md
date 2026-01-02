@@ -98,3 +98,11 @@ tests/
 - **PR Preview**: Auto-deploy on PR, cleanup on close
 
 Preview uses separate D1 database (`health-tracker-preview-db`).
+
+## Recent Changes
+- 005-strength-set-management: Added TypeScript 5.x (strict mode) + React 18+, Hono, Drizzle ORM, Zod, TanStack Query
+- 005-strength-set-management: Added [if applicable, e.g., PostgreSQL, CoreData, files or N/A]
+
+## Active Technologies
+- TypeScript 5.x (strict mode) + React 18+, Hono, Drizzle ORM, Zod, TanStack Query (005-strength-set-management)
+- Cloudflare D1 (SQLite) (005-strength-set-management)

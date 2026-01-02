@@ -78,7 +78,22 @@ export const updateMealSchema = z.object({
 // Muscle group schema
 export const muscleGroupSchema = z.enum(['chest', 'back', 'legs', 'shoulders', 'arms', 'core', 'other']);
 
-// Exercise schemas (strength training optimized)
+// Exercise set schema (for individual set input)
+export const exerciseSetInputSchema = z.object({
+  reps: z.number().int().min(1, '1回以上で入力してください').max(100, '100回以下で入力してください'),
+  weight: z.number().min(0).max(500).nullable().optional(),
+  variation: z.string().max(50).optional(),
+});
+
+// Exercise schemas (strength training optimized - per-set recording)
+export const createExerciseSetsSchema = z.object({
+  exerciseType: z.string().min(1, '種目を選択してください').max(100),
+  muscleGroup: muscleGroupSchema.optional(),
+  sets: z.array(exerciseSetInputSchema).min(1, '1セット以上入力してください'),
+  recordedAt: datetimeSchema,
+});
+
+// Legacy schema for backward compatibility
 export const createExerciseSchema = z.object({
   exerciseType: z.string().min(1, '種目を選択してください').max(100),
   muscleGroup: muscleGroupSchema.optional(),
@@ -91,10 +106,25 @@ export const createExerciseSchema = z.object({
 export const updateExerciseSchema = z.object({
   exerciseType: z.string().min(1).max(100).optional(),
   muscleGroup: muscleGroupSchema.optional(),
-  sets: z.number().int().min(1).max(20).optional(),
   reps: z.number().int().min(1).max(100).optional(),
   weight: z.number().min(0).max(500).nullable().optional(),
+  variation: z.string().max(50).nullable().optional(),
   recordedAt: datetimeSchema.optional(),
+});
+
+// Add set to existing exercise group
+export const addSetSchema = z.object({
+  date: z.string().date(),
+  reps: z.number().int().min(1, '1回以上で入力してください').max(100),
+  weight: z.number().min(0).max(500).nullable().optional(),
+  variation: z.string().max(50).optional(),
+});
+
+// Import session schema
+export const importSessionSchema = z.object({
+  sourceDate: z.string().date(),
+  targetDate: z.string().date(),
+  exerciseTypes: z.array(z.string()).optional(),
 });
 
 // Date range schema for queries

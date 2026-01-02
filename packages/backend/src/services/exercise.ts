@@ -1,13 +1,63 @@
-import { eq, desc, and } from 'drizzle-orm';
+import { eq, desc, and, sql } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import type { Database } from '../db';
 import { schema } from '../db';
 import { AppError } from '../middleware/error';
 import type { CreateExerciseInput, UpdateExerciseInput } from '@lifestyle-app/shared';
+import { z } from 'zod';
+import { createExerciseSetsSchema, addSetSchema, importSessionSchema } from '@lifestyle-app/shared';
+
+// Type for new multi-set input
+export type CreateExerciseSetsInput = z.infer<typeof createExerciseSetsSchema>;
+export type AddSetInput = z.infer<typeof addSetSchema>;
+export type ImportSessionInput = z.infer<typeof importSessionSchema>;
 
 export class ExerciseService {
   constructor(private db: Database) {}
 
+  // New: Create multiple sets at once
+  async createSets(userId: string, input: CreateExerciseSetsInput) {
+    const now = new Date().toISOString();
+    const exercises = [];
+
+    for (let i = 0; i < input.sets.length; i++) {
+      const set = input.sets[i];
+      const id = uuidv4();
+      const setNumber = i + 1;
+
+      await this.db.insert(schema.exerciseRecords).values({
+        id,
+        userId,
+        exerciseType: input.exerciseType,
+        muscleGroup: input.muscleGroup ?? null,
+        setNumber,
+        reps: set.reps,
+        weight: set.weight ?? null,
+        variation: set.variation ?? null,
+        recordedAt: input.recordedAt,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      exercises.push({
+        id,
+        userId,
+        exerciseType: input.exerciseType,
+        muscleGroup: input.muscleGroup ?? null,
+        setNumber,
+        reps: set.reps,
+        weight: set.weight ?? null,
+        variation: set.variation ?? null,
+        recordedAt: input.recordedAt,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
+    return exercises;
+  }
+
+  // Legacy: Create single record (for backward compatibility)
   async create(userId: string, input: CreateExerciseInput) {
     const now = new Date().toISOString();
     const id = uuidv4();
@@ -17,9 +67,10 @@ export class ExerciseService {
       userId,
       exerciseType: input.exerciseType,
       muscleGroup: input.muscleGroup ?? null,
-      sets: input.sets,
+      setNumber: 1,
       reps: input.reps,
       weight: input.weight ?? null,
+      variation: null,
       recordedAt: input.recordedAt,
       createdAt: now,
       updatedAt: now,
@@ -30,9 +81,10 @@ export class ExerciseService {
       userId,
       exerciseType: input.exerciseType,
       muscleGroup: input.muscleGroup ?? null,
-      sets: input.sets,
+      setNumber: 1,
       reps: input.reps,
       weight: input.weight ?? null,
+      variation: null,
       recordedAt: input.recordedAt,
       createdAt: now,
       updatedAt: now,
@@ -120,8 +172,9 @@ export class ExerciseService {
       endDate: endOfWeek.toISOString(),
     });
 
-    const totalSets = exercises.reduce((sum, e) => sum + e.sets, 0);
-    const totalReps = exercises.reduce((sum, e) => sum + e.reps * e.sets, 0);
+    // Each record is now 1 set
+    const totalSets = exercises.length;
+    const totalReps = exercises.reduce((sum, e) => sum + e.reps, 0);
     const count = exercises.length;
 
     const byType = exercises.reduce(
@@ -129,8 +182,8 @@ export class ExerciseService {
         if (!acc[e.exerciseType]) {
           acc[e.exerciseType] = { sets: 0, reps: 0 };
         }
-        acc[e.exerciseType].sets += e.sets;
-        acc[e.exerciseType].reps += e.reps * e.sets;
+        acc[e.exerciseType].sets += 1;
+        acc[e.exerciseType].reps += e.reps;
         return acc;
       },
       {} as Record<string, { sets: number; reps: number }>
@@ -152,8 +205,9 @@ export class ExerciseService {
   ) {
     const exercises = await this.findByUserId(userId, options);
 
-    const totalSets = exercises.reduce((sum, e) => sum + e.sets, 0);
-    const totalReps = exercises.reduce((sum, e) => sum + e.reps * e.sets, 0);
+    // Each record is now 1 set
+    const totalSets = exercises.length;
+    const totalReps = exercises.reduce((sum, e) => sum + e.reps, 0);
     const count = exercises.length;
 
     const byType = exercises.reduce(
@@ -161,8 +215,8 @@ export class ExerciseService {
         if (!acc[e.exerciseType]) {
           acc[e.exerciseType] = { sets: 0, reps: 0 };
         }
-        acc[e.exerciseType].sets += e.sets;
-        acc[e.exerciseType].reps += e.reps * e.sets;
+        acc[e.exerciseType].sets += 1;
+        acc[e.exerciseType].reps += e.reps;
         return acc;
       },
       {} as Record<string, { sets: number; reps: number }>
@@ -193,16 +247,16 @@ export class ExerciseService {
       updateData.muscleGroup = input.muscleGroup;
     }
 
-    if (input.sets !== undefined) {
-      updateData.sets = input.sets;
-    }
-
     if (input.reps !== undefined) {
       updateData.reps = input.reps;
     }
 
     if (input.weight !== undefined) {
       updateData.weight = input.weight;
+    }
+
+    if (input.variation !== undefined) {
+      updateData.variation = input.variation;
     }
 
     if (input.recordedAt !== undefined) {
@@ -246,5 +300,91 @@ export class ExerciseService {
       }
     }
     return types;
+  }
+
+  // Get recent training sessions (grouped by date)
+  async getRecentSessions(
+    userId: string,
+    options?: { cursor?: string; limit?: number }
+  ) {
+    const limit = options?.limit ?? 10;
+
+    const records = await this.db
+      .select()
+      .from(schema.exerciseRecords)
+      .where(eq(schema.exerciseRecords.userId, userId))
+      .orderBy(desc(schema.exerciseRecords.recordedAt))
+      .all();
+
+    // Group by date
+    const sessionMap = new Map<string, {
+      date: string;
+      exercises: typeof records;
+    }>();
+
+    for (const record of records) {
+      const dateStr = record.recordedAt.split('T')[0];
+      if (!sessionMap.has(dateStr)) {
+        sessionMap.set(dateStr, { date: dateStr, exercises: [] });
+      }
+      sessionMap.get(dateStr)!.exercises.push(record);
+    }
+
+    // Convert to array and sort by date desc
+    let sessions = Array.from(sessionMap.values())
+      .sort((a, b) => b.date.localeCompare(a.date));
+
+    // Apply cursor pagination
+    if (options?.cursor) {
+      const cursorIndex = sessions.findIndex(s => s.date === options.cursor);
+      if (cursorIndex !== -1) {
+        sessions = sessions.slice(cursorIndex + 1);
+      }
+    }
+
+    // Apply limit
+    const hasMore = sessions.length > limit;
+    sessions = sessions.slice(0, limit);
+
+    // Format sessions for response
+    const formattedSessions = sessions.map(session => {
+      // Group exercises by type within the session
+      const exerciseGroups: Record<string, {
+        exerciseType: string;
+        muscleGroup: string | null;
+        sets: { setNumber: number; reps: number; weight: number | null; variation: string | null }[];
+      }> = {};
+
+      for (const exercise of session.exercises) {
+        if (!exerciseGroups[exercise.exerciseType]) {
+          exerciseGroups[exercise.exerciseType] = {
+            exerciseType: exercise.exerciseType,
+            muscleGroup: exercise.muscleGroup,
+            sets: [],
+          };
+        }
+        exerciseGroups[exercise.exerciseType].sets.push({
+          setNumber: exercise.setNumber,
+          reps: exercise.reps,
+          weight: exercise.weight,
+          variation: exercise.variation,
+        });
+      }
+
+      // Sort sets by setNumber
+      for (const group of Object.values(exerciseGroups)) {
+        group.sets.sort((a, b) => a.setNumber - b.setNumber);
+      }
+
+      return {
+        date: session.date,
+        exercises: Object.values(exerciseGroups),
+      };
+    });
+
+    return {
+      sessions: formattedSessions,
+      nextCursor: hasMore ? sessions[sessions.length - 1]?.date : null,
+    };
   }
 }
