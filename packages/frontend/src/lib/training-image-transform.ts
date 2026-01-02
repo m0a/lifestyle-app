@@ -75,7 +75,7 @@ export function transformToImageData(
     date,
     title: 'WorkOut',
     exercises: exerciseCards,
-    footer: 'Powered by Lifestyle App',
+    footer: 'https://lifestyle-tracker.abe00makoto.workers.dev',
   };
 }
 
