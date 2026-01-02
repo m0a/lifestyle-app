@@ -288,4 +288,31 @@ export const mealAnalysisApi = {
   ): Promise<{ foodItems: FoodItem[]; updatedTotals: NutritionTotals }> {
     return api.post(`/api/meals/${mealId}/chat/apply`, { changes });
   },
+
+  // Delete meal photo (T034)
+  async deletePhoto(mealId: string): Promise<{ success: boolean; message: string }> {
+    return api.delete(`/api/meals/${mealId}/photo`);
+  },
+
+  // Upload meal photo (T035)
+  async uploadPhoto(
+    mealId: string,
+    photo: Blob
+  ): Promise<{ success: boolean; photoKey: string; message: string }> {
+    const formData = new FormData();
+    formData.append('photo', photo, 'photo.jpg');
+
+    const response = await fetch(`${API_BASE_URL}/api/meals/${mealId}/photo`, {
+      method: 'POST',
+      body: formData,
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new ApiRequestError(error.message || 'Photo upload failed', response.status);
+    }
+
+    return response.json();
+  },
 };

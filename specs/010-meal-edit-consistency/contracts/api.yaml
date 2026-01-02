@@ -1,0 +1,113 @@
+openapi: 3.0.3
+info:
+  title: Meal Edit API Extensions
+  description: 食事編集機能のための追加APIエンドポイント
+  version: 1.0.0
+
+paths:
+  /api/meals/{mealId}/photo:
+    delete:
+      summary: 食事から写真を削除
+      description: 指定された食事記録から写真を削除し、R2ストレージからも削除する
+      operationId: deleteMealPhoto
+      tags:
+        - Meal Photo
+      parameters:
+        - name: mealId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: 食事記録ID
+      responses:
+        '200':
+          description: 写真削除成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '404':
+          description: 食事記録または写真が見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: 認証エラー
+        '403':
+          description: 権限エラー（他ユーザーの記録）
+
+    post:
+      summary: 既存の食事に写真を追加/更新
+      description: 既存の食事記録に写真を追加、または既存の写真を置き換える
+      operationId: uploadMealPhoto
+      tags:
+        - Meal Photo
+      parameters:
+        - name: mealId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: 食事記録ID
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: string
+                  format: binary
+                  description: 写真ファイル（JPEG, PNG, WebP）
+              required:
+                - image
+      responses:
+        '200':
+          description: 写真アップロード成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  photoKey:
+                    type: string
+                    description: R2ストレージキー
+                  photoUrl:
+                    type: string
+                    description: 写真のURL
+        '400':
+          description: 無効なファイル形式
+        '401':
+          description: 認証エラー
+        '403':
+          description: 権限エラー
+        '413':
+          description: ファイルサイズ超過
+
+components:
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: エラーメッセージ
+      required:
+        - error
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+security:
+  - BearerAuth: []
