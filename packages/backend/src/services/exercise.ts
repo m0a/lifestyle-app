@@ -1,11 +1,11 @@
-import { eq, desc, and } from 'drizzle-orm';
+import { eq, desc, and, inArray } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import type { Database } from '../db';
 import { schema } from '../db';
 import { AppError } from '../middleware/error';
 import type { CreateExerciseInput, UpdateExerciseInput } from '@lifestyle-app/shared';
 import { z } from 'zod';
-import { createExerciseSetsSchema } from '@lifestyle-app/shared';
+import { createExerciseSetsSchema, calculate1RM } from '@lifestyle-app/shared';
 
 // Type for new multi-set input
 export type CreateExerciseSetsInput = z.infer<typeof createExerciseSetsSchema>;
@@ -298,6 +298,54 @@ export class ExerciseService {
       }
     }
     return types;
+  }
+
+  /**
+   * Get historical max 1RM for specified exercise types
+   * @param userId - User ID
+   * @param exerciseTypes - Optional array of exercise types. If empty, returns all types.
+   * @returns Array of { exerciseType, maxRM, achievedAt } for each exercise type
+   */
+  async getMaxRMs(
+    userId: string,
+    exerciseTypes?: string[]
+  ): Promise<{ exerciseType: string; maxRM: number; achievedAt: string }[]> {
+    // Get all records for the user (filtered by exercise types if specified)
+    const records = await this.db
+      .select()
+      .from(schema.exerciseRecords)
+      .where(eq(schema.exerciseRecords.userId, userId))
+      .all();
+
+    // Filter by exercise types if specified
+    const filtered = exerciseTypes && exerciseTypes.length > 0
+      ? records.filter(r => exerciseTypes.includes(r.exerciseType))
+      : records;
+
+    // Group by exercise type and find max 1RM for each
+    const maxByType = new Map<string, { maxRM: number; achievedAt: string }>();
+
+    for (const record of filtered) {
+      // Skip records without weight (bodyweight exercises)
+      if (record.weight === null) continue;
+
+      const estimated1RM = calculate1RM(record.weight, record.reps);
+      const existing = maxByType.get(record.exerciseType);
+
+      if (!existing || estimated1RM > existing.maxRM) {
+        maxByType.set(record.exerciseType, {
+          maxRM: estimated1RM,
+          achievedAt: record.recordedAt,
+        });
+      }
+    }
+
+    // Convert to array
+    return Array.from(maxByType.entries()).map(([exerciseType, data]) => ({
+      exerciseType,
+      maxRM: data.maxRM,
+      achievedAt: data.achievedAt,
+    }));
   }
 
   // Get recent training sessions (grouped by date)

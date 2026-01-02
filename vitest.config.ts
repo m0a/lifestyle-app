@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitest/config';
+import path from 'path';
 
 export default defineConfig({
   test: {
@@ -13,8 +14,8 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@lifestyle-app/shared': './packages/shared/src',
-      '@lifestyle-app/backend': './packages/backend/src',
+      '@lifestyle-app/shared': path.resolve(__dirname, 'packages/shared/src'),
+      '@lifestyle-app/backend': path.resolve(__dirname, 'packages/backend/src'),
     },
   },
 });

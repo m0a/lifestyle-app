@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
-import { createExerciseSetsSchema, updateExerciseSchema, dateRangeSchema, exerciseQuerySchema } from '@lifestyle-app/shared';
+import { createExerciseSetsSchema, updateExerciseSchema, dateRangeSchema, exerciseQuerySchema, maxRMQuerySchema } from '@lifestyle-app/shared';
 import { ExerciseService } from '../services/exercise';
 import { authMiddleware } from '../middleware/auth';
 import type { Database } from '../db';
@@ -84,6 +84,21 @@ export const exercises = new Hono<{ Bindings: Bindings; Variables: Variables }>(
     const types = await exerciseService.getExerciseTypes(user.id);
 
     return c.json({ types });
+  })
+  .get('/max-rm', zValidator('query', maxRMQuerySchema), async (c) => {
+    const query = c.req.valid('query');
+    const db = c.get('db');
+    const user = c.get('user');
+
+    // Parse comma-separated exercise types if provided
+    const exerciseTypes = query.exerciseTypes
+      ? query.exerciseTypes.split(',').map((t) => t.trim()).filter(Boolean)
+      : undefined;
+
+    const exerciseService = new ExerciseService(db);
+    const maxRMs = await exerciseService.getMaxRMs(user.id, exerciseTypes);
+
+    return c.json({ maxRMs });
   })
   .get('/sessions', async (c) => {
     const cursor = c.req.query('cursor');

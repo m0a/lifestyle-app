@@ -145,5 +145,20 @@ export const exerciseQuerySchema = z.object({
 export const dashboardPeriodSchema = z.enum(['week', 'month']);
 export type DashboardPeriod = z.infer<typeof dashboardPeriodSchema>;
 
+// Max RM schemas (for training image feature)
+export const maxRMQuerySchema = z.object({
+  exerciseTypes: z.string().optional(), // Comma-separated exercise types
+});
+
+export const maxRMRecordSchema = z.object({
+  exerciseType: z.string(),
+  maxRM: z.number(),
+  achievedAt: z.string(),
+});
+
+export const maxRMResponseSchema = z.object({
+  maxRMs: z.array(maxRMRecordSchema),
+});
+
 // Meal analysis schemas
 export * from './meal-analysis';
