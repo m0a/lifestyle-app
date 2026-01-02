@@ -125,11 +125,17 @@ export class ExerciseService {
     }
 
     if (options?.startDate) {
-      filtered = filtered.filter((r) => r.recordedAt >= options.startDate!);
+      filtered = filtered.filter((r) => {
+        const recordDate = r.recordedAt.split('T')[0];
+        return recordDate >= options.startDate!;
+      });
     }
 
     if (options?.endDate) {
-      filtered = filtered.filter((r) => r.recordedAt <= options.endDate!);
+      filtered = filtered.filter((r) => {
+        const recordDate = r.recordedAt.split('T')[0];
+        return recordDate <= options.endDate!;
+      });
     }
 
     if (options?.limit) {

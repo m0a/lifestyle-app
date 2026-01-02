@@ -26,10 +26,8 @@ export function useTrainingImage({ date }: UseTrainingImageOptions): UseTraining
     queryKey: ['exercises', 'forImage', date],
     queryFn: async () => {
       // Use date range that includes the entire day
-      // startDate: beginning of day, endDate: end of day (next day for comparison)
       const startDate = date;
-      // Add T23:59:59 to include all records for this day in string comparison
-      const endDate = `${date}T23:59:59`;
+      const endDate = date;
 
       const res = await api.exercises.$get({
         query: { startDate, endDate },
