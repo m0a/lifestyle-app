@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTrainingImage } from '../../hooks/useTrainingImage';
 import { useShareImage } from '../../hooks/useShareImage';
 import { TrainingImagePreview } from '../../components/exercise/TrainingImagePreview';

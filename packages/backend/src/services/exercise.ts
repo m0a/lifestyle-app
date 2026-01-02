@@ -1,4 +1,4 @@
-import { eq, desc, and, inArray } from 'drizzle-orm';
+import { eq, desc, and } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import type { Database } from '../db';
 import { schema } from '../db';
