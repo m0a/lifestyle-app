@@ -29,8 +29,8 @@ export const TrainingImagePreview = forwardRef<HTMLDivElement, TrainingImagePrev
         {/* Header */}
         <div className="bg-red-600 text-white py-3 px-4">
           <div className="text-center">
-            <div className="text-lg font-bold">{data.date}</div>
-            <div className="text-2xl font-bold tracking-wide">{data.title}</div>
+            <div className="text-sm font-bold">{data.date}</div>
+            <div className="text-xl font-bold tracking-wide">{data.title}</div>
           </div>
         </div>
 
