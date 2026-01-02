@@ -13,7 +13,5 @@ ALTER TABLE exercise_records ADD COLUMN variation TEXT;
 -- Note: SQLite doesn't support ALTER COLUMN, so we handle this via application constraints
 
 -- Step 4: Remove sets column
--- Note: SQLite doesn't support DROP COLUMN in older versions
--- For D1/modern SQLite, we can use:
--- ALTER TABLE exercise_records DROP COLUMN sets;
--- If that fails, the column will remain but be unused
+-- D1/modern SQLite supports DROP COLUMN
+ALTER TABLE exercise_records DROP COLUMN sets;
