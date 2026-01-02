@@ -100,9 +100,10 @@ tests/
 Preview uses separate D1 database (`health-tracker-preview-db`).
 
 ## Recent Changes
+- 009-share-training-image: Added TypeScript 5.x (strict mode) + React 18+, Hono, Drizzle ORM, Zod, TanStack Query + React, Tailwind CSS, html-to-image (or html2canvas), Web Share API
 - 005-strength-set-management: Added TypeScript 5.x (strict mode) + React 18+, Hono, Drizzle ORM, Zod, TanStack Query
 - 005-strength-set-management: Added [if applicable, e.g., PostgreSQL, CoreData, files or N/A]
 
 ## Active Technologies
-- TypeScript 5.x (strict mode) + React 18+, Hono, Drizzle ORM, Zod, TanStack Query (005-strength-set-management)
-- Cloudflare D1 (SQLite) (005-strength-set-management)
+- TypeScript 5.x (strict mode) + React 18+, Hono, Drizzle ORM, Zod, TanStack Query + React, Tailwind CSS, html-to-image (or html2canvas), Web Share API (009-share-training-image)
+- Cloudflare D1 (SQLite) - 既存のexercise_recordsテーブルを使用 (009-share-training-image)

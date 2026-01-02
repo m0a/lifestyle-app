@@ -10,9 +10,15 @@ import {
   createExerciseSchema,
   createExerciseSetsSchema,
   updateExerciseSchema,
+  maxRMQuerySchema,
+  maxRMRecordSchema,
+  maxRMResponseSchema,
   type MealType,
   type DashboardPeriod,
 } from '../schemas';
+
+// Training image types
+export * from './training-image';
 
 // Infer types from schemas
 export type RegisterInput = z.infer<typeof registerSchema>;
@@ -25,6 +31,9 @@ export type UpdateMealInput = z.infer<typeof updateMealSchema>;
 export type CreateExerciseInput = z.infer<typeof createExerciseSchema>;
 export type CreateExerciseSetsInput = z.infer<typeof createExerciseSetsSchema>;
 export type UpdateExerciseInput = z.infer<typeof updateExerciseSchema>;
+export type MaxRMQueryInput = z.infer<typeof maxRMQuerySchema>;
+export type MaxRMRecordType = z.infer<typeof maxRMRecordSchema>;
+export type MaxRMResponseType = z.infer<typeof maxRMResponseSchema>;
 // MealType and DashboardPeriod are exported from schemas/index.ts
 
 // Entity types

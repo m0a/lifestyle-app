@@ -13,6 +13,9 @@ import { Settings } from './pages/Settings';
 // Lazy load meal pages
 const MealDetail = lazy(() => import('./pages/MealDetail'));
 
+// Lazy load training image page
+const TrainingImagePage = lazy(() => import('./pages/exercise/TrainingImagePage'));
+
 // Home component
 function Home() {
   return (
@@ -84,6 +87,18 @@ const routes: RouteObject[] = [
       <Layout>
         <ProtectedRoute>
           <Exercise />
+        </ProtectedRoute>
+      </Layout>
+    ),
+  },
+  {
+    path: '/exercises/image',
+    element: (
+      <Layout>
+        <ProtectedRoute>
+          <Suspense fallback={<div className="p-4 text-center">読み込み中...</div>}>
+            <TrainingImagePage />
+          </Suspense>
         </ProtectedRoute>
       </Layout>
     ),
