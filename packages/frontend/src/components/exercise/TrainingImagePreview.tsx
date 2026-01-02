@@ -30,7 +30,7 @@ export const TrainingImagePreview = forwardRef<HTMLDivElement, TrainingImagePrev
         <div className="bg-red-600 text-white py-3 px-4">
           <div className="text-center">
             <div className="text-xs font-bold">{data.date}</div>
-            <div className="text-lg font-bold tracking-wide">{data.title}</div>
+            <div className="text-base font-bold tracking-wide">{data.title}</div>
           </div>
         </div>
 
