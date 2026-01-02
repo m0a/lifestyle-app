@@ -64,6 +64,13 @@ export class PhotoStorageService {
   }
 
   /**
+   * Delete photo by key.
+   */
+  async deletePhoto(key: string): Promise<void> {
+    await this.r2.delete(key);
+  }
+
+  /**
    * Delete temporary photo (used when analysis fails or is cancelled).
    */
   async deleteTempPhoto(key: string): Promise<void> {

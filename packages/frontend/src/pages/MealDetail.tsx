@@ -1,8 +1,24 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { api, getPhotoUrl, mealAnalysisApi } from '../lib/api';
-import type { MealRecord, FoodItem, ChatMessage } from '@lifestyle-app/shared';
+import { MealEditMode } from '../components/meal/MealEditMode';
+import type { MealRecord, FoodItem, ChatMessage, NutritionTotals } from '@lifestyle-app/shared';
 import { MEAL_TYPE_LABELS } from '@lifestyle-app/shared';
+
+// Hook to warn about unsaved changes on navigation/refresh (T040)
+function useUnsavedChangesWarning(isDirty: boolean) {
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isDirty) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isDirty]);
+}
 
 interface MealDetailResponse {
   meal: MealRecord;
@@ -16,6 +32,11 @@ export default function MealDetailPage() {
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // Warn before leaving with unsaved changes (T040)
+  useUnsavedChangesWarning(hasUnsavedChanges);
 
   useEffect(() => {
     if (!mealId) return;
@@ -57,6 +78,43 @@ export default function MealDetailPage() {
     loadMealData();
   }, [mealId]);
 
+  const reloadMealData = useCallback(async () => {
+    if (!mealId) return;
+
+    try {
+      const mealResponse = await api.get<MealDetailResponse>(`/api/meals/${mealId}`);
+      setMeal(mealResponse.meal);
+
+      if (mealResponse.meal.analysisSource === 'ai') {
+        const { foodItems: items } = await mealAnalysisApi.getFoodItems(mealId);
+        setFoodItems(items);
+      }
+    } catch (err) {
+      console.error('Failed to reload meal data:', err);
+    }
+  }, [mealId]);
+
+  const handleEditSave = useCallback(() => {
+    setHasUnsavedChanges(false);
+    setIsEditing(false);
+    reloadMealData();
+  }, [reloadMealData]);
+
+  const handleEditCancel = useCallback(() => {
+    setHasUnsavedChanges(false);
+    setIsEditing(false);
+    reloadMealData();
+  }, [reloadMealData]);
+
+  const getTotals = useCallback((): NutritionTotals => {
+    return {
+      calories: meal?.calories ?? 0,
+      protein: meal?.totalProtein ?? 0,
+      fat: meal?.totalFat ?? 0,
+      carbs: meal?.totalCarbs ?? 0,
+    };
+  }, [meal]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -82,6 +140,36 @@ export default function MealDetailPage() {
   }
 
   const photoUrl = getPhotoUrl(meal.photoKey);
+
+  // Edit mode view
+  if (isEditing) {
+    return (
+      <div className="mx-auto max-w-lg p-4">
+        {/* Edit mode header */}
+        <div className="mb-4 flex items-center justify-between">
+          <button
+            onClick={handleEditCancel}
+            className="text-gray-600 hover:text-gray-800"
+          >
+            ← キャンセル
+          </button>
+          <span className="rounded-full bg-yellow-100 px-3 py-1 text-sm font-medium text-yellow-800">
+            編集中
+          </span>
+        </div>
+
+        <MealEditMode
+          meal={meal}
+          foodItems={foodItems}
+          totals={getTotals()}
+          photoUrl={photoUrl ?? undefined}
+          onSave={handleEditSave}
+          onCancel={handleEditCancel}
+          onDirtyChange={setHasUnsavedChanges}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-lg p-4">
@@ -159,6 +247,14 @@ export default function MealDetailPage() {
             <div className="text-xs text-gray-500">C (g)</div>
           </div>
         </div>
+
+        {/* Edit button */}
+        <button
+          onClick={() => setIsEditing(true)}
+          className="mt-4 w-full rounded-lg bg-blue-600 py-3 font-medium text-white hover:bg-blue-700"
+        >
+          編集する
+        </button>
       </div>
 
       {/* Food items list */}

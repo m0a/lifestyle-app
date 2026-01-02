@@ -401,6 +401,114 @@ mealAnalysis.delete('/:mealId/food-items/:foodItemId', async (c) => {
   return c.json({ message: '削除しました', updatedTotals });
 });
 
+// DELETE /api/meals/:mealId/photo - Delete meal photo (T032)
+mealAnalysis.delete('/:mealId/photo', async (c) => {
+  const mealId = c.req.param('mealId');
+  const db = c.get('db');
+  const userId = c.get('user').id;
+  const photoStorage = new PhotoStorageService(c.env.PHOTOS);
+
+  // Verify meal belongs to user
+  const meal = await db.query.mealRecords.findFirst({
+    where: and(eq(mealRecords.id, mealId), eq(mealRecords.userId, userId)),
+  });
+
+  if (!meal) {
+    return c.json({ error: 'not_found', message: '食事記録が見つかりません' }, 404);
+  }
+
+  if (!meal.photoKey) {
+    return c.json({ error: 'not_found', message: '写真が設定されていません' }, 404);
+  }
+
+  // Delete photo from storage
+  try {
+    await photoStorage.deletePhoto(meal.photoKey);
+  } catch (error) {
+    console.error('Failed to delete photo from storage:', error);
+    // Continue even if storage deletion fails
+  }
+
+  // Update meal record
+  const now = new Date().toISOString();
+  await db
+    .update(mealRecords)
+    .set({
+      photoKey: null,
+      updatedAt: now,
+    })
+    .where(eq(mealRecords.id, mealId));
+
+  return c.json({ success: true, message: '写真を削除しました' });
+});
+
+// POST /api/meals/:mealId/photo - Add/replace meal photo (T033)
+mealAnalysis.post('/:mealId/photo', async (c) => {
+  const mealId = c.req.param('mealId');
+  const db = c.get('db');
+  const userId = c.get('user').id;
+  const photoStorage = new PhotoStorageService(c.env.PHOTOS);
+
+  // Verify meal belongs to user
+  const meal = await db.query.mealRecords.findFirst({
+    where: and(eq(mealRecords.id, mealId), eq(mealRecords.userId, userId)),
+  });
+
+  if (!meal) {
+    return c.json({ error: 'not_found', message: '食事記録が見つかりません' }, 404);
+  }
+
+  const formData = await c.req.formData();
+  const photo = formData.get('photo') as File | null;
+
+  if (!photo) {
+    return c.json({ error: 'invalid_request', message: '写真が必要です' }, 400);
+  }
+
+  // Validate file type
+  if (!photo.type.startsWith('image/')) {
+    return c.json({ error: 'invalid_request', message: '画像ファイルを選択してください' }, 400);
+  }
+
+  // Validate file size (10MB max)
+  if (photo.size > 10 * 1024 * 1024) {
+    return c.json({ error: 'invalid_request', message: 'ファイルサイズは10MB以下にしてください' }, 400);
+  }
+
+  // Delete old photo if exists
+  if (meal.photoKey) {
+    try {
+      await photoStorage.deletePhoto(meal.photoKey);
+    } catch (error) {
+      console.error('Failed to delete old photo:', error);
+      // Continue even if old photo deletion fails
+    }
+  }
+
+  // Upload new photo directly as permanent (not temp)
+  const photoData = await photo.arrayBuffer();
+  const permanentPhotoKey = await photoStorage.saveForRecord(
+    await photoStorage.uploadForAnalysis(photoData, photo.type),
+    mealId
+  );
+
+  // Update meal record
+  const now = new Date().toISOString();
+  await db
+    .update(mealRecords)
+    .set({
+      photoKey: permanentPhotoKey,
+      updatedAt: now,
+    })
+    .where(eq(mealRecords.id, mealId));
+
+  return c.json({
+    success: true,
+    photoKey: permanentPhotoKey,
+    message: '写真をアップロードしました',
+  });
+});
+
 // POST /api/meals/:mealId/save - Save meal record
 mealAnalysis.post(
   '/:mealId/save',
