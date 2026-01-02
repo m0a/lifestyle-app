@@ -28,7 +28,7 @@ describe('transformToImageData', () => {
 
     expect(result.date).toBe('2026-01-02');
     expect(result.title).toBe('WorkOut');
-    expect(result.footer).toBe('Powered by Lifestyle App');
+    expect(result.footer).toBe('https://lifestyle-tracker.abe00makoto.workers.dev');
     expect(result.exercises).toHaveLength(1);
     expect(result.exercises[0].exerciseType).toBe('ベンチプレス');
     expect(result.exercises[0].sets).toHaveLength(1);
