@@ -1,16 +1,14 @@
-import { eq, desc, and, sql } from 'drizzle-orm';
+import { eq, desc, and } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import type { Database } from '../db';
 import { schema } from '../db';
 import { AppError } from '../middleware/error';
 import type { CreateExerciseInput, UpdateExerciseInput } from '@lifestyle-app/shared';
 import { z } from 'zod';
-import { createExerciseSetsSchema, addSetSchema, importSessionSchema } from '@lifestyle-app/shared';
+import { createExerciseSetsSchema } from '@lifestyle-app/shared';
 
 // Type for new multi-set input
 export type CreateExerciseSetsInput = z.infer<typeof createExerciseSetsSchema>;
-export type AddSetInput = z.infer<typeof addSetSchema>;
-export type ImportSessionInput = z.infer<typeof importSessionSchema>;
 
 export class ExerciseService {
   constructor(private db: Database) {}

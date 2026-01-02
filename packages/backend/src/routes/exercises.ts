@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
-import { createExerciseSchema, createExerciseSetsSchema, updateExerciseSchema, dateRangeSchema, exerciseQuerySchema, addSetSchema, importSessionSchema } from '@lifestyle-app/shared';
+import { createExerciseSetsSchema, updateExerciseSchema, dateRangeSchema, exerciseQuerySchema } from '@lifestyle-app/shared';
 import { ExerciseService } from '../services/exercise';
 import { authMiddleware } from '../middleware/auth';
 import type { Database } from '../db';
