@@ -89,9 +89,10 @@ export const exerciseRecords = sqliteTable(
       .references(() => users.id, { onDelete: 'cascade' }),
     exerciseType: text('exercise_type').notNull(),
     muscleGroup: text('muscle_group'), // 'chest' | 'back' | 'legs' | 'shoulders' | 'arms' | 'core' | 'other'
-    sets: integer('sets').notNull(),
+    setNumber: integer('set_number').notNull().default(1), // セット番号（1, 2, 3...）
     reps: integer('reps').notNull(),
     weight: real('weight'),
+    variation: text('variation'), // バリエーション（ワイド、ナロウ等）
     recordedAt: text('recorded_at').notNull(),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),

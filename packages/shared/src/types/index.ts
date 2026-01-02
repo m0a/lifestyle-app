@@ -8,6 +8,7 @@ import {
   createMealSchema,
   updateMealSchema,
   createExerciseSchema,
+  createExerciseSetsSchema,
   updateExerciseSchema,
   type MealType,
   type DashboardPeriod,
@@ -22,6 +23,7 @@ export type UpdateWeightInput = z.infer<typeof updateWeightSchema>;
 export type CreateMealInput = z.infer<typeof createMealSchema>;
 export type UpdateMealInput = z.infer<typeof updateMealSchema>;
 export type CreateExerciseInput = z.infer<typeof createExerciseSchema>;
+export type CreateExerciseSetsInput = z.infer<typeof createExerciseSetsSchema>;
 export type UpdateExerciseInput = z.infer<typeof updateExerciseSchema>;
 // MealType and DashboardPeriod are exported from schemas/index.ts
 
@@ -64,9 +66,10 @@ export interface ExerciseRecord {
   userId: string;
   exerciseType: string;
   muscleGroup: string | null;
-  sets: number;
+  setNumber: number;
   reps: number;
   weight: number | null;
+  variation: string | null;
   recordedAt: string;
   createdAt: string;
   updatedAt: string;

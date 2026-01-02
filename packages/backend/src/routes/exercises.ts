@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
-import { createExerciseSchema, updateExerciseSchema, dateRangeSchema, exerciseQuerySchema } from '@lifestyle-app/shared';
+import { createExerciseSchema, createExerciseSetsSchema, updateExerciseSchema, dateRangeSchema, exerciseQuerySchema, addSetSchema, importSessionSchema } from '@lifestyle-app/shared';
 import { ExerciseService } from '../services/exercise';
 import { authMiddleware } from '../middleware/auth';
 import type { Database } from '../db';
@@ -18,15 +18,16 @@ type Variables = {
 // All exercise routes require authentication
 export const exercises = new Hono<{ Bindings: Bindings; Variables: Variables }>()
   .use(authMiddleware)
-  .post('/', zValidator('json', createExerciseSchema), async (c) => {
+  // New: Create multiple sets at once
+  .post('/', zValidator('json', createExerciseSetsSchema), async (c) => {
     const input = c.req.valid('json');
     const db = c.get('db');
     const user = c.get('user');
 
     const exerciseService = new ExerciseService(db);
-    const exercise = await exerciseService.create(user.id, input);
+    const exercisesList = await exerciseService.createSets(user.id, input);
 
-    return c.json({ exercise }, 201);
+    return c.json({ exercises: exercisesList }, 201);
   })
   .get('/', zValidator('query', exerciseQuerySchema), async (c) => {
     const query = c.req.valid('query');
@@ -83,6 +84,18 @@ export const exercises = new Hono<{ Bindings: Bindings; Variables: Variables }>(
     const types = await exerciseService.getExerciseTypes(user.id);
 
     return c.json({ types });
+  })
+  .get('/sessions', async (c) => {
+    const cursor = c.req.query('cursor');
+    const limitStr = c.req.query('limit');
+    const limit = limitStr ? parseInt(limitStr, 10) : undefined;
+    const db = c.get('db');
+    const user = c.get('user');
+
+    const exerciseService = new ExerciseService(db);
+    const result = await exerciseService.getRecentSessions(user.id, { cursor, limit });
+
+    return c.json(result);
   })
   .get('/:id', async (c) => {
     const id = c.req.param('id');
