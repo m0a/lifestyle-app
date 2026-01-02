@@ -39,7 +39,7 @@
 - [x] T005 [P] Add createExerciseSetsSchema to `packages/shared/src/schemas/index.ts`
 - [x] T006 [P] Add addSetSchema to `packages/shared/src/schemas/index.ts`
 - [x] T007 [P] Create exercise-utils.ts with calculateRM and kgToLbs functions in `packages/frontend/src/lib/exercise-utils.ts`
-- [ ] T008 Run migration on local D1 database and verify data integrity (deferred to deployment)
+- [x] T008 Run migration on local D1 database and verify data integrity (applied to preview and production)
 
 **Checkpoint**: 基盤完了 - ユーザーストーリーの実装開始可能
 
