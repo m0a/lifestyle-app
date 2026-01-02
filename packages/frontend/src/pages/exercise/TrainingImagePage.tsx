@@ -2,9 +2,17 @@ import { useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTrainingImage } from '../../hooks/useTrainingImage';
 import { useShareImage } from '../../hooks/useShareImage';
-import { TrainingImagePreview } from '../../components/exercise/TrainingImagePreview';
+import { TrainingImagePreview, type ColorTheme } from '../../components/exercise/TrainingImagePreview';
 import { ShareButton } from '../../components/exercise/ShareButton';
 import { SaveButton } from '../../components/exercise/SaveButton';
+
+const colorOptions: { value: ColorTheme; label: string; bgClass: string }[] = [
+  { value: 'blue', label: '青', bgClass: 'bg-blue-600' },
+  { value: 'green', label: '緑', bgClass: 'bg-green-600' },
+  { value: 'purple', label: '紫', bgClass: 'bg-purple-600' },
+  { value: 'gray', label: '黒', bgClass: 'bg-gray-700' },
+  { value: 'red', label: '赤', bgClass: 'bg-red-600' },
+];
 
 /**
  * Training image page - displays a preview of the training record image
@@ -20,6 +28,9 @@ export function TrainingImagePage() {
 
   // Ref for the image preview element
   const imageRef = useRef<HTMLDivElement>(null);
+
+  // Color theme state
+  const [colorTheme, setColorTheme] = useState<ColorTheme>('blue');
 
   // Fetch training data
   const { imageData, isLoading, error, hasExercises } = useTrainingImage({ date });
@@ -122,6 +133,22 @@ export function TrainingImagePage() {
         <div className="w-16" /> {/* Spacer for centering */}
       </div>
 
+      {/* Color Selector */}
+      <div className="flex justify-center gap-2">
+        {colorOptions.map((option) => (
+          <button
+            key={option.value}
+            onClick={() => setColorTheme(option.value)}
+            className={`w-8 h-8 rounded-full ${option.bgClass} ${
+              colorTheme === option.value
+                ? 'ring-2 ring-offset-2 ring-gray-400'
+                : 'opacity-60 hover:opacity-100'
+            } transition-all`}
+            title={option.label}
+          />
+        ))}
+      </div>
+
       {/* Error message */}
       {(actionError || shareError) && (
         <div className="rounded-md bg-red-50 p-3">
@@ -132,7 +159,7 @@ export function TrainingImagePage() {
       {/* Image Preview */}
       <div className="flex justify-center overflow-x-auto pb-4">
         {imageData && (
-          <TrainingImagePreview ref={imageRef} data={imageData} />
+          <TrainingImagePreview ref={imageRef} data={imageData} colorTheme={colorTheme} />
         )}
       </div>
 
