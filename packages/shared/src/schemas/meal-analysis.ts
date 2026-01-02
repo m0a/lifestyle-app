@@ -133,6 +133,10 @@ export type TextAnalysisRequest = z.infer<typeof textAnalysisRequestSchema>;
 export const mealTypeSourceSchema = z.enum(['text', 'time']);
 export type MealTypeSource = z.infer<typeof mealTypeSourceSchema>;
 
+// Date/time source for text analysis
+export const dateTimeSourceSchema = z.enum(['text', 'now']);
+export type DateTimeSource = z.infer<typeof dateTimeSourceSchema>;
+
 // Text analysis response (T002)
 export const textAnalysisResponseSchema = z.object({
   mealId: z.string().uuid(),
@@ -140,6 +144,8 @@ export const textAnalysisResponseSchema = z.object({
   totals: nutritionTotalsSchema,
   inferredMealType: z.enum(['breakfast', 'lunch', 'dinner', 'snack']),
   mealTypeSource: mealTypeSourceSchema,
+  inferredRecordedAt: z.string().datetime(),
+  dateTimeSource: dateTimeSourceSchema,
 });
 export type TextAnalysisResponse = z.infer<typeof textAnalysisResponseSchema>;
 
