@@ -1,19 +1,20 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { mealAnalysisApi } from '../../lib/api';
 import { useToast } from '../ui/Toast';
-import type { FoodItem, NutritionTotals, FoodItemChange, ChatMessage } from '@lifestyle-app/shared';
+import { toDateTimeLocal } from '../../lib/dateValidation';
+import type { FoodItem, NutritionTotals, ChatChange, ChatMessage } from '@lifestyle-app/shared';
 
 interface MealChatProps {
   mealId: string;
   currentFoodItems: FoodItem[];
-  onUpdate: (foodItems: FoodItem[], totals: NutritionTotals) => void;
+  onUpdate: (foodItems: FoodItem[], totals: NutritionTotals, recordedAt?: string) => void;
 }
 
 interface DisplayMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
-  changes?: FoodItemChange[];
+  changes?: ChatChange[];
   isStreaming?: boolean;
 }
 
@@ -22,7 +23,7 @@ export function MealChat({ mealId, currentFoodItems: _currentFoodItems, onUpdate
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [pendingChanges, setPendingChanges] = useState<FoodItemChange[]>([]);
+  const [pendingChanges, setPendingChanges] = useState<ChatChange[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Load chat history on mount
@@ -74,7 +75,7 @@ export function MealChat({ mealId, currentFoodItems: _currentFoodItems, onUpdate
 
     try {
       let fullContent = '';
-      let changes: FoodItemChange[] = [];
+      let changes: ChatChange[] = [];
 
       for await (const event of mealAnalysisApi.sendChatMessage(mealId, userMessage)) {
         if (event.text) {
@@ -129,7 +130,7 @@ export function MealChat({ mealId, currentFoodItems: _currentFoodItems, onUpdate
 
     try {
       const result = await mealAnalysisApi.applyChatSuggestion(mealId, pendingChanges);
-      onUpdate(result.foodItems, result.updatedTotals);
+      onUpdate(result.foodItems, result.updatedTotals, result.recordedAt);
       setPendingChanges([]);
       toast.success('変更を適用しました');
     } catch (error) {
@@ -192,6 +193,7 @@ export function MealChat({ mealId, currentFoodItems: _currentFoodItems, onUpdate
                 {change.action === 'add' && `追加: ${change.foodItem?.name}`}
                 {change.action === 'remove' && '削除: (食材)'}
                 {change.action === 'update' && '変更: (食材)'}
+                {change.action === 'set_datetime' && `日時変更: ${toDateTimeLocal(change.recordedAt)}`}
               </li>
             ))}
           </ul>

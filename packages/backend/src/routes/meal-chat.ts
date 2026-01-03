@@ -12,6 +12,7 @@ import {
   applyChatSuggestionSchema,
   type FoodItem,
   type ChatMessage,
+  type ChatChange,
   type NutritionTotals,
 } from '@lifestyle-app/shared';
 
@@ -215,6 +216,7 @@ mealChat.post(
     }
 
     const now = new Date().toISOString();
+    let newRecordedAt: string | undefined;
 
     // Apply each change (discriminated union - each action has specific required fields)
     for (const change of changes) {
@@ -243,12 +245,13 @@ mealChat.post(
           // For 'update', foodItemId and foodItem are required by schema
           // foodItem is partial - only update fields that are defined
           const updateData: Record<string, unknown> = {};
-          if (change.foodItem.name !== undefined) updateData.name = change.foodItem.name;
-          if (change.foodItem.portion !== undefined) updateData.portion = change.foodItem.portion;
-          if (change.foodItem.calories !== undefined) updateData.calories = change.foodItem.calories;
-          if (change.foodItem.protein !== undefined) updateData.protein = change.foodItem.protein;
-          if (change.foodItem.fat !== undefined) updateData.fat = change.foodItem.fat;
-          if (change.foodItem.carbs !== undefined) updateData.carbs = change.foodItem.carbs;
+          const item = change.foodItem;
+          if (item['name'] !== undefined) updateData['name'] = item['name'];
+          if (item['portion'] !== undefined) updateData['portion'] = item['portion'];
+          if (item['calories'] !== undefined) updateData['calories'] = item['calories'];
+          if (item['protein'] !== undefined) updateData['protein'] = item['protein'];
+          if (item['fat'] !== undefined) updateData['fat'] = item['fat'];
+          if (item['carbs'] !== undefined) updateData['carbs'] = item['carbs'];
 
           if (Object.keys(updateData).length > 0) {
             await db
@@ -260,6 +263,10 @@ mealChat.post(
           }
           break;
         }
+        case 'set_datetime':
+          // For 'set_datetime', update the recordedAt timestamp
+          newRecordedAt = change.recordedAt;
+          break;
       }
     }
 
@@ -289,19 +296,28 @@ mealChat.post(
       { calories: 0, protein: 0, fat: 0, carbs: 0 }
     );
 
-    // Update meal record
+    // Update meal record (including recordedAt if changed)
+    const mealUpdateData: Record<string, unknown> = {
+      calories: totals.calories,
+      totalProtein: totals.protein,
+      totalFat: totals.fat,
+      totalCarbs: totals.carbs,
+      content: foodItems.map((i) => i.name).join(', '),
+      updatedAt: now,
+    };
+    if (newRecordedAt) {
+      mealUpdateData['recordedAt'] = newRecordedAt;
+    }
+
     await db
       .update(mealRecords)
-      .set({
-        calories: totals.calories,
-        totalProtein: totals.protein,
-        totalFat: totals.fat,
-        totalCarbs: totals.carbs,
-        content: foodItems.map((i) => i.name).join(', '),
-        updatedAt: now,
-      })
+      .set(mealUpdateData)
       .where(eq(mealRecords.id, mealId));
 
-    return c.json({ foodItems, updatedTotals: totals });
+    return c.json({
+      foodItems,
+      updatedTotals: totals,
+      recordedAt: newRecordedAt || meal.recordedAt,
+    });
   }
 );

@@ -211,10 +211,15 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
     }
   }, []);
 
-  // Handle chat updates (T027-T028)
-  const handleChatUpdate = useCallback((updatedFoodItems: FoodItem[], updatedTotals: NutritionTotals) => {
+  // Handle chat updates (T027-T028) - now includes date/time changes
+  const handleChatUpdate = useCallback((updatedFoodItems: FoodItem[], updatedTotals: NutritionTotals, newRecordedAt?: string) => {
     setFoodItems(updatedFoodItems);
     setTotals(updatedTotals);
+    if (newRecordedAt) {
+      setRecordedAt(newRecordedAt);
+      setDateTimeSource('text'); // Changed via chat, show as 'from text'
+      setDateError(null);
+    }
   }, []);
 
   return (

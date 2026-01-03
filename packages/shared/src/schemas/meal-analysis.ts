@@ -93,6 +93,35 @@ export const foodItemChangeSchema = z.discriminatedUnion('action', [
 ]);
 export type FoodItemChange = z.infer<typeof foodItemChangeSchema>;
 
+// Date/time change (from chat)
+export const dateTimeChangeSchema = z.object({
+  action: z.literal('set_datetime'),
+  recordedAt: z.string().datetime(),
+});
+export type DateTimeChange = z.infer<typeof dateTimeChangeSchema>;
+
+// Combined change type for chat (food items or date/time)
+export const chatChangeSchema = z.discriminatedUnion('action', [
+  z.object({
+    action: z.literal('add'),
+    foodItem: createFoodItemSchema,
+  }),
+  z.object({
+    action: z.literal('update'),
+    foodItemId: z.string().uuid(),
+    foodItem: updateFoodItemSchema,
+  }),
+  z.object({
+    action: z.literal('remove'),
+    foodItemId: z.string().uuid(),
+  }),
+  z.object({
+    action: z.literal('set_datetime'),
+    recordedAt: z.string().datetime(),
+  }),
+]);
+export type ChatChange = z.infer<typeof chatChangeSchema>;
+
 // Chat message
 export const chatMessageSchema = z.object({
   id: z.string().uuid(),
@@ -116,9 +145,9 @@ export const sendChatMessageSchema = z.object({
 });
 export type SendChatMessage = z.infer<typeof sendChatMessageSchema>;
 
-// Apply chat suggestion request
+// Apply chat suggestion request (includes both food item and date/time changes)
 export const applyChatSuggestionSchema = z.object({
-  changes: z.array(foodItemChangeSchema),
+  changes: z.array(chatChangeSchema),
 });
 export type ApplyChatSuggestion = z.infer<typeof applyChatSuggestionSchema>;
 
