@@ -100,9 +100,36 @@ export class AIChatService {
 
       if (nextMarkerStart === -1) break;
 
+      // For DATE_CHANGE, also handle simple ISO date format (not wrapped in JSON)
+      if (markerType === 'date_change') {
+        // Try to find a simple ISO date after the marker
+        const markerEnd = nextMarkerStart + '[DATE_CHANGE:'.length;
+        const closeBracketIdx = response.indexOf(']', markerEnd);
+        if (closeBracketIdx !== -1) {
+          const content = response.slice(markerEnd, closeBracketIdx).trim();
+          // Check if it's a simple date (not JSON object)
+          if (!content.startsWith('{')) {
+            // Try to parse as ISO date directly
+            const dateStr = content.replace(/['"]/g, '').trim();
+            const date = new Date(dateStr);
+            if (!isNaN(date.getTime())) {
+              changes.push({
+                action: 'set_datetime',
+                recordedAt: date.toISOString(),
+              });
+              pos = closeBracketIdx + 1;
+              continue;
+            }
+          }
+        }
+      }
+
       // Find the start of JSON object
       const jsonStart = response.indexOf('{', nextMarkerStart);
-      if (jsonStart === -1) break;
+      if (jsonStart === -1) {
+        pos = nextMarkerStart + 1;
+        continue;
+      }
 
       // Find balanced closing brace
       let braceCount = 0;
