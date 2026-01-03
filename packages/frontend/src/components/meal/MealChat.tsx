@@ -2,12 +2,23 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { mealAnalysisApi } from '../../lib/api';
 import { useToast } from '../ui/Toast';
 import { toDateTimeLocal } from '../../lib/dateValidation';
-import type { FoodItem, NutritionTotals, ChatChange, ChatMessage } from '@lifestyle-app/shared';
+import type { FoodItem, NutritionTotals, ChatChange, ChatMessage, MealType } from '@lifestyle-app/shared';
+
+// T011: Helper function to display meal type in Japanese
+function getMealTypeLabel(mealType: MealType): string {
+  const labels: Record<MealType, string> = {
+    breakfast: '朝食',
+    lunch: '昼食',
+    dinner: '夕食',
+    snack: '間食',
+  };
+  return labels[mealType];
+}
 
 interface MealChatProps {
   mealId: string;
   currentFoodItems: FoodItem[];
-  onUpdate: (foodItems: FoodItem[], totals: NutritionTotals, recordedAt?: string) => void;
+  onUpdate: (foodItems: FoodItem[], totals: NutritionTotals, recordedAt?: string, mealType?: MealType) => void;
 }
 
 interface DisplayMessage {
@@ -130,7 +141,7 @@ export function MealChat({ mealId, currentFoodItems: _currentFoodItems, onUpdate
 
     try {
       const result = await mealAnalysisApi.applyChatSuggestion(mealId, pendingChanges);
-      onUpdate(result.foodItems, result.updatedTotals, result.recordedAt);
+      onUpdate(result.foodItems, result.updatedTotals, result.recordedAt, result.mealType);
       setPendingChanges([]);
       toast.success('変更を適用しました');
     } catch (error) {
@@ -194,6 +205,7 @@ export function MealChat({ mealId, currentFoodItems: _currentFoodItems, onUpdate
                 {change.action === 'remove' && '削除: (食材)'}
                 {change.action === 'update' && '変更: (食材)'}
                 {change.action === 'set_datetime' && `日時変更: ${toDateTimeLocal(change.recordedAt)}`}
+                {change.action === 'set_meal_type' && `食事タイプ変更: ${getMealTypeLabel(change.mealType)}`}
               </li>
             ))}
           </ul>

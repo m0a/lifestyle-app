@@ -5,7 +5,7 @@ import { PhotoCapture } from './PhotoCapture';
 import { mealAnalysisApi, getPhotoUrl, api } from '../../lib/api';
 import { useToast } from '../ui/Toast';
 import { validateNotFuture, toDateTimeLocal, getCurrentDateTimeLocal } from '../../lib/dateValidation';
-import type { FoodItem, NutritionTotals, MealRecord } from '@lifestyle-app/shared';
+import type { FoodItem, NutritionTotals, MealRecord, MealType } from '@lifestyle-app/shared';
 
 interface MealEditModeProps {
   meal: MealRecord;
@@ -122,12 +122,20 @@ export function MealEditMode({
 
   // Handler for AI chat suggestions
   const handleChatUpdate = useCallback(
-    (updatedFoodItems: FoodItem[], updatedTotals: NutritionTotals) => {
+    (updatedFoodItems: FoodItem[], updatedTotals: NutritionTotals, newRecordedAt?: string, newMealType?: MealType) => {
       setFoodItems(updatedFoodItems);
       setTotals(updatedTotals);
+      if (newRecordedAt) {
+        setRecordedAt(toDateTimeLocal(newRecordedAt));
+      }
+      // Notify parent about meal type change via page reload
+      // The mealType is updated server-side, will be reflected on next fetch
       setIsDirty(true);
+      if (newMealType) {
+        toast.info(`食事タイプを${newMealType === 'breakfast' ? '朝食' : newMealType === 'lunch' ? '昼食' : newMealType === 'dinner' ? '夕食' : '間食'}に変更しました`);
+      }
     },
-    []
+    [toast]
   );
 
   // Handler for photo upload (T036)
