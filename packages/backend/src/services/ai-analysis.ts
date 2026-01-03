@@ -10,6 +10,7 @@ import type {
   TextAnalysisResponse,
   TextAnalysisError,
   MealTypeSource,
+  DateTimeSource,
 } from '@lifestyle-app/shared';
 
 // Schema for AI response validation
@@ -42,6 +43,12 @@ const aiTextResponseSchema = z.object({
   ),
   mealType: z.enum(['breakfast', 'lunch', 'dinner', 'snack']).nullable(),
   mealTypeFromText: z.boolean(),
+  // Date/time inference from text (e.g., "昨日", "今朝", "先週")
+  dateOffset: z.object({
+    days: z.number().int(), // days ago (0 = today, 1 = yesterday, -1 = tomorrow)
+    timeOfDay: z.enum(['morning', 'noon', 'evening', 'night']).nullable(),
+  }).nullable(),
+  dateFromText: z.boolean(),
 });
 
 const TEXT_ANALYSIS_PROMPT = `あなたは食事の栄養分析の専門家です。
@@ -60,7 +67,12 @@ const TEXT_ANALYSIS_PROMPT = `あなたは食事の栄養分析の専門家で�
     }
   ],
   "mealType": "breakfast" | "lunch" | "dinner" | "snack" | null,
-  "mealTypeFromText": true/false
+  "mealTypeFromText": true/false,
+  "dateOffset": {
+    "days": 何日前か（0=今日、1=昨日、2=一昨日...）,
+    "timeOfDay": "morning" | "noon" | "evening" | "night" | null
+  } | null,
+  "dateFromText": true/false
 }
 
 ## ルール
@@ -69,6 +81,10 @@ const TEXT_ANALYSIS_PROMPT = `あなたは食事の栄養分析の専門家で�
 - portion は「大盛り」「小さめ」などのテキストがあれば反映、なければ medium
 - 「朝ごはん」「昼食」「ランチ」「夕飯」「夜食」「おやつ」などのキーワードがあれば mealType を設定し mealTypeFromText を true に
 - キーワードがなければ mealType は null、mealTypeFromText は false
+- 「昨日」「一昨日」「今朝」「昨日の夜」「先週の金曜」などの日時表現があれば dateOffset を設定し dateFromText を true に
+  - days: 0=今日、1=昨日、2=一昨日、7=先週...（正の数=過去、負の数は使わない）
+  - timeOfDay: morning(朝/午前)、noon(昼/正午)、evening(夕方/夕食)、night(夜/深夜)
+- 日時表現がなければ dateOffset は null、dateFromText は false
 - 日本の食事に対応してください（和食、洋食、中華等）`;
 
 const MEAL_ANALYSIS_PROMPT = `あなたは食事の栄養分析の専門家です。
@@ -250,6 +266,57 @@ export class AIAnalysisService {
         mealTypeSource = 'time';
       }
 
+      // Determine date/time and source
+      const now = currentTime ? new Date(currentTime) : new Date();
+      let inferredRecordedAt: string;
+      let dateTimeSource: DateTimeSource;
+
+      if (object.dateFromText && object.dateOffset) {
+        // Calculate date from offset
+        const targetDate = new Date(now);
+        targetDate.setDate(targetDate.getDate() - object.dateOffset.days);
+
+        // Set time based on timeOfDay
+        if (object.dateOffset.timeOfDay) {
+          switch (object.dateOffset.timeOfDay) {
+            case 'morning':
+              targetDate.setHours(8, 0, 0, 0);
+              break;
+            case 'noon':
+              targetDate.setHours(12, 0, 0, 0);
+              break;
+            case 'evening':
+              targetDate.setHours(18, 0, 0, 0);
+              break;
+            case 'night':
+              targetDate.setHours(21, 0, 0, 0);
+              break;
+          }
+        } else {
+          // Use meal type to infer time if not specified
+          switch (inferredMealType) {
+            case 'breakfast':
+              targetDate.setHours(8, 0, 0, 0);
+              break;
+            case 'lunch':
+              targetDate.setHours(12, 0, 0, 0);
+              break;
+            case 'dinner':
+              targetDate.setHours(19, 0, 0, 0);
+              break;
+            case 'snack':
+              targetDate.setHours(15, 0, 0, 0);
+              break;
+          }
+        }
+
+        inferredRecordedAt = targetDate.toISOString();
+        dateTimeSource = 'text';
+      } else {
+        inferredRecordedAt = now.toISOString();
+        dateTimeSource = 'now';
+      }
+
       return {
         success: true,
         result: {
@@ -257,6 +324,8 @@ export class AIAnalysisService {
           totals,
           inferredMealType,
           mealTypeSource,
+          inferredRecordedAt,
+          dateTimeSource,
         },
       };
     } catch (error) {

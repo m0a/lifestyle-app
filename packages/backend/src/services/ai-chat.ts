@@ -1,6 +1,6 @@
 import { streamText } from 'ai';
 import { getAIProvider, getModelId, type AIConfig } from '../lib/ai-provider';
-import type { FoodItem, ChatMessage, FoodItemChange } from '@lifestyle-app/shared';
+import type { FoodItem, ChatMessage, ChatChange } from '@lifestyle-app/shared';
 
 const CHAT_SYSTEM_PROMPT = `あなたは食事記録のアシスタントです。
 ユーザーが**既に食べた食事**を正確に記録する手助けをしてください。
@@ -20,8 +20,17 @@ const CHAT_SYSTEM_PROMPT = `あなたは食事記録のアシスタントです�
 - **重要**: portionは必ず "small", "medium", "large" のいずれかを使用してください。"3つ"や"1パック"などの表現は使用しないでください。
 - caloriesは整数で指定してください
 - 栄養バランスについて質問された場合は、具体的な数値で説明してください
-- 食事と無関係な質問には、食事内容の調整に関する質問のみ対応可能であることを案内してください
-- 日本語で応答してください`;
+- 日本語で応答してください
+
+## 日付・時刻の変更
+- ユーザーが「昨日」「一昨日」「今朝」などの日付変更を要求した場合は対応してください
+- 日付変更は以下の形式で含めてください:
+  [DATE_CHANGE: {"recordedAt": "2026-01-02T12:00:00.000Z"}]
+- recordedAt は ISO 8601 形式で指定してください
+- 現在の日時（今日）: {{CURRENT_DATE}}
+- 「昨日」は1日前、「一昨日」は2日前として計算してください
+- 時刻は食事タイプに応じて: 朝食=8:00, 昼食=12:00, 夕食=19:00, 間食=15:00
+- 未来の日付は設定できません`;
 
 export class AIChatService {
   constructor(private config: AIConfig) {}
@@ -33,12 +42,18 @@ export class AIChatService {
   async *chat(
     currentMeal: FoodItem[],
     chatHistory: ChatMessage[],
-    userMessage: string
+    userMessage: string,
+    currentDateTime?: string
   ): AsyncGenerator<string, void, unknown> {
     const provider = getAIProvider(this.config);
     const modelId = getModelId(this.config);
 
     const mealContext = this.formatMealContext(currentMeal);
+    const now = currentDateTime ? new Date(currentDateTime) : new Date();
+    const currentDateStr = now.toISOString();
+
+    // Inject current date into prompt
+    const systemPrompt = CHAT_SYSTEM_PROMPT.replace('{{CURRENT_DATE}}', currentDateStr);
 
     const messages: Array<{ role: 'user' | 'assistant'; content: string }> = [
       ...chatHistory.map((msg) => ({
@@ -50,7 +65,7 @@ export class AIChatService {
 
     const { textStream } = streamText({
       model: provider(modelId),
-      system: `${CHAT_SYSTEM_PROMPT}\n\n現在の食事:\n${mealContext}`,
+      system: `${systemPrompt}\n\n現在の食事:\n${mealContext}`,
       messages,
     });
 
@@ -61,19 +76,32 @@ export class AIChatService {
 
   /**
    * Parse change proposals from AI response.
-   * Handles nested JSON objects in [CHANGE: {...}] markers.
+   * Handles nested JSON objects in [CHANGE: {...}] and [DATE_CHANGE: {...}] markers.
    */
-  parseChanges(response: string): FoodItemChange[] {
-    const changes: FoodItemChange[] = [];
+  parseChanges(response: string): ChatChange[] {
+    const changes: ChatChange[] = [];
 
-    // Find all [CHANGE: markers and extract balanced JSON
+    // Find all [CHANGE: and [DATE_CHANGE: markers and extract balanced JSON
+    const markers = ['[CHANGE:', '[DATE_CHANGE:'];
     let pos = 0;
+
     while (pos < response.length) {
-      const markerStart = response.indexOf('[CHANGE:', pos);
-      if (markerStart === -1) break;
+      // Find the next marker
+      let nextMarkerStart = -1;
+      let markerType: 'change' | 'date_change' | null = null;
+
+      for (const marker of markers) {
+        const idx = response.indexOf(marker, pos);
+        if (idx !== -1 && (nextMarkerStart === -1 || idx < nextMarkerStart)) {
+          nextMarkerStart = idx;
+          markerType = marker === '[DATE_CHANGE:' ? 'date_change' : 'change';
+        }
+      }
+
+      if (nextMarkerStart === -1) break;
 
       // Find the start of JSON object
-      const jsonStart = response.indexOf('{', markerStart);
+      const jsonStart = response.indexOf('{', nextMarkerStart);
       if (jsonStart === -1) break;
 
       // Find balanced closing brace
@@ -91,7 +119,7 @@ export class AIChatService {
       }
 
       if (jsonEnd === -1) {
-        pos = markerStart + 1;
+        pos = nextMarkerStart + 1;
         continue;
       }
 
@@ -99,38 +127,50 @@ export class AIChatService {
 
       try {
         const parsed = JSON.parse(jsonStr);
-        if (parsed.action === 'add' && parsed.food) {
-          changes.push({
-            action: 'add',
-            foodItem: {
-              name: parsed.food.name,
-              portion: this.normalizePortion(parsed.food.portion),
-              calories: Math.round(parsed.food.calories || 0),
-              protein: parsed.food.protein || 0,
-              fat: parsed.food.fat || 0,
-              carbs: parsed.food.carbs || 0,
-            },
-          });
-        } else if (parsed.action === 'remove' && parsed.foodItemId) {
-          changes.push({
-            action: 'remove',
-            foodItemId: parsed.foodItemId,
-          });
-        } else if (parsed.action === 'update' && parsed.foodItemId && parsed.food) {
-          // Normalize update foodItem fields
-          const normalizedFood: Record<string, unknown> = {};
-          if (parsed.food.name !== undefined) normalizedFood.name = parsed.food.name;
-          if (parsed.food.portion !== undefined) normalizedFood.portion = this.normalizePortion(parsed.food.portion);
-          if (parsed.food.calories !== undefined) normalizedFood.calories = Math.round(parsed.food.calories);
-          if (parsed.food.protein !== undefined) normalizedFood.protein = parsed.food.protein;
-          if (parsed.food.fat !== undefined) normalizedFood.fat = parsed.food.fat;
-          if (parsed.food.carbs !== undefined) normalizedFood.carbs = parsed.food.carbs;
 
-          changes.push({
-            action: 'update',
-            foodItemId: parsed.foodItemId,
-            foodItem: normalizedFood,
-          });
+        if (markerType === 'date_change' && parsed.recordedAt) {
+          // Validate that it's a valid date
+          const date = new Date(parsed.recordedAt);
+          if (!isNaN(date.getTime())) {
+            changes.push({
+              action: 'set_datetime',
+              recordedAt: date.toISOString(),
+            });
+          }
+        } else if (markerType === 'change') {
+          if (parsed.action === 'add' && parsed.food) {
+            changes.push({
+              action: 'add',
+              foodItem: {
+                name: parsed.food.name,
+                portion: this.normalizePortion(parsed.food.portion),
+                calories: Math.round(parsed.food.calories || 0),
+                protein: parsed.food.protein || 0,
+                fat: parsed.food.fat || 0,
+                carbs: parsed.food.carbs || 0,
+              },
+            });
+          } else if (parsed.action === 'remove' && parsed.foodItemId) {
+            changes.push({
+              action: 'remove',
+              foodItemId: parsed.foodItemId,
+            });
+          } else if (parsed.action === 'update' && parsed.foodItemId && parsed.food) {
+            // Normalize update foodItem fields
+            const normalizedFood: Record<string, unknown> = {};
+            if (parsed.food.name !== undefined) normalizedFood['name'] = parsed.food.name;
+            if (parsed.food.portion !== undefined) normalizedFood['portion'] = this.normalizePortion(parsed.food.portion);
+            if (parsed.food.calories !== undefined) normalizedFood['calories'] = Math.round(parsed.food.calories);
+            if (parsed.food.protein !== undefined) normalizedFood['protein'] = parsed.food.protein;
+            if (parsed.food.fat !== undefined) normalizedFood['fat'] = parsed.food.fat;
+            if (parsed.food.carbs !== undefined) normalizedFood['carbs'] = parsed.food.carbs;
+
+            changes.push({
+              action: 'update',
+              foodItemId: parsed.foodItemId,
+              foodItem: normalizedFood,
+            });
+          }
         }
       } catch (e) {
         // Skip invalid JSON
@@ -150,40 +190,44 @@ export class AIChatService {
   extractDisplayText(response: string): string {
     let result = response;
 
-    // Remove all [CHANGE: {...}] markers with balanced braces
-    let pos = 0;
-    while (pos < result.length) {
-      const markerStart = result.indexOf('[CHANGE:', pos);
-      if (markerStart === -1) break;
+    // Remove all [CHANGE: {...}] and [DATE_CHANGE: {...}] markers with balanced braces
+    const markers = ['[CHANGE:', '[DATE_CHANGE:'];
 
-      const jsonStart = result.indexOf('{', markerStart);
-      if (jsonStart === -1) break;
+    for (const marker of markers) {
+      let pos = 0;
+      while (pos < result.length) {
+        const markerStart = result.indexOf(marker, pos);
+        if (markerStart === -1) break;
 
-      // Find balanced closing brace
-      let braceCount = 0;
-      let jsonEnd = -1;
-      for (let i = jsonStart; i < result.length; i++) {
-        if (result[i] === '{') braceCount++;
-        else if (result[i] === '}') {
-          braceCount--;
-          if (braceCount === 0) {
-            jsonEnd = i;
-            break;
+        const jsonStart = result.indexOf('{', markerStart);
+        if (jsonStart === -1) break;
+
+        // Find balanced closing brace
+        let braceCount = 0;
+        let jsonEnd = -1;
+        for (let i = jsonStart; i < result.length; i++) {
+          if (result[i] === '{') braceCount++;
+          else if (result[i] === '}') {
+            braceCount--;
+            if (braceCount === 0) {
+              jsonEnd = i;
+              break;
+            }
           }
         }
-      }
 
-      if (jsonEnd === -1) {
-        pos = markerStart + 1;
-        continue;
-      }
+        if (jsonEnd === -1) {
+          pos = markerStart + 1;
+          continue;
+        }
 
-      // Find closing ]
-      const closeBracket = result.indexOf(']', jsonEnd);
-      if (closeBracket !== -1) {
-        result = result.slice(0, markerStart) + result.slice(closeBracket + 1);
-      } else {
-        pos = jsonEnd + 1;
+        // Find closing ]
+        const closeBracket = result.indexOf(']', jsonEnd);
+        if (closeBracket !== -1) {
+          result = result.slice(0, markerStart) + result.slice(closeBracket + 1);
+        } else {
+          pos = jsonEnd + 1;
+        }
       }
     }
 

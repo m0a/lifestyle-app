@@ -110,7 +110,7 @@ import type {
   AnalysisResult,
   AnalysisFailure,
   ChatMessage,
-  FoodItemChange,
+  ChatChange,
   MealType,
   CreateFoodItem,
   UpdateFoodItem,
@@ -125,7 +125,7 @@ export interface MealChatEvent {
   text?: string;
   done?: boolean;
   messageId?: string;
-  changes?: FoodItemChange[];
+  changes?: ChatChange[];
   error?: string;
 }
 
@@ -281,11 +281,11 @@ export const mealAnalysisApi = {
     }
   },
 
-  // Apply chat suggestion
+  // Apply chat suggestion (includes food item and date/time changes)
   async applyChatSuggestion(
     mealId: string,
-    changes: FoodItemChange[]
-  ): Promise<{ foodItems: FoodItem[]; updatedTotals: NutritionTotals }> {
+    changes: ChatChange[]
+  ): Promise<{ foodItems: FoodItem[]; updatedTotals: NutritionTotals; recordedAt?: string }> {
     return api.post(`/api/meals/${mealId}/chat/apply`, { changes });
   },
 

@@ -21,8 +21,8 @@ export function Meal() {
   } = useMeals(filterType ? { mealType: filterType } : undefined);
 
   // Save meal from SmartMealInput
-  const handleSmartSave = useCallback(async (mealId: string, mealType: MealType) => {
-    await mealAnalysisApi.saveMealAnalysis(mealId, mealType);
+  const handleSmartSave = useCallback(async (mealId: string, mealType: MealType, recordedAt?: string) => {
+    await mealAnalysisApi.saveMealAnalysis(mealId, mealType, recordedAt);
   }, []);
 
   if (isLoading) {

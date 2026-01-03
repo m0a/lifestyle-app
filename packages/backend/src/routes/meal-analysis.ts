@@ -168,9 +168,10 @@ mealAnalysis.post(
       return c.json(analysisResult.failure, 422);
     }
 
-    // Create meal record
+    // Create meal record with inferred date/time
     const mealId = uuidv4();
     const now = new Date().toISOString();
+    const recordedAt = analysisResult.result.inferredRecordedAt;
 
     await db.insert(mealRecords).values({
       id: mealId,
@@ -183,7 +184,7 @@ mealAnalysis.post(
       totalFat: analysisResult.result.totals.fat,
       totalCarbs: analysisResult.result.totals.carbs,
       analysisSource: 'ai',
-      recordedAt: now,
+      recordedAt,
       createdAt: now,
       updatedAt: now,
     });
@@ -209,6 +210,8 @@ mealAnalysis.post(
       totals: analysisResult.result.totals,
       inferredMealType: analysisResult.result.inferredMealType,
       mealTypeSource: analysisResult.result.mealTypeSource,
+      inferredRecordedAt: analysisResult.result.inferredRecordedAt,
+      dateTimeSource: analysisResult.result.dateTimeSource,
     };
 
     return c.json(response);

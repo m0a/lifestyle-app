@@ -2,8 +2,9 @@ import { useState, useCallback, useEffect } from 'react';
 import { AnalysisResult } from './AnalysisResult';
 import { MealChat } from './MealChat';
 import { PhotoCapture } from './PhotoCapture';
-import { mealAnalysisApi, getPhotoUrl } from '../../lib/api';
+import { mealAnalysisApi, getPhotoUrl, api } from '../../lib/api';
 import { useToast } from '../ui/Toast';
+import { validateNotFuture, toDateTimeLocal, getCurrentDateTimeLocal } from '../../lib/dateValidation';
 import type { FoodItem, NutritionTotals, MealRecord } from '@lifestyle-app/shared';
 
 interface MealEditModeProps {
@@ -34,6 +35,10 @@ export function MealEditMode({
   const [showChat, setShowChat] = useState(false);
   const [showPhotoCapture, setShowPhotoCapture] = useState(false);
   const [isPhotoLoading, setIsPhotoLoading] = useState(false);
+  // Date/time editing state
+  const [recordedAt, setRecordedAt] = useState<string>(toDateTimeLocal(meal.recordedAt));
+  const [dateError, setDateError] = useState<string | null>(null);
+  const [isDateSaving, setIsDateSaving] = useState(false);
 
   // Notify parent of dirty state changes (T040)
   useEffect(() => {
@@ -164,6 +169,34 @@ export function MealEditMode({
     }
   }, [meal.id, toast]);
 
+  // Handler for date/time change (FR-002)
+  const handleDateTimeChange = useCallback(
+    async (newDateTime: string) => {
+      // Validate not future (FR-005)
+      const isoDateTime = new Date(newDateTime).toISOString();
+      const validationError = validateNotFuture(isoDateTime);
+      if (validationError) {
+        setDateError(validationError);
+        return;
+      }
+      setDateError(null);
+
+      setIsDateSaving(true);
+      try {
+        await api.patch(`/api/meals/${meal.id}`, { recordedAt: isoDateTime });
+        setRecordedAt(newDateTime);
+        setIsDirty(true);
+        toast.success('記録日時を更新しました');
+      } catch (error) {
+        console.error('Failed to update meal datetime:', error);
+        toast.error('記録日時の更新に失敗しました');
+      } finally {
+        setIsDateSaving(false);
+      }
+    },
+    [meal.id, toast]
+  );
+
   return (
     <div className="flex flex-col gap-4">
       {/* Edit mode header */}
@@ -196,6 +229,27 @@ export function MealEditMode({
           />
         </div>
       )}
+
+      {/* Date/Time editing section (FR-002) */}
+      <div className="rounded-lg border bg-white p-4">
+        <h3 className="mb-3 font-semibold text-gray-900">記録日時</h3>
+        <div className="space-y-2">
+          <input
+            type="datetime-local"
+            value={recordedAt}
+            max={getCurrentDateTimeLocal()}
+            onChange={(e) => handleDateTimeChange(e.target.value)}
+            disabled={isDateSaving}
+            className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
+          />
+          {dateError && (
+            <p className="text-sm text-red-600">{dateError}</p>
+          )}
+          {isDateSaving && (
+            <p className="text-sm text-gray-500">更新中...</p>
+          )}
+        </div>
+      </div>
 
       {/* Photo section (T038) */}
       <div className="rounded-lg border bg-white p-4">

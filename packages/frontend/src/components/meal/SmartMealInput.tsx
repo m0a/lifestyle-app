@@ -4,15 +4,17 @@ import type {
   NutritionTotals,
   MealType,
   TextAnalysisResponse,
+  DateTimeSource,
 } from '@lifestyle-app/shared';
 import { MEAL_TYPE_LABELS } from '@lifestyle-app/shared';
 import { mealAnalysisApi, getPhotoUrl } from '../../lib/api';
 import { AnalysisResult } from './AnalysisResult';
 import { PhotoCapture } from './PhotoCapture';
 import { MealChat } from './MealChat';
+import { validateNotFuture, toDateTimeLocal, getCurrentDateTimeLocal } from '../../lib/dateValidation';
 
 interface SmartMealInputProps {
-  onSave: (mealId: string, mealType: MealType) => Promise<void>;
+  onSave: (mealId: string, mealType: MealType, recordedAt?: string) => Promise<void>;
   onRefresh?: () => void;
 }
 
@@ -34,6 +36,11 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
   const [showPhotoCapture, setShowPhotoCapture] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [photoKey, setPhotoKey] = useState<string | null>(null);
+
+  // Date/time state (011-meal-datetime)
+  const [recordedAt, setRecordedAt] = useState<string>(new Date().toISOString());
+  const [dateTimeSource, setDateTimeSource] = useState<DateTimeSource>('now');
+  const [dateError, setDateError] = useState<string | null>(null);
 
   // Submit text for analysis (T012)
   const handleSubmit = useCallback(async () => {
@@ -59,6 +66,8 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
       setTotals(response.totals);
       setMealType(response.inferredMealType);
       setMealTypeSource(response.mealTypeSource);
+      setRecordedAt(response.inferredRecordedAt);
+      setDateTimeSource(response.dateTimeSource);
       setInputState('result');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'エラーが発生しました');
@@ -111,21 +120,31 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
   const handleSave = useCallback(async () => {
     if (!mealId) return;
 
+    // Validate date before saving
+    const validationError = validateNotFuture(recordedAt);
+    if (validationError) {
+      setDateError(validationError);
+      return;
+    }
+
     setInputState('saving');
     try {
-      await onSave(mealId, mealType);
+      await onSave(mealId, mealType, recordedAt);
       // Reset state
       setText('');
       setMealId(null);
       setFoodItems([]);
       setTotals(null);
+      setRecordedAt(new Date().toISOString());
+      setDateTimeSource('now');
+      setDateError(null);
       setInputState('idle');
       onRefresh?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : '保存に失敗しました');
       setInputState('error');
     }
-  }, [mealId, mealType, onSave, onRefresh]);
+  }, [mealId, mealType, recordedAt, onSave, onRefresh]);
 
   // Reset to idle state
   const handleReset = useCallback(() => {
@@ -136,6 +155,9 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
     setError(null);
     setPhotoKey(null);
     setShowChat(false);
+    setRecordedAt(new Date().toISOString());
+    setDateTimeSource('now');
+    setDateError(null);
     setInputState('idle');
   }, []);
 
@@ -143,6 +165,19 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
   const handleManualFallback = useCallback(() => {
     setError(null);
     setInputState('idle');
+  }, []);
+
+  // Handle date/time change (011-meal-datetime)
+  const handleDateTimeChange = useCallback((newDateTime: string) => {
+    const isoDateTime = new Date(newDateTime).toISOString();
+    const validationError = validateNotFuture(isoDateTime);
+    if (validationError) {
+      setDateError(validationError);
+      return;
+    }
+    setDateError(null);
+    setRecordedAt(isoDateTime);
+    setDateTimeSource('now'); // Once manually changed, it's no longer from text
   }, []);
 
   // Handle photo capture (T024-T026)
@@ -176,10 +211,15 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
     }
   }, []);
 
-  // Handle chat updates (T027-T028)
-  const handleChatUpdate = useCallback((updatedFoodItems: FoodItem[], updatedTotals: NutritionTotals) => {
+  // Handle chat updates (T027-T028) - now includes date/time changes
+  const handleChatUpdate = useCallback((updatedFoodItems: FoodItem[], updatedTotals: NutritionTotals, newRecordedAt?: string) => {
     setFoodItems(updatedFoodItems);
     setTotals(updatedTotals);
+    if (newRecordedAt) {
+      setRecordedAt(newRecordedAt);
+      setDateTimeSource('text'); // Changed via chat, show as 'from text'
+      setDateError(null);
+    }
   }, []);
 
   return (
@@ -292,6 +332,26 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
               )}
             </div>
           )}
+
+          {/* Date/time selector (011-meal-datetime) */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-3">
+              <label className="text-sm font-medium text-gray-700">記録日時:</label>
+              <input
+                type="datetime-local"
+                value={toDateTimeLocal(recordedAt)}
+                max={getCurrentDateTimeLocal()}
+                onChange={(e) => handleDateTimeChange(e.target.value)}
+                className="rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+              <span className="text-xs text-gray-400">
+                ({dateTimeSource === 'text' ? 'テキストから推測' : '現在時刻'})
+              </span>
+            </div>
+            {dateError && (
+              <p className="text-sm text-red-600">{dateError}</p>
+            )}
+          </div>
 
           {/* Meal type selector (T016) */}
           <div className="flex items-center gap-3">
