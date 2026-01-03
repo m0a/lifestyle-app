@@ -5,7 +5,7 @@ import { PhotoCapture } from './PhotoCapture';
 import { mealAnalysisApi, getPhotoUrl, api } from '../../lib/api';
 import { useToast } from '../ui/Toast';
 import { validateNotFuture, toDateTimeLocal, getCurrentDateTimeLocal } from '../../lib/dateValidation';
-import type { FoodItem, NutritionTotals, MealRecord } from '@lifestyle-app/shared';
+import type { FoodItem, NutritionTotals, MealRecord, MealType } from '@lifestyle-app/shared';
 
 interface MealEditModeProps {
   meal: MealRecord;
@@ -39,6 +39,9 @@ export function MealEditMode({
   const [recordedAt, setRecordedAt] = useState<string>(toDateTimeLocal(meal.recordedAt));
   const [dateError, setDateError] = useState<string | null>(null);
   const [isDateSaving, setIsDateSaving] = useState(false);
+  // Meal type editing state
+  const [mealType, setMealType] = useState<MealType>(meal.mealType);
+  const [isMealTypeSaving, setIsMealTypeSaving] = useState(false);
 
   // Notify parent of dirty state changes (T040)
   useEffect(() => {
@@ -122,12 +125,19 @@ export function MealEditMode({
 
   // Handler for AI chat suggestions
   const handleChatUpdate = useCallback(
-    (updatedFoodItems: FoodItem[], updatedTotals: NutritionTotals) => {
+    (updatedFoodItems: FoodItem[], updatedTotals: NutritionTotals, newRecordedAt?: string, newMealType?: MealType) => {
       setFoodItems(updatedFoodItems);
       setTotals(updatedTotals);
+      if (newRecordedAt) {
+        setRecordedAt(toDateTimeLocal(newRecordedAt));
+      }
+      if (newMealType) {
+        setMealType(newMealType);
+        toast.info(`食事タイプを${newMealType === 'breakfast' ? '朝食' : newMealType === 'lunch' ? '昼食' : newMealType === 'dinner' ? '夕食' : '間食'}に変更しました`);
+      }
       setIsDirty(true);
     },
-    []
+    [toast]
   );
 
   // Handler for photo upload (T036)
@@ -197,6 +207,27 @@ export function MealEditMode({
     [meal.id, toast]
   );
 
+  // Handler for meal type change
+  const handleMealTypeChange = useCallback(
+    async (newMealType: MealType) => {
+      if (newMealType === mealType) return;
+
+      setIsMealTypeSaving(true);
+      try {
+        await api.patch(`/api/meals/${meal.id}`, { mealType: newMealType });
+        setMealType(newMealType);
+        setIsDirty(true);
+        toast.success('食事タイプを更新しました');
+      } catch (error) {
+        console.error('Failed to update meal type:', error);
+        toast.error('食事タイプの更新に失敗しました');
+      } finally {
+        setIsMealTypeSaving(false);
+      }
+    },
+    [meal.id, mealType, toast]
+  );
+
   return (
     <div className="flex flex-col gap-4">
       {/* Edit mode header */}
@@ -246,6 +277,27 @@ export function MealEditMode({
             <p className="text-sm text-red-600">{dateError}</p>
           )}
           {isDateSaving && (
+            <p className="text-sm text-gray-500">更新中...</p>
+          )}
+        </div>
+      </div>
+
+      {/* Meal type editing section */}
+      <div className="rounded-lg border bg-white p-4">
+        <h3 className="mb-3 font-semibold text-gray-900">食事タイプ</h3>
+        <div className="space-y-2">
+          <select
+            value={mealType}
+            onChange={(e) => handleMealTypeChange(e.target.value as MealType)}
+            disabled={isMealTypeSaving}
+            className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
+          >
+            <option value="breakfast">朝食</option>
+            <option value="lunch">昼食</option>
+            <option value="dinner">夕食</option>
+            <option value="snack">間食</option>
+          </select>
+          {isMealTypeSaving && (
             <p className="text-sm text-gray-500">更新中...</p>
           )}
         </div>

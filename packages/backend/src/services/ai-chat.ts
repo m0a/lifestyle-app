@@ -19,6 +19,7 @@ const CHAT_SYSTEM_PROMPT = `あなたは食事記録のアシスタントです�
   - 食材削除: [CHANGE: {"action": "remove", "foodItemId": "uuid-of-food-to-remove"}]
   - 食材更新: [CHANGE: {"action": "update", "foodItemId": "uuid-of-food", "food": {"portion": "small", "calories": 80}}]
   - **日時変更**: [CHANGE: {"action": "set_datetime", "recordedAt": "2026-01-02T12:00:00"}]
+  - **食事タイプ変更**: [CHANGE: {"action": "set_meal_type", "mealType": "breakfast"}]
 - **重要**: portionは必ず "small", "medium", "large" のいずれかを使用してください
 - caloriesは整数で指定してください
 - 日本語で応答してください
@@ -50,7 +51,38 @@ const CHAT_SYSTEM_PROMPT = `あなたは食事記録のアシスタントです�
 → 応答: 記録日時を一昨日の12:00に変更しました。
 [CHANGE: {"action": "set_datetime", "recordedAt": "2026-01-01T12:00:00"}]
 
-- 未来の日付は設定できません`;
+- 未来の日付は設定できません
+
+## 食事タイプの変更
+ユーザーが「朝食として記録」「これは夕食」「昼食に変更して」などの食事タイプ変更を要求したら:
+1. **食材は変更しない**（remove/update/addは使わない）
+2. **set_meal_typeアクションを使用**
+
+### 食事タイプ変更の形式（必須）
+[CHANGE: {"action": "set_meal_type", "mealType": "breakfast"}]
+
+### 有効なmealType値
+- breakfast: 朝食/朝ごはん
+- lunch: 昼食/昼ごはん/ランチ
+- dinner: 夕食/夕ごはん/夕飯/ディナー
+- snack: 間食/おやつ
+
+### 食事タイプ変更の例
+ユーザー: 「朝食として記録して」
+→ 応答: 食事タイプを朝食に変更しました。
+[CHANGE: {"action": "set_meal_type", "mealType": "breakfast"}]
+
+ユーザー: 「これは夕食でした」
+→ 応答: 食事タイプを夕食に変更しました。
+[CHANGE: {"action": "set_meal_type", "mealType": "dinner"}]
+
+### 日時と食事タイプの同時変更
+ユーザーが「昨日の朝食として記録して」のように日時と食事タイプを同時に指定した場合、両方のアクションを出力してください。
+
+ユーザー: 「昨日の朝食として記録して」
+→ 応答: 記録日時を昨日の08:00に、食事タイプを朝食に変更しました。
+[CHANGE: {"action": "set_datetime", "recordedAt": "2026-01-02T08:00:00"}]
+[CHANGE: {"action": "set_meal_type", "mealType": "breakfast"}]`;
 
 export class AIChatService {
   constructor(private config: AIConfig) {}
@@ -226,6 +258,15 @@ export class AIChatService {
               foodItemId: parsed.foodItemId,
               foodItem: normalizedFood,
             });
+          } else if (parsed.action === 'set_meal_type' && parsed.mealType) {
+            // Handle set_meal_type action
+            const validMealTypes = ['breakfast', 'lunch', 'dinner', 'snack'];
+            if (validMealTypes.includes(parsed.mealType)) {
+              changes.push({
+                action: 'set_meal_type',
+                mealType: parsed.mealType as 'breakfast' | 'lunch' | 'dinner' | 'snack',
+              });
+            }
           }
         }
       } catch (e) {

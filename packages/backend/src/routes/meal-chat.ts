@@ -216,6 +216,7 @@ mealChat.post(
 
     const now = new Date().toISOString();
     let newRecordedAt: string | undefined;
+    let newMealType: 'breakfast' | 'lunch' | 'dinner' | 'snack' | undefined;
 
     // Apply each change (discriminated union - each action has specific required fields)
     for (const change of changes) {
@@ -266,6 +267,10 @@ mealChat.post(
           // For 'set_datetime', update the recordedAt timestamp
           newRecordedAt = change.recordedAt;
           break;
+        case 'set_meal_type':
+          // For 'set_meal_type', update the mealType
+          newMealType = change.mealType;
+          break;
       }
     }
 
@@ -295,7 +300,7 @@ mealChat.post(
       { calories: 0, protein: 0, fat: 0, carbs: 0 }
     );
 
-    // Update meal record (including recordedAt if changed)
+    // Update meal record (including recordedAt and mealType if changed)
     const mealUpdateData: Record<string, unknown> = {
       calories: totals.calories,
       totalProtein: totals.protein,
@@ -307,6 +312,9 @@ mealChat.post(
     if (newRecordedAt) {
       mealUpdateData['recordedAt'] = newRecordedAt;
     }
+    if (newMealType) {
+      mealUpdateData['mealType'] = newMealType;
+    }
 
     await db
       .update(mealRecords)
@@ -317,6 +325,7 @@ mealChat.post(
       foodItems,
       updatedTotals: totals,
       recordedAt: newRecordedAt || meal.recordedAt,
+      mealType: newMealType || meal.mealType,
     });
   }
 );

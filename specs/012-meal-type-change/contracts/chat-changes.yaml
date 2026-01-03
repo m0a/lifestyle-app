@@ -1,0 +1,261 @@
+# API Contract: ChatChange Schema Extension
+# Feature: 012-meal-type-change
+# Date: 2026-01-03
+
+openapi: 3.0.3
+info:
+  title: Meal Type Change API Contract
+  version: 1.0.0
+  description: ChatChange スキーマへの set_meal_type アクション追加
+
+components:
+  schemas:
+    MealType:
+      type: string
+      enum:
+        - breakfast
+        - lunch
+        - dinner
+        - snack
+      description: 食事タイプ
+
+    MealTypeChange:
+      type: object
+      required:
+        - action
+        - mealType
+      properties:
+        action:
+          type: string
+          const: set_meal_type
+        mealType:
+          $ref: '#/components/schemas/MealType'
+      description: 食事タイプ変更アクション
+
+    ChatChange:
+      oneOf:
+        - $ref: '#/components/schemas/AddFoodItem'
+        - $ref: '#/components/schemas/UpdateFoodItem'
+        - $ref: '#/components/schemas/RemoveFoodItem'
+        - $ref: '#/components/schemas/SetDateTime'
+        - $ref: '#/components/schemas/MealTypeChange'  # 追加
+      discriminator:
+        propertyName: action
+        mapping:
+          add: '#/components/schemas/AddFoodItem'
+          update: '#/components/schemas/UpdateFoodItem'
+          remove: '#/components/schemas/RemoveFoodItem'
+          set_datetime: '#/components/schemas/SetDateTime'
+          set_meal_type: '#/components/schemas/MealTypeChange'
+
+    # 既存スキーマ参照（変更なし）
+    AddFoodItem:
+      type: object
+      required:
+        - action
+        - foodItem
+      properties:
+        action:
+          type: string
+          const: add
+        foodItem:
+          $ref: '#/components/schemas/CreateFoodItem'
+
+    UpdateFoodItem:
+      type: object
+      required:
+        - action
+        - foodItemId
+        - foodItem
+      properties:
+        action:
+          type: string
+          const: update
+        foodItemId:
+          type: string
+          format: uuid
+        foodItem:
+          $ref: '#/components/schemas/PartialFoodItem'
+
+    RemoveFoodItem:
+      type: object
+      required:
+        - action
+        - foodItemId
+      properties:
+        action:
+          type: string
+          const: remove
+        foodItemId:
+          type: string
+          format: uuid
+
+    SetDateTime:
+      type: object
+      required:
+        - action
+        - recordedAt
+      properties:
+        action:
+          type: string
+          const: set_datetime
+        recordedAt:
+          type: string
+          format: date-time
+
+    CreateFoodItem:
+      type: object
+      required:
+        - name
+        - portion
+        - calories
+        - protein
+        - fat
+        - carbs
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        portion:
+          type: string
+          enum: [small, medium, large]
+        calories:
+          type: integer
+          minimum: 0
+          maximum: 5000
+        protein:
+          type: number
+          minimum: 0
+          maximum: 200
+        fat:
+          type: number
+          minimum: 0
+          maximum: 200
+        carbs:
+          type: number
+          minimum: 0
+          maximum: 500
+
+    PartialFoodItem:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        portion:
+          type: string
+          enum: [small, medium, large]
+        calories:
+          type: integer
+          minimum: 0
+          maximum: 5000
+        protein:
+          type: number
+          minimum: 0
+          maximum: 200
+        fat:
+          type: number
+          minimum: 0
+          maximum: 200
+        carbs:
+          type: number
+          minimum: 0
+          maximum: 500
+
+paths:
+  /api/meals/{mealId}/chat/apply:
+    post:
+      summary: AIチャット提案を適用
+      description: 食材変更、日時変更、食事タイプ変更を適用
+      parameters:
+        - name: mealId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - changes
+              properties:
+                changes:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/ChatChange'
+            examples:
+              mealTypeChange:
+                summary: 食事タイプを朝食に変更
+                value:
+                  changes:
+                    - action: set_meal_type
+                      mealType: breakfast
+              combinedChange:
+                summary: 日時と食事タイプを同時に変更
+                value:
+                  changes:
+                    - action: set_datetime
+                      recordedAt: "2026-01-02T08:00:00Z"
+                    - action: set_meal_type
+                      mealType: breakfast
+      responses:
+        '200':
+          description: 変更適用成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  foodItems:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/FoodItem'
+                  updatedTotals:
+                    $ref: '#/components/schemas/NutritionTotals'
+                  recordedAt:
+                    type: string
+                    format: date-time
+                  mealType:
+                    $ref: '#/components/schemas/MealType'
+        '400':
+          description: バリデーションエラー
+        '404':
+          description: 食事記録が見つからない
+
+    FoodItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        portion:
+          type: string
+          enum: [small, medium, large]
+        calories:
+          type: integer
+        protein:
+          type: number
+        fat:
+          type: number
+        carbs:
+          type: number
+
+    NutritionTotals:
+      type: object
+      properties:
+        calories:
+          type: integer
+        protein:
+          type: number
+        fat:
+          type: number
+        carbs:
+          type: number

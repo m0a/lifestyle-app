@@ -100,7 +100,18 @@ export const dateTimeChangeSchema = z.object({
 });
 export type DateTimeChange = z.infer<typeof dateTimeChangeSchema>;
 
-// Combined change type for chat (food items or date/time)
+// Meal type enum
+export const mealTypeSchema = z.enum(['breakfast', 'lunch', 'dinner', 'snack']);
+export type MealType = z.infer<typeof mealTypeSchema>;
+
+// Meal type change (from chat)
+export const mealTypeChangeSchema = z.object({
+  action: z.literal('set_meal_type'),
+  mealType: mealTypeSchema,
+});
+export type MealTypeChange = z.infer<typeof mealTypeChangeSchema>;
+
+// Combined change type for chat (food items, date/time, or meal type)
 export const chatChangeSchema = z.discriminatedUnion('action', [
   z.object({
     action: z.literal('add'),
@@ -118,6 +129,10 @@ export const chatChangeSchema = z.discriminatedUnion('action', [
   z.object({
     action: z.literal('set_datetime'),
     recordedAt: z.string().datetime(),
+  }),
+  z.object({
+    action: z.literal('set_meal_type'),
+    mealType: mealTypeSchema,
   }),
 ]);
 export type ChatChange = z.infer<typeof chatChangeSchema>;

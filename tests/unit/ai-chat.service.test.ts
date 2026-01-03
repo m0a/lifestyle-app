@@ -125,6 +125,52 @@ describe('AIChatService', () => {
       expect(changes).toHaveLength(1);
       expect(changes[0].foodItem?.calories).toBe(46); // 45.7 rounded to 46
     });
+
+    it('should parse set_meal_type action from response', () => {
+      const response = `食事タイプを朝食に変更しました。
+[CHANGE: {"action": "set_meal_type", "mealType": "breakfast"}]`;
+
+      const changes = service.parseChanges(response);
+
+      expect(changes).toHaveLength(1);
+      expect(changes[0].action).toBe('set_meal_type');
+      expect(changes[0].mealType).toBe('breakfast');
+    });
+
+    it('should parse all valid meal types', () => {
+      const mealTypes = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
+
+      for (const mealType of mealTypes) {
+        const response = `[CHANGE: {"action": "set_meal_type", "mealType": "${mealType}"}]`;
+        const changes = service.parseChanges(response);
+
+        expect(changes).toHaveLength(1);
+        expect(changes[0].action).toBe('set_meal_type');
+        expect(changes[0].mealType).toBe(mealType);
+      }
+    });
+
+    it('should skip invalid meal types', () => {
+      const response = `[CHANGE: {"action": "set_meal_type", "mealType": "invalid_type"}]`;
+
+      const changes = service.parseChanges(response);
+
+      expect(changes).toHaveLength(0);
+    });
+
+    it('should parse combined set_datetime and set_meal_type actions', () => {
+      const response = `記録日時を昨日の08:00に、食事タイプを朝食に変更しました。
+[CHANGE: {"action": "set_datetime", "recordedAt": "2026-01-02T08:00:00"}]
+[CHANGE: {"action": "set_meal_type", "mealType": "breakfast"}]`;
+
+      const changes = service.parseChanges(response);
+
+      expect(changes).toHaveLength(2);
+      expect(changes[0].action).toBe('set_datetime');
+      expect(changes[0].recordedAt).toBeDefined();
+      expect(changes[1].action).toBe('set_meal_type');
+      expect(changes[1].mealType).toBe('breakfast');
+    });
   });
 
   describe('extractDisplayText', () => {

@@ -281,11 +281,11 @@ export const mealAnalysisApi = {
     }
   },
 
-  // Apply chat suggestion (includes food item and date/time changes)
+  // Apply chat suggestion (includes food item, date/time, and meal type changes)
   async applyChatSuggestion(
     mealId: string,
     changes: ChatChange[]
-  ): Promise<{ foodItems: FoodItem[]; updatedTotals: NutritionTotals; recordedAt?: string }> {
+  ): Promise<{ foodItems: FoodItem[]; updatedTotals: NutritionTotals; recordedAt?: string; mealType?: MealType }> {
     return api.post(`/api/meals/${mealId}/chat/apply`, { changes });
   },
 
