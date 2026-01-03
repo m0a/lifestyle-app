@@ -12,7 +12,6 @@ import {
   applyChatSuggestionSchema,
   type FoodItem,
   type ChatMessage,
-  type ChatChange,
   type NutritionTotals,
 } from '@lifestyle-app/shared';
 
