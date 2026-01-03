@@ -13,24 +13,23 @@ const CHAT_SYSTEM_PROMPT = `あなたは食事記録のアシスタントです�
 
 ## 応答ルール
 - ユーザーが食べ物を伝えたら、その栄養情報を推定して追加提案してください
-- 変更提案は以下の形式で含めてください:
-  [CHANGE: {"action": "add", "food": {"name": "食材名", "portion": "medium", "calories": 100, "protein": 5.0, "fat": 2.0, "carbs": 10.0}}]
-  [CHANGE: {"action": "remove", "foodItemId": "uuid-of-food-to-remove"}]
-  [CHANGE: {"action": "update", "foodItemId": "uuid-of-food", "food": {"portion": "small", "calories": 80}}]
-- **重要**: portionは必ず "small", "medium", "large" のいずれかを使用してください。"3つ"や"1パック"などの表現は使用しないでください。
+- **すべての変更は [CHANGE: {...}] 形式で統一してください**
+- 使用可能なアクション:
+  - 食材追加: [CHANGE: {"action": "add", "food": {"name": "食材名", "portion": "medium", "calories": 100, "protein": 5.0, "fat": 2.0, "carbs": 10.0}}]
+  - 食材削除: [CHANGE: {"action": "remove", "foodItemId": "uuid-of-food-to-remove"}]
+  - 食材更新: [CHANGE: {"action": "update", "foodItemId": "uuid-of-food", "food": {"portion": "small", "calories": 80}}]
+  - **日時変更**: [CHANGE: {"action": "set_datetime", "recordedAt": "2026-01-02T12:00:00"}]
+- **重要**: portionは必ず "small", "medium", "large" のいずれかを使用してください
 - caloriesは整数で指定してください
-- 栄養バランスについて質問された場合は、具体的な数値で説明してください
 - 日本語で応答してください
 
 ## 日付・時刻の変更（重要）
-ユーザーが日付や時刻の変更を要求した場合は、**必ず** [DATE_CHANGE: ...] 形式で応答してください。
+ユーザーが「昨日」「一昨日」「今朝」「昨晩」「〜に変更して」などの日時変更を要求したら:
+1. **食材は変更しない**（remove/update/addは使わない）
+2. **set_datetimeアクションのみ使用**
 
-### 日付変更のトリガーキーワード
-「昨日」「一昨日」「今朝」「昨晩」「日付を変更」「〜に変更して」「〜の食事」などを検出したら日付変更を実行します。
-
-### 日付変更の形式（必須）
-以下の形式を**必ず**使用してください:
-[DATE_CHANGE: 2026-01-02T19:00:00]
+### 日時変更の形式（必須）
+[CHANGE: {"action": "set_datetime", "recordedAt": "YYYY-MM-DDTHH:mm:ss"}]
 
 ### 計算ルール
 - 現在の日時: {{CURRENT_DATE}}
@@ -42,17 +41,16 @@ const CHAT_SYSTEM_PROMPT = `あなたは食事記録のアシスタントです�
   - 夕食/夕飯/昨晩 → 19:00
   - 間食 → 15:00
 
-### 日付変更の例
+### 日時変更の例
 ユーザー: 「昨日の夕食に変更して」
 → 応答: 記録日時を昨日の19:00に変更しました。
-[DATE_CHANGE: 2026-01-02T19:00:00]
+[CHANGE: {"action": "set_datetime", "recordedAt": "2026-01-02T19:00:00"}]
 
 ユーザー: 「これは一昨日の昼ごはんです」
 → 応答: 記録日時を一昨日の12:00に変更しました。
-[DATE_CHANGE: 2026-01-01T12:00:00]
+[CHANGE: {"action": "set_datetime", "recordedAt": "2026-01-01T12:00:00"}]
 
-- 未来の日付は設定できません
-- 日付変更時は [DATE_CHANGE: ...] を**必ず**含めてください`;
+- 未来の日付は設定できません`;
 
 export class AIChatService {
   constructor(private config: AIConfig) {}
@@ -187,7 +185,16 @@ export class AIChatService {
             });
           }
         } else if (markerType === 'change') {
-          if (parsed.action === 'add' && parsed.food) {
+          if (parsed.action === 'set_datetime' && parsed.recordedAt) {
+            // Handle set_datetime action in CHANGE format
+            const date = new Date(parsed.recordedAt);
+            if (!isNaN(date.getTime())) {
+              changes.push({
+                action: 'set_datetime',
+                recordedAt: date.toISOString(),
+              });
+            }
+          } else if (parsed.action === 'add' && parsed.food) {
             changes.push({
               action: 'add',
               foodItem: {
