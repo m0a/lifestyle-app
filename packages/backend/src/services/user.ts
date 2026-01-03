@@ -25,7 +25,10 @@ interface ExportData {
   exercises: Array<{
     id: string;
     exerciseType: string;
-    durationMinutes: number;
+    muscleGroup: string | null;
+    setNumber: number;
+    reps: number;
+    weight: number | null;
     recordedAt: string;
     createdAt: string;
   }>;
@@ -97,7 +100,10 @@ export class UserService {
       .select({
         id: exercises.id,
         exerciseType: exercises.exerciseType,
-        durationMinutes: exercises.durationMinutes,
+        muscleGroup: exercises.muscleGroup,
+        setNumber: exercises.setNumber,
+        reps: exercises.reps,
+        weight: exercises.weight,
         recordedAt: exercises.recordedAt,
         createdAt: exercises.createdAt,
       })
@@ -149,9 +155,9 @@ export class UserService {
 
     // Exercise records
     lines.push('## Exercise Records');
-    lines.push('date,exercise_type,duration_minutes');
+    lines.push('date,exercise_type,muscle_group,set_number,reps,weight_kg');
     for (const record of data.exercises) {
-      lines.push(`${record.recordedAt},${record.exerciseType},${record.durationMinutes}`);
+      lines.push(`${record.recordedAt},${record.exerciseType},${record.muscleGroup ?? ''},${record.setNumber},${record.reps},${record.weight ?? ''}`);
     }
 
     return lines.join('\n');
