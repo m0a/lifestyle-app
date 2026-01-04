@@ -232,6 +232,7 @@ mealAnalysis.post(
       dateTimeSource: analysisResult.result.dateTimeSource,
       // Debug: include usage in response
       _debug_usage: analysisResult.usage,
+      _debug_rawUsage: (analysisResult as { _rawUsage?: unknown })._rawUsage,
     };
 
     return c.json(response);

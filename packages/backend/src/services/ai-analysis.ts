@@ -21,16 +21,48 @@ export interface TokenUsage {
 }
 
 // Helper to normalize AI SDK usage to our format
-function normalizeUsage(usage: { inputTokens?: number; outputTokens?: number; totalTokens?: number } | undefined): TokenUsage | undefined {
-  console.log('normalizeUsage input:', JSON.stringify(usage));
-  if (!usage || usage.inputTokens === undefined || usage.outputTokens === undefined) {
-    console.log('normalizeUsage returning undefined - missing required fields');
+function normalizeUsage(usage: Record<string, unknown> | undefined): TokenUsage | undefined {
+  console.log('normalizeUsage raw input:', usage);
+  console.log('normalizeUsage input type:', typeof usage);
+  if (usage) {
+    console.log('normalizeUsage keys:', Object.keys(usage));
+    console.log('inputTokens value:', usage.inputTokens, 'type:', typeof usage.inputTokens);
+    console.log('outputTokens value:', usage.outputTokens, 'type:', typeof usage.outputTokens);
+    console.log('totalTokens value:', usage.totalTokens, 'type:', typeof usage.totalTokens);
+    // Also check for alternate property names
+    console.log('promptTokens value:', usage.promptTokens, 'type:', typeof usage.promptTokens);
+    console.log('completionTokens value:', usage.completionTokens, 'type:', typeof usage.completionTokens);
+  }
+
+  if (!usage) {
+    console.log('normalizeUsage: usage is falsy');
     return undefined;
   }
-  const inputTokens = usage.inputTokens;
-  const outputTokens = usage.outputTokens;
+
+  // Try standard AI SDK property names first
+  let inputTokens = usage.inputTokens as number | undefined;
+  let outputTokens = usage.outputTokens as number | undefined;
+  let totalTokens = usage.totalTokens as number | undefined;
+
+  // Fallback to OpenAI-style property names
+  if (inputTokens === undefined) {
+    inputTokens = usage.promptTokens as number | undefined;
+  }
+  if (outputTokens === undefined) {
+    outputTokens = usage.completionTokens as number | undefined;
+  }
+
+  // Check if we have valid numbers
+  if (typeof inputTokens !== 'number' || typeof outputTokens !== 'number') {
+    console.log('normalizeUsage: inputTokens or outputTokens not valid numbers');
+    return undefined;
+  }
+
   // Calculate totalTokens if not provided
-  const totalTokens = usage.totalTokens ?? (inputTokens + outputTokens);
+  if (typeof totalTokens !== 'number') {
+    totalTokens = inputTokens + outputTokens;
+  }
+
   const result = {
     promptTokens: inputTokens,
     completionTokens: outputTokens,
@@ -348,6 +380,7 @@ export class AIAnalysisService {
         dateTimeSource = 'now';
       }
 
+      const normalizedUsage = normalizeUsage(usage as Record<string, unknown>);
       return {
         success: true,
         result: {
@@ -358,7 +391,9 @@ export class AIAnalysisService {
           inferredRecordedAt,
           dateTimeSource,
         },
-        usage: normalizeUsage(usage),
+        usage: normalizedUsage,
+        // Debug: include raw usage
+        _rawUsage: usage,
       };
     } catch (error) {
       console.error('AI text analysis error:', error);
