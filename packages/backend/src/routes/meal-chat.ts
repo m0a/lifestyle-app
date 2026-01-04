@@ -5,6 +5,7 @@ import { eq, and, asc } from 'drizzle-orm';
 import { authMiddleware } from '../middleware/auth';
 import { mealRecords, mealFoodItems, mealChatMessages } from '../db/schema';
 import { AIChatService } from '../services/ai-chat';
+import { AIUsageService } from '../services/ai-usage';
 import { getAIConfigFromEnv } from '../lib/ai-provider';
 import type { Database } from '../db';
 import {
@@ -126,6 +127,7 @@ mealChat.post(
     // Get AI response (streaming)
     const aiConfig = getAIConfigFromEnv(c.env);
     const chatService = new AIChatService(aiConfig);
+    const chatResult = chatService.chat(currentMeal, history, message);
 
     // Set up SSE response
     const encoder = new TextEncoder();
@@ -134,7 +136,7 @@ mealChat.post(
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          for await (const chunk of chatService.chat(currentMeal, history, message)) {
+          for await (const chunk of chatResult.textStream) {
             fullResponse += chunk;
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text: chunk })}\n\n`));
           }
@@ -155,6 +157,13 @@ mealChat.post(
             appliedChanges: changes.length > 0 ? JSON.stringify(changes) : null,
             createdAt: assistantNow,
           });
+
+          // Record AI usage (fire-and-forget)
+          const usage = await chatResult.getUsage();
+          if (usage) {
+            const aiUsageService = new AIUsageService(db);
+            aiUsageService.recordUsage(userId, 'chat', usage).catch(console.error);
+          }
 
           // Send completion event with changes
           controller.enqueue(

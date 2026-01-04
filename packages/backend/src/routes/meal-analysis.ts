@@ -6,6 +6,7 @@ import { authMiddleware } from '../middleware/auth';
 import { mealRecords, mealFoodItems } from '../db/schema';
 import { PhotoStorageService } from '../services/photo-storage';
 import { AIAnalysisService } from '../services/ai-analysis';
+import { AIUsageService } from '../services/ai-usage';
 import { getAIConfigFromEnv } from '../lib/ai-provider';
 import type { Database } from '../db';
 import {
@@ -138,6 +139,12 @@ mealAnalysis.post('/analyze', async (c) => {
       });
     }
 
+    // Record AI usage (fire-and-forget)
+    if (analysisResult.usage) {
+      const aiUsageService = new AIUsageService(db);
+      aiUsageService.recordUsage(userId, 'image_analysis', analysisResult.usage).catch(console.error);
+    }
+
     return c.json({
       mealId,
       photoKey: tempPhotoKey,
@@ -202,6 +209,12 @@ mealAnalysis.post(
         carbs: item.carbs,
         createdAt: now,
       });
+    }
+
+    // Record AI usage (fire-and-forget)
+    if (analysisResult.usage) {
+      const aiUsageService = new AIUsageService(db);
+      aiUsageService.recordUsage(userId, 'text_analysis', analysisResult.usage).catch(console.error);
     }
 
     const response: TextAnalysisResponse = {

@@ -103,6 +103,22 @@ export const exerciseRecords = sqliteTable(
   ]
 );
 
+export const aiUsageRecords = sqliteTable(
+  'ai_usage_records',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    featureType: text('feature_type').notNull(), // 'image_analysis' | 'text_analysis' | 'chat'
+    promptTokens: integer('prompt_tokens').notNull(),
+    completionTokens: integer('completion_tokens').notNull(),
+    totalTokens: integer('total_tokens').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [index('idx_ai_usage_user_date').on(table.userId, table.createdAt)]
+);
+
 // Aliases for convenience
 export { weightRecords as weights };
 export { mealRecords as meals };
@@ -121,3 +137,5 @@ export type MealFoodItem = typeof mealFoodItems.$inferSelect;
 export type NewMealFoodItem = typeof mealFoodItems.$inferInsert;
 export type MealChatMessage = typeof mealChatMessages.$inferSelect;
 export type NewMealChatMessage = typeof mealChatMessages.$inferInsert;
+export type AIUsageRecord = typeof aiUsageRecords.$inferSelect;
+export type NewAIUsageRecord = typeof aiUsageRecords.$inferInsert;
