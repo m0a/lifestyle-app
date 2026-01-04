@@ -22,18 +22,22 @@ export interface TokenUsage {
 
 // Helper to normalize AI SDK usage to our format
 function normalizeUsage(usage: { inputTokens?: number; outputTokens?: number; totalTokens?: number } | undefined): TokenUsage | undefined {
+  console.log('normalizeUsage input:', JSON.stringify(usage));
   if (!usage || usage.inputTokens === undefined || usage.outputTokens === undefined) {
+    console.log('normalizeUsage returning undefined - missing required fields');
     return undefined;
   }
   const inputTokens = usage.inputTokens;
   const outputTokens = usage.outputTokens;
   // Calculate totalTokens if not provided
   const totalTokens = usage.totalTokens ?? (inputTokens + outputTokens);
-  return {
+  const result = {
     promptTokens: inputTokens,
     completionTokens: outputTokens,
     totalTokens,
   };
+  console.log('normalizeUsage result:', JSON.stringify(result));
+  return result;
 }
 
 // Schema for AI response validation
@@ -253,6 +257,9 @@ export class AIAnalysisService {
           },
         ],
       });
+
+      // Debug: Log raw usage from AI SDK
+      console.log('AI SDK raw usage:', JSON.stringify(usage));
 
       if (object.foods.length === 0) {
         return {
