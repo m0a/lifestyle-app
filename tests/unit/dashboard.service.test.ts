@@ -36,11 +36,11 @@ describe('DashboardService', () => {
         { calories: 2200 },
       ]);
 
-      // Mock exercise data
+      // Mock exercise data (each record = 1 set)
       mockDb.all.mockResolvedValueOnce([
-        { exerciseType: 'ベンチプレス', sets: 3, reps: 10 },
-        { exerciseType: 'ベンチプレス', sets: 4, reps: 8 },
-        { exerciseType: 'スクワット', sets: 3, reps: 12 },
+        { exerciseType: 'ベンチプレス', setNumber: 1, reps: 10 },
+        { exerciseType: 'ベンチプレス', setNumber: 2, reps: 10 },
+        { exerciseType: 'スクワット', setNumber: 1, reps: 12 },
       ]);
 
       const result = await service.getSummary(userId, { startDate, endDate });
@@ -138,18 +138,27 @@ describe('DashboardService', () => {
 
       mockDb.all.mockResolvedValueOnce([]);
       mockDb.all.mockResolvedValueOnce([]);
+      // Each record = 1 set. Total: 7 ベンチプレス + 3 スクワット + 2 ランジ = 12 sets
       mockDb.all.mockResolvedValueOnce([
-        { exerciseType: 'ベンチプレス', sets: 3, reps: 10 },
-        { exerciseType: 'ベンチプレス', sets: 4, reps: 8 },
-        { exerciseType: 'スクワット', sets: 3, reps: 12 },
-        { exerciseType: 'ランジ', sets: 2, reps: 15 },
+        { exerciseType: 'ベンチプレス', setNumber: 1, reps: 10 },
+        { exerciseType: 'ベンチプレス', setNumber: 2, reps: 10 },
+        { exerciseType: 'ベンチプレス', setNumber: 3, reps: 10 },
+        { exerciseType: 'ベンチプレス', setNumber: 1, reps: 8 },
+        { exerciseType: 'ベンチプレス', setNumber: 2, reps: 8 },
+        { exerciseType: 'ベンチプレス', setNumber: 3, reps: 8 },
+        { exerciseType: 'ベンチプレス', setNumber: 4, reps: 8 },
+        { exerciseType: 'スクワット', setNumber: 1, reps: 12 },
+        { exerciseType: 'スクワット', setNumber: 2, reps: 12 },
+        { exerciseType: 'スクワット', setNumber: 3, reps: 12 },
+        { exerciseType: 'ランジ', setNumber: 1, reps: 15 },
+        { exerciseType: 'ランジ', setNumber: 2, reps: 15 },
       ]);
 
       const result = await service.getSummary(userId, { startDate, endDate });
 
-      expect(result.exercises.totalSets).toBe(12); // 3+4+3+2
-      expect(result.exercises.sessionCount).toBe(4);
-      expect(result.exercises.byType['ベンチプレス'].sets).toBe(7); // 3+4
+      expect(result.exercises.totalSets).toBe(12); // 7+3+2
+      expect(result.exercises.sessionCount).toBe(12); // Each record is a session (set)
+      expect(result.exercises.byType['ベンチプレス'].sets).toBe(7);
       expect(result.exercises.byType['スクワット'].sets).toBe(3);
       expect(result.exercises.byType['ランジ'].sets).toBe(2);
     });
