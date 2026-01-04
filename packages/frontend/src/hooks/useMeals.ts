@@ -36,7 +36,11 @@ export function useMeals(options?: UseMealsOptions) {
   const todaySummaryQuery = useQuery({
     queryKey: ['meals', 'today-summary'],
     queryFn: async () => {
-      const res = await api.meals.today.$get();
+      // Pass timezone offset so server can calculate "today" correctly
+      const timezoneOffset = new Date().getTimezoneOffset();
+      const res = await api.meals.today.$get({
+        query: { timezoneOffset: String(timezoneOffset) },
+      });
       if (!res.ok) {
         const error = await res.json().catch(() => ({ message: 'Failed to fetch today summary' }));
         throw new Error((error as { message?: string }).message || 'Failed to fetch today summary');

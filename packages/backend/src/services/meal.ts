@@ -151,14 +151,24 @@ export class MealService {
     await this.db.delete(schema.mealRecords).where(eq(schema.mealRecords.id, id));
   }
 
-  async getTodaysSummary(userId: string) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const startDate = today.toISOString();
+  async getTodaysSummary(userId: string, timezoneOffset?: number) {
+    // timezoneOffset: minutes offset from UTC (e.g., -540 for JST)
+    // If not provided, defaults to UTC
+    const offset = timezoneOffset ?? 0;
 
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const endDate = tomorrow.toISOString();
+    // Get current time in user's timezone
+    const now = new Date();
+    const userNow = new Date(now.getTime() - offset * 60 * 1000);
+
+    // Calculate start of today in user's timezone, then convert back to UTC
+    const userToday = new Date(userNow);
+    userToday.setUTCHours(0, 0, 0, 0);
+    const startDate = new Date(userToday.getTime() + offset * 60 * 1000).toISOString();
+
+    // Calculate start of tomorrow in user's timezone, then convert back to UTC
+    const userTomorrow = new Date(userToday);
+    userTomorrow.setUTCDate(userTomorrow.getUTCDate() + 1);
+    const endDate = new Date(userTomorrow.getTime() + offset * 60 * 1000).toISOString();
 
     return this.getCalorieSummary(userId, { startDate, endDate });
   }

@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
+import { z } from 'zod';
 import { createMealSchema, updateMealSchema, dateRangeSchema, mealTypeSchema } from '@lifestyle-app/shared';
 import { MealService } from '../services/meal';
 import { authMiddleware } from '../middleware/auth';
@@ -17,6 +18,11 @@ type Variables = {
 // Query schema with mealType filter
 const mealQuerySchema = dateRangeSchema.extend({
   mealType: mealTypeSchema.optional(),
+});
+
+// Query schema for today endpoint with timezone offset
+const todayQuerySchema = z.object({
+  timezoneOffset: z.coerce.number().optional(),
 });
 
 // Chain format for RPC type inference
@@ -60,12 +66,13 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
     return c.json({ summary });
   })
-  .get('/today', async (c) => {
+  .get('/today', zValidator('query', todayQuerySchema), async (c) => {
     const db = c.get('db');
     const user = c.get('user');
+    const { timezoneOffset } = c.req.valid('query');
 
     const mealService = new MealService(db);
-    const summary = await mealService.getTodaysSummary(user.id);
+    const summary = await mealService.getTodaysSummary(user.id, timezoneOffset);
 
     return c.json({ summary });
   })
