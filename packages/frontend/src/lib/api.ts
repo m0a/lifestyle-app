@@ -49,9 +49,9 @@ class ApiClient {
     });
 
     if (!response.ok) {
-      const error: ApiError = await response.json().catch(() => ({
+      const error = await response.json().catch(() => ({
         message: 'エラーが発生しました',
-      }));
+      })) as ApiError;
       throw new ApiRequestError(error.message, response.status, error.code, error.errors);
     }
 
@@ -148,7 +148,7 @@ export const mealAnalysisApi = {
       });
 
       if (!response.ok) {
-        const error = await response.json();
+        const error = await response.json() as { message?: string };
         if (response.status === 422) {
           return error as TextAnalysisError;
         }
@@ -156,14 +156,14 @@ export const mealAnalysisApi = {
       }
 
       return response.json();
-    } catch (error) {
-      if (error instanceof Error && error.name === 'AbortError') {
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
         return {
           error: 'timeout',
           message: 'タイムアウトしました。手動で入力してください。',
         } as TextAnalysisError;
       }
-      throw error;
+      throw err;
     } finally {
       clearTimeout(timeoutId);
     }
@@ -181,7 +181,7 @@ export const mealAnalysisApi = {
     });
 
     if (!response.ok) {
-      const error = await response.json();
+      const error = await response.json() as { message?: string };
       if (response.status === 422) {
         return error as AnalysisFailure;
       }
@@ -250,7 +250,7 @@ export const mealAnalysisApi = {
     });
 
     if (!response.ok) {
-      const error = await response.json();
+      const error = await response.json() as { message?: string };
       throw new ApiRequestError(error.message || 'Chat failed', response.status);
     }
 
@@ -309,7 +309,7 @@ export const mealAnalysisApi = {
     });
 
     if (!response.ok) {
-      const error = await response.json();
+      const error = await response.json() as { message?: string };
       throw new ApiRequestError(error.message || 'Photo upload failed', response.status);
     }
 

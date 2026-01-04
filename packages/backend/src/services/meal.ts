@@ -122,19 +122,19 @@ export class MealService {
     };
 
     if (input.mealType !== undefined) {
-      updateData.mealType = input.mealType;
+      updateData['mealType'] = input.mealType;
     }
 
     if (input.content !== undefined) {
-      updateData.content = input.content;
+      updateData['content'] = input.content;
     }
 
     if (input.calories !== undefined) {
-      updateData.calories = input.calories;
+      updateData['calories'] = input.calories;
     }
 
     if (input.recordedAt !== undefined) {
-      updateData.recordedAt = input.recordedAt;
+      updateData['recordedAt'] = input.recordedAt;
     }
 
     await this.db

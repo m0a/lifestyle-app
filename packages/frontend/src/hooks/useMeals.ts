@@ -19,9 +19,9 @@ export function useMeals(options?: UseMealsOptions) {
     queryKey: ['meals', options],
     queryFn: async () => {
       const query: Record<string, string> = {};
-      if (options?.startDate) query.startDate = options.startDate;
-      if (options?.endDate) query.endDate = options.endDate;
-      if (options?.mealType) query.mealType = options.mealType;
+      if (options?.startDate) query['startDate'] = options.startDate;
+      if (options?.endDate) query['endDate'] = options.endDate;
+      if (options?.mealType) query['mealType'] = options.mealType;
 
       const res = await api.meals.$get({ query });
       if (!res.ok) {

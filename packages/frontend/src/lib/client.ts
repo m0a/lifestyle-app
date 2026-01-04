@@ -19,7 +19,7 @@ const API_BASE_URL = getApiBaseUrl();
 
 // Hono RPC client with full type safety
 export const client = hc<AppType>(API_BASE_URL, {
-  fetch: async (input, init) => {
+  fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
     console.log('[RPC] Request:', input, init?.method || 'GET');
     try {
       const response = await fetch(input, {

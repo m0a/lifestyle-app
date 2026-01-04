@@ -91,11 +91,11 @@ export class WeightService {
     };
 
     if (input.weight !== undefined) {
-      updateData.weight = input.weight;
+      updateData['weight'] = input.weight;
     }
 
     if (input.recordedAt !== undefined) {
-      updateData.recordedAt = input.recordedAt;
+      updateData['recordedAt'] = input.recordedAt;
     }
 
     await this.db

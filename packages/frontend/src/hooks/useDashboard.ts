@@ -17,10 +17,10 @@ export function useDashboard(options: UseDashboardOptions = {}) {
     queryFn: async () => {
       const query: Record<string, string> = {};
       if (startDate && endDate) {
-        query.startDate = startDate;
-        query.endDate = endDate;
+        query['startDate'] = startDate;
+        query['endDate'] = endDate;
       } else {
-        query.period = period;
+        query['period'] = period;
       }
       const res = await api.dashboard.summary.$get({ query });
       if (!res.ok) {

@@ -20,6 +20,7 @@ export class ExerciseService {
 
     for (let i = 0; i < input.sets.length; i++) {
       const set = input.sets[i];
+      if (!set) continue;
       const id = uuidv4();
       const setNumber = i + 1;
 
@@ -126,14 +127,14 @@ export class ExerciseService {
 
     if (options?.startDate) {
       filtered = filtered.filter((r) => {
-        const recordDate = r.recordedAt.split('T')[0];
+        const recordDate = r.recordedAt.split('T')[0] ?? '';
         return recordDate >= options.startDate!;
       });
     }
 
     if (options?.endDate) {
       filtered = filtered.filter((r) => {
-        const recordDate = r.recordedAt.split('T')[0];
+        const recordDate = r.recordedAt.split('T')[0] ?? '';
         return recordDate <= options.endDate!;
       });
     }
@@ -186,8 +187,8 @@ export class ExerciseService {
         if (!acc[e.exerciseType]) {
           acc[e.exerciseType] = { sets: 0, reps: 0 };
         }
-        acc[e.exerciseType].sets += 1;
-        acc[e.exerciseType].reps += e.reps;
+        acc[e.exerciseType]!.sets += 1;
+        acc[e.exerciseType]!.reps += e.reps;
         return acc;
       },
       {} as Record<string, { sets: number; reps: number }>
@@ -219,8 +220,8 @@ export class ExerciseService {
         if (!acc[e.exerciseType]) {
           acc[e.exerciseType] = { sets: 0, reps: 0 };
         }
-        acc[e.exerciseType].sets += 1;
-        acc[e.exerciseType].reps += e.reps;
+        acc[e.exerciseType]!.sets += 1;
+        acc[e.exerciseType]!.reps += e.reps;
         return acc;
       },
       {} as Record<string, { sets: number; reps: number }>
@@ -244,27 +245,27 @@ export class ExerciseService {
     };
 
     if (input.exerciseType !== undefined) {
-      updateData.exerciseType = input.exerciseType;
+      updateData['exerciseType'] = input.exerciseType;
     }
 
     if (input.muscleGroup !== undefined) {
-      updateData.muscleGroup = input.muscleGroup;
+      updateData['muscleGroup'] = input.muscleGroup;
     }
 
     if (input.reps !== undefined) {
-      updateData.reps = input.reps;
+      updateData['reps'] = input.reps;
     }
 
     if (input.weight !== undefined) {
-      updateData.weight = input.weight;
+      updateData['weight'] = input.weight;
     }
 
     if (input.variation !== undefined) {
-      updateData.variation = input.variation;
+      updateData['variation'] = input.variation;
     }
 
     if (input.recordedAt !== undefined) {
-      updateData.recordedAt = input.recordedAt;
+      updateData['recordedAt'] = input.recordedAt;
     }
 
     await this.db
@@ -375,7 +376,7 @@ export class ExerciseService {
     }>();
 
     for (const record of records) {
-      const dateStr = record.recordedAt.split('T')[0];
+      const dateStr = record.recordedAt.split('T')[0] ?? '';
       if (!sessionMap.has(dateStr)) {
         sessionMap.set(dateStr, { date: dateStr, exercises: [] });
       }
@@ -415,7 +416,7 @@ export class ExerciseService {
             sets: [],
           };
         }
-        exerciseGroups[exercise.exerciseType].sets.push({
+        exerciseGroups[exercise.exerciseType]!.sets.push({
           setNumber: exercise.setNumber,
           reps: exercise.reps,
           weight: exercise.weight,

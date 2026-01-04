@@ -1,8 +1,8 @@
-import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import { eq, sql, and, gte } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { aiUsageRecords } from '../db/schema';
 import type { AIFeatureType, AIUsageSummary } from '@lifestyle-app/shared';
+import type { Database } from '../db';
 
 export interface TokenUsage {
   promptTokens: number;
@@ -11,7 +11,7 @@ export interface TokenUsage {
 }
 
 export class AIUsageService {
-  constructor(private db: DrizzleD1Database) {}
+  constructor(private db: Database) {}
 
   /**
    * Record AI usage after a successful API call.

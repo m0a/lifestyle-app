@@ -1,6 +1,6 @@
 import { eq, and, gte, lte, desc } from 'drizzle-orm';
-import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import { weights, meals, exercises } from '../db/schema';
+import type { Database } from '../db';
 
 interface DateRange {
   startDate: Date;
@@ -48,7 +48,7 @@ interface MealRecord {
 
 interface ExerciseRecord {
   exerciseType: string;
-  sets: number;
+  setNumber: number;
   reps: number;
 }
 
@@ -90,7 +90,7 @@ interface GoalProgress {
 }
 
 export class DashboardService {
-  constructor(private db: DrizzleD1Database) {}
+  constructor(private db: Database) {}
 
   async getSummary(userId: string, options: DateRange): Promise<DashboardSummary> {
     const { startDate, endDate } = options;
@@ -170,8 +170,8 @@ export class DashboardService {
     }
 
     const weightValues = records.map((r) => r.weight);
-    const startWeight = records[0].weight;
-    const endWeight = records[records.length - 1].weight;
+    const startWeight = records[0]?.weight ?? 0;
+    const endWeight = records[records.length - 1]?.weight ?? 0;
 
     return {
       startWeight,
@@ -197,7 +197,7 @@ export class DashboardService {
     }
 
     const caloriesWithValue = records.filter((r) => r.calories != null);
-    const totalCalories = caloriesWithValue.reduce((sum, r) => sum + r.calories, 0);
+    const totalCalories = caloriesWithValue.reduce((sum, r) => sum + (r.calories ?? 0), 0);
 
     // Calculate nutrient totals (null values are treated as 0)
     const totalProtein = records.reduce((sum, r) => sum + (r.totalProtein ?? 0), 0);
@@ -235,8 +235,9 @@ export class DashboardService {
       };
     }
 
-    const totalSets = records.reduce((sum, r) => sum + r.sets, 0);
-    const totalReps = records.reduce((sum, r) => sum + r.sets * r.reps, 0);
+    // Each record is now 1 set
+    const totalSets = records.length;
+    const totalReps = records.reduce((sum, r) => sum + r.reps, 0);
 
     // Group by exercise type
     const byType: Record<string, { sets: number; reps: number }> = {};
@@ -245,8 +246,8 @@ export class DashboardService {
       if (!byType[type]) {
         byType[type] = { sets: 0, reps: 0 };
       }
-      byType[type].sets += record.sets;
-      byType[type].reps += record.sets * record.reps;
+      byType[type]!.sets += 1;
+      byType[type]!.reps += record.reps;
     }
 
     return {
@@ -315,12 +316,13 @@ export class DashboardService {
         .filter((m) => m.calories != null)
         .reduce((sum, m) => sum + (m.calories || 0), 0);
 
-      const exerciseSets = weekExercises.reduce((sum, e) => sum + e.sets, 0);
+      // Each record is 1 set
+      const exerciseSets = weekExercises.length;
 
       result.unshift({
-        weekStart: weekStart.toISOString().split('T')[0],
-        weekEnd: weekEnd.toISOString().split('T')[0],
-        weight: weekWeights.length > 0 ? weekWeights[0].weight : null,
+        weekStart: weekStart.toISOString().split('T')[0] ?? '',
+        weekEnd: weekEnd.toISOString().split('T')[0] ?? '',
+        weight: weekWeights.length > 0 ? weekWeights[0]?.weight ?? null : null,
         totalCalories,
         exerciseSets,
       });
@@ -374,9 +376,10 @@ export class DashboardService {
       )
       .all();
 
-    const currentWeight = latestWeight.length > 0 ? latestWeight[0].weight : null;
+    const currentWeight = latestWeight.length > 0 ? latestWeight[0]?.weight ?? null : null;
     const targetWeight = goals.targetWeight || 65;
-    const weeklyExerciseSets = weeklyExercises.reduce((sum, e) => sum + e.sets, 0);
+    // Each record is 1 set
+    const weeklyExerciseSets = weeklyExercises.length;
     const targetExerciseSets = 30; // Default weekly target: 30 sets
 
     const mealsWithCalories = weeklyMeals.filter((m) => m.calories != null);

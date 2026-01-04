@@ -38,12 +38,11 @@ jobs:
       - name: Type check shared
         run: pnpm --filter @lifestyle-app/shared typecheck
 
-      # Backend/Frontend typecheck skipped - Drizzle ORM has complex generic types
-      # TODO: Fix Drizzle type issues and re-enable
-      # - name: Type check backend
-      #   run: pnpm --filter @lifestyle-app/backend typecheck
-      # - name: Type check frontend
-      #   run: pnpm --filter @lifestyle-app/frontend typecheck
+      - name: Type check backend
+        run: pnpm --filter @lifestyle-app/backend typecheck
+
+      - name: Type check frontend
+        run: pnpm --filter @lifestyle-app/frontend typecheck
 
   test:
     name: Unit & Integration Tests

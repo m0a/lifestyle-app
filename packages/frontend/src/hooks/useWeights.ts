@@ -17,8 +17,8 @@ export function useWeights(options?: UseWeightsOptions) {
     queryKey: ['weights', options],
     queryFn: async () => {
       const query: Record<string, string> = {};
-      if (options?.startDate) query.startDate = options.startDate;
-      if (options?.endDate) query.endDate = options.endDate;
+      if (options?.startDate) query['startDate'] = options.startDate;
+      if (options?.endDate) query['endDate'] = options.endDate;
 
       const res = await api.weights.$get({ query });
       if (!res.ok) {

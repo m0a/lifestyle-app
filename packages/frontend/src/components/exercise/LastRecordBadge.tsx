@@ -22,7 +22,7 @@ export function LastRecordBadge({ record, onCopy, isLoading }: LastRecordBadgePr
 
   const formatExercise = (exercise: ExerciseRecord) => {
     const weightStr = exercise.weight ? ` ${exercise.weight}kg` : '';
-    return `${exercise.sets}×${exercise.reps}${weightStr}`;
+    return `${exercise.reps}回${weightStr}`;
   };
 
   const formatDate = (dateStr: string) => {

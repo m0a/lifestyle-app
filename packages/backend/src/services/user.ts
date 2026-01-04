@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
-import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import { users, weights, meals, exercises } from '../db/schema';
+import type { Database } from '../db';
 
 interface ExportData {
   user: {
@@ -36,7 +36,7 @@ interface ExportData {
 }
 
 export class UserService {
-  constructor(private db: DrizzleD1Database) {}
+  constructor(private db: Database) {}
 
   async getProfile(userId: string) {
     const user = await this.db

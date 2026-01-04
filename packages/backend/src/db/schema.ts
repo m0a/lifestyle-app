@@ -21,7 +21,9 @@ export const weightRecords = sqliteTable(
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
-  (table) => [index('idx_weight_user_date').on(table.userId, table.recordedAt)]
+  (table) => ({
+    idx_weight_user_date: index('idx_weight_user_date').on(table.userId, table.recordedAt),
+  })
 );
 
 export const mealRecords = sqliteTable(
@@ -44,7 +46,9 @@ export const mealRecords = sqliteTable(
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
-  (table) => [index('idx_meal_user_date').on(table.userId, table.recordedAt)]
+  (table) => ({
+    idx_meal_user_date: index('idx_meal_user_date').on(table.userId, table.recordedAt),
+  })
 );
 
 export const mealFoodItems = sqliteTable(
@@ -62,7 +66,9 @@ export const mealFoodItems = sqliteTable(
     carbs: real('carbs').notNull(),
     createdAt: text('created_at').notNull(),
   },
-  (table) => [index('idx_food_items_meal').on(table.mealId)]
+  (table) => ({
+    idx_food_items_meal: index('idx_food_items_meal').on(table.mealId),
+  })
 );
 
 export const mealChatMessages = sqliteTable(
@@ -77,7 +83,9 @@ export const mealChatMessages = sqliteTable(
     appliedChanges: text('applied_changes'), // JSON string
     createdAt: text('created_at').notNull(),
   },
-  (table) => [index('idx_chat_messages_meal').on(table.mealId, table.createdAt)]
+  (table) => ({
+    idx_chat_messages_meal: index('idx_chat_messages_meal').on(table.mealId, table.createdAt),
+  })
 );
 
 export const exerciseRecords = sqliteTable(
@@ -97,10 +105,10 @@ export const exerciseRecords = sqliteTable(
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
-  (table) => [
-    index('idx_exercise_user_date').on(table.userId, table.recordedAt),
-    index('idx_exercise_user_type_date').on(table.userId, table.exerciseType, table.recordedAt),
-  ]
+  (table) => ({
+    idx_exercise_user_date: index('idx_exercise_user_date').on(table.userId, table.recordedAt),
+    idx_exercise_user_type_date: index('idx_exercise_user_type_date').on(table.userId, table.exerciseType, table.recordedAt),
+  })
 );
 
 export const aiUsageRecords = sqliteTable(
@@ -116,7 +124,9 @@ export const aiUsageRecords = sqliteTable(
     totalTokens: integer('total_tokens').notNull(),
     createdAt: text('created_at').notNull(),
   },
-  (table) => [index('idx_ai_usage_user_date').on(table.userId, table.createdAt)]
+  (table) => ({
+    idx_ai_usage_user_date: index('idx_ai_usage_user_date').on(table.userId, table.createdAt),
+  })
 );
 
 // Aliases for convenience

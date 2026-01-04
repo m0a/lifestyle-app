@@ -123,14 +123,6 @@ export function Settings() {
             <p className="text-sm text-gray-500">メールアドレス</p>
             <p className="font-medium text-gray-900">{profile?.email}</p>
           </div>
-          {profile?.name && (
-            <div>
-              <p className="text-sm text-gray-500">名前</p>
-              <p className="font-medium text-gray-900" data-testid="user-name">
-                {profile.name}
-              </p>
-            </div>
-          )}
           <div>
             <p className="text-sm text-gray-500">登録日</p>
             <p className="font-medium text-gray-900">

@@ -39,7 +39,7 @@ export function ExerciseList({
 
     for (const exercise of exercises) {
       const date = new Date(exercise.recordedAt);
-      const dateStr = date.toISOString().split('T')[0];
+      const dateStr = date.toISOString().split('T')[0] ?? '';
       const key = `${exercise.exerciseType}|${dateStr}`;
 
       if (!groupMap.has(key)) {
@@ -81,7 +81,7 @@ export function ExerciseList({
       if (!dateGroups[group.dateLabel]) {
         dateGroups[group.dateLabel] = [];
       }
-      dateGroups[group.dateLabel].push(group);
+      dateGroups[group.dateLabel]!.push(group);
     }
 
     return dateGroups;

@@ -19,9 +19,9 @@ export function useExercises(options?: UseExercisesOptions) {
     queryKey: ['exercises', options],
     queryFn: async () => {
       const query: Record<string, string> = {};
-      if (options?.startDate) query.startDate = options.startDate;
-      if (options?.endDate) query.endDate = options.endDate;
-      if (options?.exerciseType) query.exerciseType = options.exerciseType;
+      if (options?.startDate) query['startDate'] = options.startDate;
+      if (options?.endDate) query['endDate'] = options.endDate;
+      if (options?.exerciseType) query['exerciseType'] = options.exerciseType;
 
       const res = await api.exercises.$get({ query });
       if (!res.ok) {

@@ -35,7 +35,7 @@ export function SessionListModal({ isOpen, onClose, onSelect }: SessionListModal
 
     try {
       const query: Record<string, string> = { limit: '10' };
-      if (cursor) query.cursor = cursor;
+      if (cursor) query['cursor'] = cursor;
 
       const res = await api.exercises.sessions.$get({ query });
       if (!res.ok) {
@@ -48,7 +48,7 @@ export function SessionListModal({ isOpen, onClose, onSelect }: SessionListModal
       } else {
         setSessions(data.sessions);
       }
-      setNextCursor(data.nextCursor);
+      setNextCursor(data.nextCursor ?? null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch sessions');
     } finally {
