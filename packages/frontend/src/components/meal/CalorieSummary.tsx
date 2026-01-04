@@ -4,6 +4,9 @@ interface CalorieSummaryProps {
   count: number;
   totalMeals: number;
   targetCalories?: number;
+  totalProtein: number;
+  totalFat: number;
+  totalCarbs: number;
 }
 
 export function CalorieSummary({
@@ -12,6 +15,9 @@ export function CalorieSummary({
   count,
   totalMeals,
   targetCalories = 2000,
+  totalProtein,
+  totalFat,
+  totalCarbs,
 }: CalorieSummaryProps) {
   const progress = Math.min((totalCalories / targetCalories) * 100, 100);
   const remaining = targetCalories - totalCalories;
@@ -23,6 +29,9 @@ export function CalorieSummary({
         <p className="text-sm text-gray-500">今日のカロリー</p>
         <p className="mt-1 text-2xl font-bold text-gray-900">
           {totalCalories.toLocaleString()} <span className="text-sm font-normal">kcal</span>
+        </p>
+        <p className="mt-1 text-xs text-gray-500">
+          P: {totalProtein.toFixed(1)}g F: {totalFat.toFixed(1)}g C: {totalCarbs.toFixed(1)}g
         </p>
         <div className="mt-2">
           <div className="h-2 overflow-hidden rounded-full bg-gray-200">

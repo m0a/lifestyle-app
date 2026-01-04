@@ -96,11 +96,19 @@ export class MealService {
     const count = mealsWithCalories.length;
     const averageCalories = count > 0 ? Math.round(totalCalories / count) : 0;
 
+    // Calculate nutrient totals (null values are treated as 0)
+    const totalProtein = meals.reduce((sum, m) => sum + (m.totalProtein ?? 0), 0);
+    const totalFat = meals.reduce((sum, m) => sum + (m.totalFat ?? 0), 0);
+    const totalCarbs = meals.reduce((sum, m) => sum + (m.totalCarbs ?? 0), 0);
+
     return {
       totalCalories,
       averageCalories,
       count,
       totalMeals: meals.length,
+      totalProtein,
+      totalFat,
+      totalCarbs,
     };
   }
 

@@ -5,6 +5,9 @@ interface MealSummaryCardProps {
   mealCount: number;
   averageCalories: number;
   byType: Record<string, number>;
+  totalProtein: number;
+  totalFat: number;
+  totalCarbs: number;
 }
 
 const MEAL_TYPE_LABELS: Record<string, string> = {
@@ -19,6 +22,9 @@ export function MealSummaryCard({
   mealCount,
   averageCalories,
   byType,
+  totalProtein,
+  totalFat,
+  totalCarbs,
 }: MealSummaryCardProps) {
   const hasData = mealCount > 0;
 
@@ -42,11 +48,16 @@ export function MealSummaryCard({
 
       {hasData ? (
         <div className="space-y-4">
-          <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-bold text-gray-900">
-              {totalCalories.toLocaleString()}
-            </span>
-            <span className="text-lg text-gray-500">kcal</span>
+          <div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl font-bold text-gray-900">
+                {totalCalories.toLocaleString()}
+              </span>
+              <span className="text-lg text-gray-500">kcal</span>
+            </div>
+            <p className="mt-1 text-xs text-gray-500">
+              P: {totalProtein.toFixed(1)}g F: {totalFat.toFixed(1)}g C: {totalCarbs.toFixed(1)}g
+            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-4 text-sm">
