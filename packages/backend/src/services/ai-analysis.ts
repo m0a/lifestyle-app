@@ -279,7 +279,7 @@ export class AIAnalysisService {
       const provider = getAIProvider(this.config);
       const modelId = getModelId(this.config);
 
-      const { object, usage } = await generateObject({
+      const result = await generateObject({
         model: provider(modelId),
         schema: aiTextResponseSchema,
         messages: [
@@ -290,8 +290,13 @@ export class AIAnalysisService {
         ],
       });
 
-      // Debug: Log raw usage from AI SDK
-      console.log('AI SDK raw usage:', JSON.stringify(usage));
+      // Debug: Log full result structure from AI SDK
+      console.log('AI SDK result keys:', Object.keys(result));
+      console.log('AI SDK usage:', JSON.stringify(result.usage));
+      console.log('AI SDK rawResponse:', result.rawResponse ? 'exists' : 'undefined');
+      console.log('AI SDK response:', result.response ? Object.keys(result.response) : 'undefined');
+
+      const { object, usage } = result;
 
       if (object.foods.length === 0) {
         return {
@@ -392,8 +397,13 @@ export class AIAnalysisService {
           dateTimeSource,
         },
         usage: normalizedUsage,
-        // Debug: include raw usage
-        _rawUsage: usage,
+        // Debug: include raw usage and result keys
+        _debug: {
+          rawUsage: usage,
+          resultKeys: Object.keys(result),
+          usageType: typeof usage,
+          usageKeys: usage ? Object.keys(usage as object) : null,
+        },
       };
     } catch (error) {
       console.error('AI text analysis error:', error);

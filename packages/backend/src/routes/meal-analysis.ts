@@ -230,9 +230,8 @@ mealAnalysis.post(
       mealTypeSource: analysisResult.result.mealTypeSource,
       inferredRecordedAt: analysisResult.result.inferredRecordedAt,
       dateTimeSource: analysisResult.result.dateTimeSource,
-      // Debug: include usage in response
-      _debug_usage: analysisResult.usage,
-      _debug_rawUsage: (analysisResult as { _rawUsage?: unknown })._rawUsage,
+      // Debug: include usage info
+      _debug: (analysisResult as { _debug?: unknown })._debug,
     };
 
     return c.json(response);
