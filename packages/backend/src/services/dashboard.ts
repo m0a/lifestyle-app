@@ -21,6 +21,9 @@ interface MealSummary {
   mealCount: number;
   averageCalories: number;
   byType: Record<string, number>;
+  totalProtein: number;
+  totalFat: number;
+  totalCarbs: number;
 }
 
 interface ExerciseSummary {
@@ -38,6 +41,9 @@ interface WeightRecord {
 interface MealRecord {
   mealType: string;
   calories: number | null;
+  totalProtein: number | null;
+  totalFat: number | null;
+  totalCarbs: number | null;
 }
 
 interface ExerciseRecord {
@@ -184,11 +190,19 @@ export class DashboardService {
         mealCount: 0,
         averageCalories: 0,
         byType: {},
+        totalProtein: 0,
+        totalFat: 0,
+        totalCarbs: 0,
       };
     }
 
     const caloriesWithValue = records.filter((r) => r.calories != null);
     const totalCalories = caloriesWithValue.reduce((sum, r) => sum + r.calories, 0);
+
+    // Calculate nutrient totals (null values are treated as 0)
+    const totalProtein = records.reduce((sum, r) => sum + (r.totalProtein ?? 0), 0);
+    const totalFat = records.reduce((sum, r) => sum + (r.totalFat ?? 0), 0);
+    const totalCarbs = records.reduce((sum, r) => sum + (r.totalCarbs ?? 0), 0);
 
     // Group by meal type
     const byType: Record<string, number> = {};
@@ -205,6 +219,9 @@ export class DashboardService {
       mealCount: records.length,
       averageCalories: caloriesWithValue.length > 0 ? totalCalories / caloriesWithValue.length : 0,
       byType,
+      totalProtein,
+      totalFat,
+      totalCarbs,
     };
   }
 

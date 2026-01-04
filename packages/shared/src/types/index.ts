@@ -105,6 +105,9 @@ export interface MealSummary {
   totalCalories: number;
   averageCalories: number;
   count: number;
+  totalProtein: number;
+  totalFat: number;
+  totalCarbs: number;
 }
 
 export interface ExerciseSummary {

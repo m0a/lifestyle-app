@@ -55,6 +55,9 @@ export function Meal() {
           averageCalories={todaySummary.averageCalories}
           count={todaySummary.count}
           totalMeals={todaySummary.totalMeals}
+          totalProtein={todaySummary.totalProtein ?? 0}
+          totalFat={todaySummary.totalFat ?? 0}
+          totalCarbs={todaySummary.totalCarbs ?? 0}
         />
       )}
 

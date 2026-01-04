@@ -114,6 +114,9 @@ export function Dashboard() {
               mealCount={summary?.meals.mealCount ?? 0}
               averageCalories={summary?.meals.averageCalories ?? 0}
               byType={summary?.meals.byType ?? {}}
+              totalProtein={summary?.meals.totalProtein ?? 0}
+              totalFat={summary?.meals.totalFat ?? 0}
+              totalCarbs={summary?.meals.totalCarbs ?? 0}
             />
             <ExerciseSummaryCard
               totalSets={summary?.exercises.totalSets ?? 0}

@@ -78,10 +78,10 @@ describe('DashboardService', () => {
 
       mockDb.all.mockResolvedValueOnce([]);
       mockDb.all.mockResolvedValueOnce([
-        { calories: 2000, mealType: 'breakfast' },
-        { calories: 500, mealType: 'lunch' },
-        { calories: 800, mealType: 'dinner' },
-        { calories: null, mealType: 'snack' },
+        { calories: 2000, mealType: 'breakfast', totalProtein: 30, totalFat: 20, totalCarbs: 200 },
+        { calories: 500, mealType: 'lunch', totalProtein: 25, totalFat: 15, totalCarbs: 50 },
+        { calories: 800, mealType: 'dinner', totalProtein: 40, totalFat: 30, totalCarbs: 80 },
+        { calories: null, mealType: 'snack', totalProtein: null, totalFat: null, totalCarbs: null },
       ]);
       mockDb.all.mockResolvedValueOnce([]);
 
@@ -90,6 +90,45 @@ describe('DashboardService', () => {
       expect(result.meals.totalCalories).toBe(3300);
       expect(result.meals.mealCount).toBe(4);
       expect(result.meals.averageCalories).toBeCloseTo(1100, 0);
+      // New nutrient assertions
+      expect(result.meals.totalProtein).toBe(95); // 30+25+40+0
+      expect(result.meals.totalFat).toBe(65); // 20+15+30+0
+      expect(result.meals.totalCarbs).toBe(330); // 200+50+80+0
+    });
+
+    it('should calculate nutrient totals with null values as zero', async () => {
+      const userId = 'user-123';
+      const startDate = new Date('2025-01-01');
+      const endDate = new Date('2025-01-03');
+
+      mockDb.all.mockResolvedValueOnce([]);
+      mockDb.all.mockResolvedValueOnce([
+        { calories: 500, mealType: 'breakfast', totalProtein: null, totalFat: null, totalCarbs: null },
+        { calories: 600, mealType: 'lunch', totalProtein: 20, totalFat: 10, totalCarbs: 50 },
+      ]);
+      mockDb.all.mockResolvedValueOnce([]);
+
+      const result = await service.getSummary(userId, { startDate, endDate });
+
+      expect(result.meals.totalProtein).toBe(20); // null treated as 0
+      expect(result.meals.totalFat).toBe(10);
+      expect(result.meals.totalCarbs).toBe(50);
+    });
+
+    it('should return zero nutrients for empty meal records', async () => {
+      const userId = 'user-123';
+      const startDate = new Date('2025-01-01');
+      const endDate = new Date('2025-01-03');
+
+      mockDb.all.mockResolvedValueOnce([]);
+      mockDb.all.mockResolvedValueOnce([]);
+      mockDb.all.mockResolvedValueOnce([]);
+
+      const result = await service.getSummary(userId, { startDate, endDate });
+
+      expect(result.meals.totalProtein).toBe(0);
+      expect(result.meals.totalFat).toBe(0);
+      expect(result.meals.totalCarbs).toBe(0);
     });
 
     it('should calculate exercise statistics correctly', async () => {
