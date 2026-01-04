@@ -35,6 +35,18 @@ export function Settings() {
     },
   });
 
+  // Fetch AI usage
+  const { data: aiUsage } = useQuery({
+    queryKey: ['user', 'ai-usage'],
+    queryFn: async () => {
+      const res = await api.user['ai-usage'].$get();
+      if (!res.ok) {
+        throw new Error('Failed to fetch AI usage');
+      }
+      return res.json();
+    },
+  });
+
   // Delete account mutation
   const deleteMutation = useMutation({
     mutationFn: async () => {
@@ -152,6 +164,30 @@ export function Settings() {
               <p className="text-sm text-gray-500">合計</p>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* AI Usage Section */}
+      {aiUsage && (
+        <div className="rounded-lg border border-gray-200 bg-white p-6">
+          <h2 className="mb-4 text-lg font-semibold text-gray-900">AI使用量</h2>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="text-center">
+              <p className="text-2xl font-bold text-purple-600" data-testid="ai-monthly-tokens">
+                {aiUsage.monthlyTokens.toLocaleString()}
+              </p>
+              <p className="text-sm text-gray-500">今月のトークン</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold text-gray-900" data-testid="ai-total-tokens">
+                {aiUsage.totalTokens.toLocaleString()}
+              </p>
+              <p className="text-sm text-gray-500">累計トークン</p>
+            </div>
+          </div>
+          <p className="mt-4 text-xs text-gray-500">
+            トークンはAI機能（食事分析・チャット）で消費されます
+          </p>
         </div>
       )}
 

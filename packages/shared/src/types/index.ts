@@ -132,3 +132,13 @@ export interface ExportData {
   exercises: ExerciseRecord[];
   exportedAt: string;
 }
+
+// AI Usage Tracking types
+export const AIFeatureTypeSchema = z.enum(['image_analysis', 'text_analysis', 'chat']);
+export type AIFeatureType = z.infer<typeof AIFeatureTypeSchema>;
+
+export const AIUsageSummarySchema = z.object({
+  totalTokens: z.number().int().min(0),
+  monthlyTokens: z.number().int().min(0),
+});
+export type AIUsageSummary = z.infer<typeof AIUsageSummarySchema>;

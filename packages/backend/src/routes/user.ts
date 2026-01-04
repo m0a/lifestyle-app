@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { UserService } from '../services/user';
+import { AIUsageService } from '../services/ai-usage';
 import { authMiddleware } from '../middleware/auth';
 import type { Bindings, Variables } from '../types';
 
@@ -81,4 +82,13 @@ export const user = new Hono<{ Bindings: Bindings; Variables: Variables }>()
     } catch (error) {
       return c.json({ error: 'Failed to delete account' }, 500);
     }
+  })
+  .get('/ai-usage', async (c) => {
+    const currentUser = c.get('user');
+    const db = c.get('db');
+    const service = new AIUsageService(db);
+
+    const summary = await service.getSummary(currentUser.id);
+
+    return c.json(summary);
   });

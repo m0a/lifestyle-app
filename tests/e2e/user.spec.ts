@@ -135,4 +135,42 @@ test.describe('User Settings - Export and Delete', () => {
       }
     });
   });
+
+  test.describe('AI Usage Display', () => {
+    test('should display AI usage section', async ({ page }) => {
+      await page.goto('/settings');
+      await expect(page.getByText('AI使用量')).toBeVisible();
+    });
+
+    test('should display monthly tokens', async ({ page }) => {
+      await page.goto('/settings');
+      await expect(page.getByTestId('ai-monthly-tokens')).toBeVisible();
+      await expect(page.getByText('今月のトークン')).toBeVisible();
+    });
+
+    test('should display total tokens', async ({ page }) => {
+      await page.goto('/settings');
+      await expect(page.getByTestId('ai-total-tokens')).toBeVisible();
+      await expect(page.getByText('累計トークン')).toBeVisible();
+    });
+
+    test('should display token values as numbers', async ({ page }) => {
+      await page.goto('/settings');
+
+      // Wait for the AI usage section to load
+      await page.waitForSelector('[data-testid="ai-monthly-tokens"]');
+
+      const monthlyTokens = await page.getByTestId('ai-monthly-tokens').textContent();
+      const totalTokens = await page.getByTestId('ai-total-tokens').textContent();
+
+      // Values should be numeric (possibly with comma formatting)
+      expect(monthlyTokens).toMatch(/^[\d,]+$/);
+      expect(totalTokens).toMatch(/^[\d,]+$/);
+    });
+
+    test('should display explanation text', async ({ page }) => {
+      await page.goto('/settings');
+      await expect(page.getByText(/トークンはAI機能.*で消費されます/)).toBeVisible();
+    });
+  });
 });

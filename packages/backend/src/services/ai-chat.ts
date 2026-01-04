@@ -2,6 +2,19 @@ import { streamText } from 'ai';
 import { getAIProvider, getModelId, type AIConfig } from '../lib/ai-provider';
 import type { FoodItem, ChatMessage, ChatChange } from '@lifestyle-app/shared';
 
+// Token usage from AI SDK
+export interface TokenUsage {
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+}
+
+// Result type for chat streaming with usage callback
+export interface ChatStreamResult {
+  textStream: AsyncGenerator<string, void, unknown>;
+  getUsage: () => Promise<TokenUsage | undefined>;
+}
+
 const CHAT_SYSTEM_PROMPT = `あなたは食事記録のアシスタントです。
 ユーザーが**既に食べた食事**を正確に記録する手助けをしてください。
 
@@ -89,14 +102,14 @@ export class AIChatService {
 
   /**
    * Chat with AI about the current meal.
-   * Returns a streaming response.
+   * Returns a streaming response with usage information.
    */
-  async *chat(
+  chat(
     currentMeal: FoodItem[],
     chatHistory: ChatMessage[],
     userMessage: string,
     currentDateTime?: string
-  ): AsyncGenerator<string, void, unknown> {
+  ): ChatStreamResult {
     const provider = getAIProvider(this.config);
     const modelId = getModelId(this.config);
 
@@ -115,15 +128,38 @@ export class AIChatService {
       { role: 'user' as const, content: userMessage },
     ];
 
-    const { textStream } = streamText({
+    const result = streamText({
       model: provider(modelId),
       system: `${systemPrompt}\n\n現在の食事:\n${mealContext}`,
       messages,
     });
 
-    for await (const text of textStream) {
-      yield text;
-    }
+    // Create async generator wrapper for textStream
+    const textStreamGenerator = async function* () {
+      for await (const text of result.textStream) {
+        yield text;
+      }
+    };
+
+    return {
+      textStream: textStreamGenerator(),
+      getUsage: async () => {
+        try {
+          const usage = await result.usage;
+          if (usage) {
+            return {
+              promptTokens: usage.promptTokens,
+              completionTokens: usage.completionTokens,
+              totalTokens: usage.totalTokens,
+            };
+          }
+          return undefined;
+        } catch (error) {
+          console.error('Failed to get usage:', error);
+          return undefined;
+        }
+      },
+    };
   }
 
   /**

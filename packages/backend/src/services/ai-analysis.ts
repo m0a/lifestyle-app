@@ -13,6 +13,13 @@ import type {
   DateTimeSource,
 } from '@lifestyle-app/shared';
 
+// Token usage from AI SDK
+export interface TokenUsage {
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+}
+
 // Schema for AI response validation
 const aiResponseSchema = z.object({
   foods: z.array(
@@ -122,7 +129,7 @@ export class AIAnalysisService {
   async analyzeMealPhoto(
     imageData: ArrayBuffer,
     mimeType: string
-  ): Promise<{ success: true; result: Omit<AnalysisResult, 'mealId' | 'photoKey'> } | { success: false; failure: AnalysisFailure }> {
+  ): Promise<{ success: true; result: Omit<AnalysisResult, 'mealId' | 'photoKey'>; usage?: TokenUsage } | { success: false; failure: AnalysisFailure }> {
     try {
       const provider = getAIProvider(this.config);
       const modelId = getModelId(this.config);
@@ -130,7 +137,7 @@ export class AIAnalysisService {
       // Convert ArrayBuffer to base64
       const base64Image = this.arrayBufferToBase64(imageData);
 
-      const { object } = await generateObject({
+      const { object, usage } = await generateObject({
         model: provider(modelId),
         schema: aiResponseSchema,
         messages: [
@@ -177,6 +184,7 @@ export class AIAnalysisService {
           foodItems,
           totals,
         },
+        usage,
       };
     } catch (error) {
       console.error('AI analysis error:', error);
@@ -212,14 +220,14 @@ export class AIAnalysisService {
     text: string,
     currentTime?: string
   ): Promise<
-    | { success: true; result: Omit<TextAnalysisResponse, 'mealId'> }
+    | { success: true; result: Omit<TextAnalysisResponse, 'mealId'>; usage?: TokenUsage }
     | { success: false; failure: TextAnalysisError }
   > {
     try {
       const provider = getAIProvider(this.config);
       const modelId = getModelId(this.config);
 
-      const { object } = await generateObject({
+      const { object, usage } = await generateObject({
         model: provider(modelId),
         schema: aiTextResponseSchema,
         messages: [
@@ -327,6 +335,7 @@ export class AIAnalysisService {
           inferredRecordedAt,
           dateTimeSource,
         },
+        usage,
       };
     } catch (error) {
       console.error('AI text analysis error:', error);
