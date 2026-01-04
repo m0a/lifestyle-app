@@ -148,8 +148,8 @@ export class AIChatService {
           const usage = await result.usage;
           if (usage) {
             return {
-              promptTokens: usage.promptTokens,
-              completionTokens: usage.completionTokens,
+              promptTokens: usage.inputTokens,
+              completionTokens: usage.outputTokens,
               totalTokens: usage.totalTokens,
             };
           }

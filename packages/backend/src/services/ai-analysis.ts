@@ -13,11 +13,20 @@ import type {
   DateTimeSource,
 } from '@lifestyle-app/shared';
 
-// Token usage from AI SDK
+// Token usage (normalized from AI SDK's inputTokens/outputTokens)
 export interface TokenUsage {
   promptTokens: number;
   completionTokens: number;
   totalTokens: number;
+}
+
+// Helper to normalize AI SDK usage to our format
+function normalizeUsage(usage: { inputTokens: number; outputTokens: number; totalTokens: number }): TokenUsage {
+  return {
+    promptTokens: usage.inputTokens,
+    completionTokens: usage.outputTokens,
+    totalTokens: usage.totalTokens,
+  };
 }
 
 // Schema for AI response validation
@@ -184,7 +193,7 @@ export class AIAnalysisService {
           foodItems,
           totals,
         },
-        usage,
+        usage: usage ? normalizeUsage(usage) : undefined,
       };
     } catch (error) {
       console.error('AI analysis error:', error);
@@ -335,7 +344,7 @@ export class AIAnalysisService {
           inferredRecordedAt,
           dateTimeSource,
         },
-        usage,
+        usage: usage ? normalizeUsage(usage) : undefined,
       };
     } catch (error) {
       console.error('AI text analysis error:', error);
