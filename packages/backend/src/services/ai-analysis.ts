@@ -21,7 +21,10 @@ export interface TokenUsage {
 }
 
 // Helper to normalize AI SDK usage to our format
-function normalizeUsage(usage: { inputTokens: number; outputTokens: number; totalTokens: number }): TokenUsage {
+function normalizeUsage(usage: { inputTokens?: number; outputTokens?: number; totalTokens?: number } | undefined): TokenUsage | undefined {
+  if (!usage || usage.inputTokens === undefined || usage.outputTokens === undefined || usage.totalTokens === undefined) {
+    return undefined;
+  }
   return {
     promptTokens: usage.inputTokens,
     completionTokens: usage.outputTokens,
@@ -193,7 +196,7 @@ export class AIAnalysisService {
           foodItems,
           totals,
         },
-        usage: usage ? normalizeUsage(usage) : undefined,
+        usage: normalizeUsage(usage),
       };
     } catch (error) {
       console.error('AI analysis error:', error);
@@ -344,7 +347,7 @@ export class AIAnalysisService {
           inferredRecordedAt,
           dateTimeSource,
         },
-        usage: usage ? normalizeUsage(usage) : undefined,
+        usage: normalizeUsage(usage),
       };
     } catch (error) {
       console.error('AI text analysis error:', error);
