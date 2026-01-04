@@ -178,7 +178,7 @@ export class AIAnalysisService {
       // Convert ArrayBuffer to base64
       const base64Image = this.arrayBufferToBase64(imageData);
 
-      const { object, usage, providerMetadata } = await generateObject({
+      const { object, usage } = await generateObject({
         model: provider(modelId),
         schema: aiResponseSchema,
         messages: [
