@@ -106,22 +106,40 @@ export function ExerciseInput({ onSubmit, isLoading, error }: ExerciseInputProps
         )}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-3">
         <div>
-          <label htmlFor="durationMinutes" className="block text-sm font-medium text-gray-700">
-            時間（分）
+          <label htmlFor="sets" className="block text-sm font-medium text-gray-700">
+            セット数
           </label>
           <input
-            {...register('durationMinutes', { valueAsNumber: true })}
+            {...register('sets', { valueAsNumber: true })}
             type="number"
-            id="durationMinutes"
+            id="sets"
             min="1"
-            max="1440"
-            placeholder="30"
+            max="20"
+            placeholder="3"
             className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
           />
-          {errors.durationMinutes && (
-            <p className="mt-1 text-sm text-red-600">{errors.durationMinutes.message}</p>
+          {errors.sets && (
+            <p className="mt-1 text-sm text-red-600">{errors.sets.message}</p>
+          )}
+        </div>
+
+        <div>
+          <label htmlFor="reps" className="block text-sm font-medium text-gray-700">
+            回数
+          </label>
+          <input
+            {...register('reps', { valueAsNumber: true })}
+            type="number"
+            id="reps"
+            min="1"
+            max="100"
+            placeholder="10"
+            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
+          />
+          {errors.reps && (
+            <p className="mt-1 text-sm text-red-600">{errors.reps.message}</p>
           )}
         </div>
 

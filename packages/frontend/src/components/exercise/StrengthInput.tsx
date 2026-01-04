@@ -120,12 +120,14 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, c
 
   const updateSet = (index: number, field: keyof SetInput, value: number | string | null) => {
     const newSets = [...sets];
+    const set = newSets[index];
+    if (!set) return;
     if (field === 'reps') {
-      newSets[index].reps = value as number;
+      set.reps = value as number;
     } else if (field === 'weight') {
-      newSets[index].weight = value as number | null;
+      set.weight = value as number | null;
     } else if (field === 'variation') {
-      newSets[index].variation = value as string;
+      set.variation = value as string;
     }
     setSets(newSets);
   };
@@ -146,9 +148,11 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, c
     }
 
     for (let i = 0; i < sets.length; i++) {
-      if (sets[i].reps < 1 || sets[i].reps > 100) {
+      const set = sets[i];
+      if (!set) continue;
+      if (set.reps < 1 || set.reps > 100) {
         setValidationError(`セット${i + 1}: 回数は1〜100の範囲で入力してください`);
-        logValidationError('StrengthInput', { reps: { message: 'Invalid reps' } }, { setIndex: i, reps: sets[i].reps });
+        logValidationError('StrengthInput', { reps: { message: 'Invalid reps', type: 'validate' } }, { setIndex: i, reps: set.reps });
         return;
       }
     }
@@ -188,34 +192,33 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, c
 
   const handleSessionSelect = (session: Session) => {
     // Take the first exercise from the session and populate the form
-    if (session.exercises.length > 0) {
-      const firstExercise = session.exercises[0];
+    const firstExercise = session.exercises[0];
+    if (!firstExercise) return;
 
-      // Set exercise type
-      const isPreset = EXERCISE_PRESETS.some(p => p.name === firstExercise.exerciseType);
-      if (isPreset) {
-        setExerciseType(firstExercise.exerciseType);
-        setShowCustomInput(false);
-      } else {
-        setCustomExerciseName(firstExercise.exerciseType);
-        setShowCustomInput(true);
-      }
-
-      // Set muscle group if available
-      if (firstExercise.muscleGroup) {
-        setSelectedMuscleGroup(firstExercise.muscleGroup as MuscleGroup);
-      }
-
-      // Copy sets
-      setSets(firstExercise.sets.map(s => ({
-        reps: s.reps,
-        weight: s.weight,
-        variation: s.variation || undefined,
-      })));
-
-      setSuccessMessage(`「${firstExercise.exerciseType}」のセット構成を取り込みました`);
-      setTimeout(() => setSuccessMessage(null), 3000);
+    // Set exercise type
+    const isPreset = EXERCISE_PRESETS.some(p => p.name === firstExercise.exerciseType);
+    if (isPreset) {
+      setExerciseType(firstExercise.exerciseType);
+      setShowCustomInput(false);
+    } else {
+      setCustomExerciseName(firstExercise.exerciseType);
+      setShowCustomInput(true);
     }
+
+    // Set muscle group if available
+    if (firstExercise.muscleGroup) {
+      setSelectedMuscleGroup(firstExercise.muscleGroup as MuscleGroup);
+    }
+
+    // Copy sets
+    setSets(firstExercise.sets.map(s => ({
+      reps: s.reps,
+      weight: s.weight,
+      variation: s.variation || undefined,
+    })));
+
+    setSuccessMessage(`「${firstExercise.exerciseType}」のセット構成を取り込みました`);
+    setTimeout(() => setSuccessMessage(null), 3000);
   };
 
   return (

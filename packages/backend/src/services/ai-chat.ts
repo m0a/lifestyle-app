@@ -146,7 +146,7 @@ export class AIChatService {
       getUsage: async () => {
         try {
           const usage = await result.usage;
-          if (usage) {
+          if (usage && typeof usage.inputTokens === 'number' && typeof usage.outputTokens === 'number' && typeof usage.totalTokens === 'number') {
             return {
               promptTokens: usage.inputTokens,
               completionTokens: usage.outputTokens,

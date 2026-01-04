@@ -4,7 +4,7 @@ import { MealList } from '../components/meal/MealList';
 import { CalorieSummary } from '../components/meal/CalorieSummary';
 import { SmartMealInput } from '../components/meal/SmartMealInput';
 import { mealAnalysisApi } from '../lib/api';
-import type { MealType } from '@lifestyle-app/shared';
+import type { MealType, MealRecord } from '@lifestyle-app/shared';
 import { MEAL_TYPE_LABELS } from '@lifestyle-app/shared';
 
 export function Meal() {
@@ -91,7 +91,7 @@ export function Meal() {
           </div>
         </div>
         <MealList
-          meals={meals}
+          meals={meals as MealRecord[]}
           onDelete={remove}
           isDeleting={isDeleting}
         />

@@ -31,21 +31,21 @@ function normalizeUsage(
   }
 
   // AI SDK v4 format: { inputTokens: { total: number }, outputTokens: { total: number } }
-  const inputTokensObj = usage.inputTokens as Record<string, unknown> | number | undefined;
-  const outputTokensObj = usage.outputTokens as Record<string, unknown> | number | undefined;
+  const inputTokensObj = usage['inputTokens'] as Record<string, unknown> | number | undefined;
+  const outputTokensObj = usage['outputTokens'] as Record<string, unknown> | number | undefined;
 
   let inputTokens: number | undefined;
   let outputTokens: number | undefined;
 
   // Handle nested object format (AI SDK v4+)
   if (inputTokensObj && typeof inputTokensObj === 'object') {
-    inputTokens = (inputTokensObj as Record<string, unknown>).total as number | undefined;
+    inputTokens = (inputTokensObj as Record<string, unknown>)['total'] as number | undefined;
   } else if (typeof inputTokensObj === 'number') {
     inputTokens = inputTokensObj;
   }
 
   if (outputTokensObj && typeof outputTokensObj === 'object') {
-    outputTokens = (outputTokensObj as Record<string, unknown>).total as number | undefined;
+    outputTokens = (outputTokensObj as Record<string, unknown>)['total'] as number | undefined;
   } else if (typeof outputTokensObj === 'number') {
     outputTokens = outputTokensObj;
   }
@@ -396,7 +396,7 @@ export class AIAnalysisService {
     const bytes = new Uint8Array(buffer);
     let binary = '';
     for (let i = 0; i < bytes.byteLength; i++) {
-      binary += String.fromCharCode(bytes[i]);
+      binary += String.fromCharCode(bytes[i] ?? 0);
     }
     return btoa(binary);
   }

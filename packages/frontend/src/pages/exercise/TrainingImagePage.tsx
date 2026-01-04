@@ -24,7 +24,7 @@ export function TrainingImagePage() {
 
   // Get date from URL params (default to today)
   const dateParam = searchParams.get('date');
-  const date = dateParam || new Date().toISOString().split('T')[0];
+  const date = dateParam || new Date().toISOString().split('T')[0] || '';
 
   // Ref for the image preview element
   const imageRef = useRef<HTMLDivElement>(null);
