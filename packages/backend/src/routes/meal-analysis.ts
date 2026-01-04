@@ -138,10 +138,10 @@ mealAnalysis.post('/analyze', async (c) => {
       });
     }
 
-    // Record AI usage (fire-and-forget)
+    // Record AI usage
     if (analysisResult.usage) {
       const aiUsageService = new AIUsageService(db);
-      aiUsageService.recordUsage(userId, 'image_analysis', analysisResult.usage).catch(console.error);
+      await aiUsageService.recordUsage(userId, 'image_analysis', analysisResult.usage);
     }
 
     return c.json({
@@ -210,19 +210,13 @@ mealAnalysis.post(
       });
     }
 
-    // Record AI usage (fire-and-forget)
-    console.log('Route: analysisResult.usage =', JSON.stringify(analysisResult.usage));
+    // Record AI usage
     if (analysisResult.usage) {
-      console.log('Route: Recording usage...');
       const aiUsageService = new AIUsageService(db);
-      aiUsageService.recordUsage(userId, 'text_analysis', analysisResult.usage).catch((err) => {
-        console.error('Route: Failed to record usage:', err);
-      });
-    } else {
-      console.log('Route: No usage data to record');
+      await aiUsageService.recordUsage(userId, 'text_analysis', analysisResult.usage);
     }
 
-    const response = {
+    return c.json({
       mealId,
       foodItems: analysisResult.result.foodItems,
       totals: analysisResult.result.totals,
@@ -230,11 +224,7 @@ mealAnalysis.post(
       mealTypeSource: analysisResult.result.mealTypeSource,
       inferredRecordedAt: analysisResult.result.inferredRecordedAt,
       dateTimeSource: analysisResult.result.dateTimeSource,
-      // Debug: include usage info
-      _debug: (analysisResult as { _debug?: unknown })._debug,
-    };
-
-    return c.json(response);
+    });
   }
 );
 

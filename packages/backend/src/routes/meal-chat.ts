@@ -158,11 +158,11 @@ mealChat.post(
             createdAt: assistantNow,
           });
 
-          // Record AI usage (fire-and-forget)
+          // Record AI usage (must await to complete before stream closes)
           const usage = await chatResult.getUsage();
           if (usage) {
             const aiUsageService = new AIUsageService(db);
-            aiUsageService.recordUsage(userId, 'chat', usage).catch(console.error);
+            await aiUsageService.recordUsage(userId, 'chat', usage);
           }
 
           // Send completion event with changes

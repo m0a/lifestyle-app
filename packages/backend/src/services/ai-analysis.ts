@@ -21,55 +21,44 @@ export interface TokenUsage {
 }
 
 // Helper to normalize AI SDK usage to our format
-function normalizeUsage(usage: Record<string, unknown> | undefined): TokenUsage | undefined {
-  console.log('normalizeUsage raw input:', usage);
-  console.log('normalizeUsage input type:', typeof usage);
-  if (usage) {
-    console.log('normalizeUsage keys:', Object.keys(usage));
-    console.log('inputTokens value:', usage.inputTokens, 'type:', typeof usage.inputTokens);
-    console.log('outputTokens value:', usage.outputTokens, 'type:', typeof usage.outputTokens);
-    console.log('totalTokens value:', usage.totalTokens, 'type:', typeof usage.totalTokens);
-    // Also check for alternate property names
-    console.log('promptTokens value:', usage.promptTokens, 'type:', typeof usage.promptTokens);
-    console.log('completionTokens value:', usage.completionTokens, 'type:', typeof usage.completionTokens);
-  }
-
+// Supports: AI SDK v4 nested format { inputTokens: { total }, outputTokens: { total } }
+// and legacy format { inputTokens: number, outputTokens: number }
+function normalizeUsage(
+  usage: Record<string, unknown> | undefined
+): TokenUsage | undefined {
   if (!usage) {
-    console.log('normalizeUsage: usage is falsy');
     return undefined;
   }
 
-  // Try standard AI SDK property names first
-  let inputTokens = usage.inputTokens as number | undefined;
-  let outputTokens = usage.outputTokens as number | undefined;
-  let totalTokens = usage.totalTokens as number | undefined;
+  // AI SDK v4 format: { inputTokens: { total: number }, outputTokens: { total: number } }
+  const inputTokensObj = usage.inputTokens as Record<string, unknown> | number | undefined;
+  const outputTokensObj = usage.outputTokens as Record<string, unknown> | number | undefined;
 
-  // Fallback to OpenAI-style property names
-  if (inputTokens === undefined) {
-    inputTokens = usage.promptTokens as number | undefined;
-  }
-  if (outputTokens === undefined) {
-    outputTokens = usage.completionTokens as number | undefined;
-  }
+  let inputTokens: number | undefined;
+  let outputTokens: number | undefined;
 
-  // Check if we have valid numbers
-  if (typeof inputTokens !== 'number' || typeof outputTokens !== 'number') {
-    console.log('normalizeUsage: inputTokens or outputTokens not valid numbers');
-    return undefined;
+  // Handle nested object format (AI SDK v4+)
+  if (inputTokensObj && typeof inputTokensObj === 'object') {
+    inputTokens = (inputTokensObj as Record<string, unknown>).total as number | undefined;
+  } else if (typeof inputTokensObj === 'number') {
+    inputTokens = inputTokensObj;
   }
 
-  // Calculate totalTokens if not provided
-  if (typeof totalTokens !== 'number') {
-    totalTokens = inputTokens + outputTokens;
+  if (outputTokensObj && typeof outputTokensObj === 'object') {
+    outputTokens = (outputTokensObj as Record<string, unknown>).total as number | undefined;
+  } else if (typeof outputTokensObj === 'number') {
+    outputTokens = outputTokensObj;
   }
 
-  const result = {
-    promptTokens: inputTokens,
-    completionTokens: outputTokens,
-    totalTokens,
-  };
-  console.log('normalizeUsage result:', JSON.stringify(result));
-  return result;
+  if (typeof inputTokens === 'number' && typeof outputTokens === 'number') {
+    return {
+      promptTokens: inputTokens,
+      completionTokens: outputTokens,
+      totalTokens: inputTokens + outputTokens,
+    };
+  }
+
+  return undefined;
 }
 
 // Schema for AI response validation
@@ -189,7 +178,7 @@ export class AIAnalysisService {
       // Convert ArrayBuffer to base64
       const base64Image = this.arrayBufferToBase64(imageData);
 
-      const { object, usage } = await generateObject({
+      const { object, usage, providerMetadata } = await generateObject({
         model: provider(modelId),
         schema: aiResponseSchema,
         messages: [
@@ -236,7 +225,7 @@ export class AIAnalysisService {
           foodItems,
           totals,
         },
-        usage: normalizeUsage(usage),
+        usage: normalizeUsage(usage as Record<string, unknown>),
       };
     } catch (error) {
       console.error('AI analysis error:', error);
@@ -289,12 +278,6 @@ export class AIAnalysisService {
           },
         ],
       });
-
-      // Debug: Log full result structure from AI SDK
-      console.log('AI SDK result keys:', Object.keys(result));
-      console.log('AI SDK usage:', JSON.stringify(result.usage));
-      console.log('AI SDK rawResponse:', result.rawResponse ? 'exists' : 'undefined');
-      console.log('AI SDK response:', result.response ? Object.keys(result.response) : 'undefined');
 
       const { object, usage } = result;
 
@@ -385,7 +368,6 @@ export class AIAnalysisService {
         dateTimeSource = 'now';
       }
 
-      const normalizedUsage = normalizeUsage(usage as Record<string, unknown>);
       return {
         success: true,
         result: {
@@ -396,14 +378,7 @@ export class AIAnalysisService {
           inferredRecordedAt,
           dateTimeSource,
         },
-        usage: normalizedUsage,
-        // Debug: include raw usage and result keys
-        _debug: {
-          rawUsage: usage,
-          resultKeys: Object.keys(result),
-          usageType: typeof usage,
-          usageKeys: usage ? Object.keys(usage as object) : null,
-        },
+        usage: normalizeUsage(usage as Record<string, unknown>),
       };
     } catch (error) {
       console.error('AI text analysis error:', error);
