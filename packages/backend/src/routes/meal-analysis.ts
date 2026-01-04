@@ -16,7 +16,6 @@ import {
   textAnalysisRequestSchema,
   type FoodItem,
   type NutritionTotals,
-  type TextAnalysisResponse,
 } from '@lifestyle-app/shared';
 
 type Bindings = {
