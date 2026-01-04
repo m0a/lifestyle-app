@@ -22,8 +22,9 @@ export class AIUsageService {
     featureType: AIFeatureType,
     usage: TokenUsage
   ): Promise<void> {
+    console.log('AIUsageService.recordUsage called:', { userId, featureType, usage });
     try {
-      await this.db.insert(aiUsageRecords).values({
+      const record = {
         id: uuidv4(),
         userId,
         featureType,
@@ -31,7 +32,10 @@ export class AIUsageService {
         completionTokens: usage.completionTokens,
         totalTokens: usage.totalTokens,
         createdAt: new Date().toISOString(),
-      });
+      };
+      console.log('Inserting record:', record);
+      await this.db.insert(aiUsageRecords).values(record);
+      console.log('Record inserted successfully');
     } catch (error) {
       console.error('Failed to record AI usage:', error);
       // Do not throw - usage recording should not affect main functionality

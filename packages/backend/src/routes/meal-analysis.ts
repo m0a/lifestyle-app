@@ -212,12 +212,18 @@ mealAnalysis.post(
     }
 
     // Record AI usage (fire-and-forget)
+    console.log('Route: analysisResult.usage =', JSON.stringify(analysisResult.usage));
     if (analysisResult.usage) {
+      console.log('Route: Recording usage...');
       const aiUsageService = new AIUsageService(db);
-      aiUsageService.recordUsage(userId, 'text_analysis', analysisResult.usage).catch(console.error);
+      aiUsageService.recordUsage(userId, 'text_analysis', analysisResult.usage).catch((err) => {
+        console.error('Route: Failed to record usage:', err);
+      });
+    } else {
+      console.log('Route: No usage data to record');
     }
 
-    const response: TextAnalysisResponse = {
+    const response = {
       mealId,
       foodItems: analysisResult.result.foodItems,
       totals: analysisResult.result.totals,
@@ -225,6 +231,8 @@ mealAnalysis.post(
       mealTypeSource: analysisResult.result.mealTypeSource,
       inferredRecordedAt: analysisResult.result.inferredRecordedAt,
       dateTimeSource: analysisResult.result.dateTimeSource,
+      // Debug: include usage in response
+      _debug_usage: analysisResult.usage,
     };
 
     return c.json(response);

@@ -100,10 +100,9 @@ tests/
 Preview uses separate D1 database (`health-tracker-preview-db`).
 
 ## Recent Changes
+- 014-ai-usage-tracking: Added TypeScript 5.x (strict mode) + React 18+, Hono, Drizzle ORM, Zod, TanStack Query, Tailwind CSS, Vercel AI SDK
+- 013-nutrient-summary: Added TypeScript 5.x (strict mode) + React 18+, Hono, Drizzle ORM, Zod, TanStack Query, Tailwind CSS
 - 010-meal-edit-consistency: Added TypeScript 5.x (strict mode) + React 18+, Hono, Drizzle ORM, Zod, TanStack Query, Tailwind CSS
-- 009-share-training-image: Added TypeScript 5.x (strict mode) + React 18+, Hono, Drizzle ORM, Zod, TanStack Query + React, Tailwind CSS, html-to-image (or html2canvas), Web Share API
-- 005-strength-set-management: Added TypeScript 5.x (strict mode) + React 18+, Hono, Drizzle ORM, Zod, TanStack Query
 
 ## Active Technologies
-- TypeScript 5.x (strict mode) + React 18+, Hono, Drizzle ORM, Zod, TanStack Query, Tailwind CSS (010-meal-edit-consistency)
-- Cloudflare D1 (SQLite) + R2 (photos) (010-meal-edit-consistency)
+- TypeScript 5.x (strict mode) + React 18+, Hono, Drizzle ORM, Zod, TanStack Query, Tailwind CSS, Vercel AI SDK (014-ai-usage-tracking)
