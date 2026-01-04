@@ -22,13 +22,17 @@ export interface TokenUsage {
 
 // Helper to normalize AI SDK usage to our format
 function normalizeUsage(usage: { inputTokens?: number; outputTokens?: number; totalTokens?: number } | undefined): TokenUsage | undefined {
-  if (!usage || usage.inputTokens === undefined || usage.outputTokens === undefined || usage.totalTokens === undefined) {
+  if (!usage || usage.inputTokens === undefined || usage.outputTokens === undefined) {
     return undefined;
   }
+  const inputTokens = usage.inputTokens;
+  const outputTokens = usage.outputTokens;
+  // Calculate totalTokens if not provided
+  const totalTokens = usage.totalTokens ?? (inputTokens + outputTokens);
   return {
-    promptTokens: usage.inputTokens,
-    completionTokens: usage.outputTokens,
-    totalTokens: usage.totalTokens,
+    promptTokens: inputTokens,
+    completionTokens: outputTokens,
+    totalTokens,
   };
 }
 
