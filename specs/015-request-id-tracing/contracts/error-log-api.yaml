@@ -1,0 +1,189 @@
+openapi: 3.0.3
+info:
+  title: Error Log API
+  description: API for logging frontend errors with request tracing
+  version: 2.0.0
+servers:
+  - url: /api/logs
+    description: Error logging endpoints
+
+paths:
+  /error:
+    post:
+      summary: Log frontend error
+      description: |
+        Logs an error that occurred in the frontend application. Includes request ID
+        for end-to-end tracing and user ID for user-specific debugging.
+      operationId: logError
+      tags:
+        - Logging
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ErrorLog'
+            examples:
+              authenticatedError:
+                summary: Error from authenticated user
+                value:
+                  message: "Failed to save meal record"
+                  stack: "Error: Network request failed\n    at saveMeal (meal.service.ts:45)\n    at async MealForm.handleSubmit (MealForm.tsx:123)"
+                  url: "https://lifestyle-app.example.com/meals/new"
+                  userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                  timestamp: "2026-01-06T10:30:45.123Z"
+                  requestId: "3ec1b68d-ce88-478e-9f4e-03837aeb2098"
+                  userId: "user_abc123"
+                  extra:
+                    type: "api_error"
+                    endpoint: "/api/meals"
+                    statusCode: 500
+              anonymousError:
+                summary: Error from unauthenticated user
+                value:
+                  message: "Login failed: Invalid credentials"
+                  url: "https://lifestyle-app.example.com/login"
+                  userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
+                  timestamp: "2026-01-06T10:25:30.456Z"
+                  requestId: "7a2f9c3d-1e4b-4f8a-9d5c-2b7e8a6f1c9d"
+                  extra:
+                    type: "authentication_error"
+      responses:
+        '200':
+          description: Error logged successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - received
+                  - requestId
+                properties:
+                  received:
+                    type: boolean
+                    example: true
+                  requestId:
+                    type: string
+                    format: uuid
+                    description: Request ID that was logged (from request or generated)
+                    example: "3ec1b68d-ce88-478e-9f4e-03837aeb2098"
+        '400':
+          description: Invalid request payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                validationError:
+                  summary: Validation error
+                  value:
+                    message: "バリデーションエラー"
+                    code: "VALIDATION_ERROR"
+                    requestId: "3ec1b68d-ce88-478e-9f4e-03837aeb2098"
+                    errors:
+                      - path: "message"
+                        message: "Required"
+                      - path: "timestamp"
+                        message: "Invalid ISO 8601 format"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    ErrorLog:
+      type: object
+      required:
+        - message
+        - url
+        - timestamp
+      properties:
+        message:
+          type: string
+          description: Human-readable error message
+          minLength: 1
+          example: "Failed to save meal record"
+        stack:
+          type: string
+          description: JavaScript stack trace (optional for non-error logs)
+          example: "Error: Network request failed\n    at saveMeal (meal.service.ts:45)"
+        url:
+          type: string
+          format: uri
+          description: Full URL where the error occurred
+          example: "https://lifestyle-app.example.com/meals/new"
+        userAgent:
+          type: string
+          description: Browser user agent string
+          example: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        timestamp:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp when error occurred
+          example: "2026-01-06T10:30:45.123Z"
+        requestId:
+          type: string
+          format: uuid
+          description: UUID v4 identifying this specific request (optional, generated server-side if not provided)
+          example: "3ec1b68d-ce88-478e-9f4e-03837aeb2098"
+        userId:
+          type: string
+          description: User ID from authentication (null for unauthenticated requests)
+          example: "user_abc123"
+        extra:
+          type: object
+          additionalProperties: true
+          description: Additional context (e.g., componentStack, formData, API response)
+          example:
+            type: "api_error"
+            endpoint: "/api/meals"
+            statusCode: 500
+            componentStack: "at MealForm\n    at ProtectedRoute"
+
+    Error:
+      type: object
+      required:
+        - message
+        - code
+      properties:
+        message:
+          type: string
+          description: Error message
+          example: "バリデーションエラー"
+        code:
+          type: string
+          description: Error code
+          enum:
+            - VALIDATION_ERROR
+            - HTTP_ERROR
+            - INTERNAL_ERROR
+          example: "VALIDATION_ERROR"
+        requestId:
+          type: string
+          format: uuid
+          description: Request ID for tracing this error
+          example: "3ec1b68d-ce88-478e-9f4e-03837aeb2098"
+        errors:
+          type: array
+          description: Validation error details (for VALIDATION_ERROR)
+          items:
+            type: object
+            required:
+              - path
+              - message
+            properties:
+              path:
+                type: string
+                description: Field path that failed validation
+                example: "message"
+              message:
+                type: string
+                description: Validation error message
+                example: "Required"
+
+tags:
+  - name: Logging
+    description: Error and event logging endpoints
