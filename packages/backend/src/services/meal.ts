@@ -70,21 +70,33 @@ export class MealService {
     const offset = options?.timezoneOffset ?? 0;
 
     if (options?.startDate) {
-      // Convert local date to UTC range start
-      // e.g., "2026-01-04" in JST (offset=-540) starts at 2026-01-03T15:00:00Z in UTC
-      const [year, month, day] = options.startDate.split('-').map(Number) as [number, number, number];
-      const localStart = new Date(Date.UTC(year, month - 1, day));
-      const utcStart = new Date(localStart.getTime() + offset * 60 * 1000).toISOString();
-      filtered = filtered.filter((r) => r.recordedAt >= utcStart);
+      // Check if startDate is already in ISO format (contains 'T')
+      if (options.startDate.includes('T')) {
+        // Already in UTC ISO format, use directly
+        filtered = filtered.filter((r) => r.recordedAt >= options.startDate!);
+      } else {
+        // Convert local date to UTC range start
+        // e.g., "2026-01-04" in JST (offset=-540) starts at 2026-01-03T15:00:00Z in UTC
+        const [year, month, day] = options.startDate.split('-').map(Number) as [number, number, number];
+        const localStart = new Date(Date.UTC(year, month - 1, day));
+        const utcStart = new Date(localStart.getTime() + offset * 60 * 1000).toISOString();
+        filtered = filtered.filter((r) => r.recordedAt >= utcStart);
+      }
     }
 
     if (options?.endDate) {
-      // Convert local date to UTC range end (end of day)
-      // e.g., "2026-01-04" in JST (offset=-540) ends at 2026-01-04T14:59:59.999Z in UTC
-      const [year, month, day] = options.endDate.split('-').map(Number) as [number, number, number];
-      const localEnd = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999));
-      const utcEnd = new Date(localEnd.getTime() + offset * 60 * 1000).toISOString();
-      filtered = filtered.filter((r) => r.recordedAt <= utcEnd);
+      // Check if endDate is already in ISO format (contains 'T')
+      if (options.endDate.includes('T')) {
+        // Already in UTC ISO format, use directly
+        filtered = filtered.filter((r) => r.recordedAt <= options.endDate!);
+      } else {
+        // Convert local date to UTC range end (end of day)
+        // e.g., "2026-01-04" in JST (offset=-540) ends at 2026-01-04T14:59:59.999Z in UTC
+        const [year, month, day] = options.endDate.split('-').map(Number) as [number, number, number];
+        const localEnd = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999));
+        const utcEnd = new Date(localEnd.getTime() + offset * 60 * 1000).toISOString();
+        filtered = filtered.filter((r) => r.recordedAt <= utcEnd);
+      }
     }
 
     if (options?.mealType) {
