@@ -106,6 +106,28 @@ export function Register() {
                 <p className="mt-1 text-sm text-red-600">{errors.goalWeight.message}</p>
               )}
             </div>
+
+            <div>
+              <label htmlFor="goalCalories" className="block text-sm font-medium text-gray-700">
+                1日の目標カロリー（kcal、任意）
+              </label>
+              <input
+                {...register('goalCalories', {
+                  setValueAs: (v) => (v === '' ? undefined : parseInt(v, 10)),
+                })}
+                type="number"
+                id="goalCalories"
+                step="50"
+                min="500"
+                max="10000"
+                placeholder="2000"
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+              <p className="mt-1 text-xs text-gray-500">未入力の場合は2000kcalが設定されます</p>
+              {errors.goalCalories && (
+                <p className="mt-1 text-sm text-red-600">{errors.goalCalories.message}</p>
+              )}
+            </div>
           </div>
 
           <button

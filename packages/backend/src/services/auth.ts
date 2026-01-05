@@ -30,6 +30,7 @@ export class AuthService {
       email: input.email,
       passwordHash,
       goalWeight: input.goalWeight ?? null,
+      goalCalories: input.goalCalories ?? 2000,
       createdAt: now,
       updatedAt: now,
     });
@@ -38,6 +39,7 @@ export class AuthService {
       id,
       email: input.email,
       goalWeight: input.goalWeight ?? null,
+      goalCalories: input.goalCalories ?? 2000,
       createdAt: now,
       updatedAt: now,
     };
@@ -64,6 +66,7 @@ export class AuthService {
       id: user.id,
       email: user.email,
       goalWeight: user.goalWeight,
+      goalCalories: user.goalCalories,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };
@@ -75,6 +78,7 @@ export class AuthService {
         id: schema.users.id,
         email: schema.users.email,
         goalWeight: schema.users.goalWeight,
+        goalCalories: schema.users.goalCalories,
         createdAt: schema.users.createdAt,
         updatedAt: schema.users.updatedAt,
       })

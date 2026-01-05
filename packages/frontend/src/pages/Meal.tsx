@@ -1,14 +1,26 @@
 import { useState, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useMeals } from '../hooks/useMeals';
 import { MealList } from '../components/meal/MealList';
 import { CalorieSummary } from '../components/meal/CalorieSummary';
 import { SmartMealInput } from '../components/meal/SmartMealInput';
 import { mealAnalysisApi } from '../lib/api';
+import { api } from '../lib/client';
 import type { MealType, MealRecord } from '@lifestyle-app/shared';
 import { MEAL_TYPE_LABELS } from '@lifestyle-app/shared';
 
 export function Meal() {
   const [filterType, setFilterType] = useState<MealType | ''>('');
+
+  // Fetch user profile for goal calories
+  const { data: profile } = useQuery({
+    queryKey: ['user', 'profile'],
+    queryFn: async () => {
+      const res = await api.user.profile.$get();
+      if (!res.ok) throw new Error('Failed to fetch profile');
+      return res.json();
+    },
+  });
 
   const {
     meals,
@@ -55,6 +67,7 @@ export function Meal() {
           averageCalories={todaySummary.averageCalories}
           count={todaySummary.count}
           totalMeals={todaySummary.totalMeals}
+          targetCalories={profile?.goalCalories ?? undefined}
           totalProtein={todaySummary.totalProtein ?? 0}
           totalFat={todaySummary.totalFat ?? 0}
           totalCarbs={todaySummary.totalCarbs ?? 0}

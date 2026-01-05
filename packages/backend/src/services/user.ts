@@ -44,6 +44,7 @@ export class UserService {
         id: users.id,
         email: users.email,
         goalWeight: users.goalWeight,
+        goalCalories: users.goalCalories,
         createdAt: users.createdAt,
       })
       .from(users)
@@ -51,6 +52,21 @@ export class UserService {
       .get();
 
     return user;
+  }
+
+  async updateGoals(userId: string, goals: { goalWeight?: number | null; goalCalories?: number | null }) {
+    const now = new Date().toISOString();
+
+    await this.db
+      .update(users)
+      .set({
+        ...(goals.goalWeight !== undefined && { goalWeight: goals.goalWeight }),
+        ...(goals.goalCalories !== undefined && { goalCalories: goals.goalCalories }),
+        updatedAt: now,
+      })
+      .where(eq(users.id, userId));
+
+    return this.getProfile(userId);
   }
 
   async exportData(userId: string): Promise<ExportData> {
