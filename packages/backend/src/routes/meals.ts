@@ -15,9 +15,10 @@ type Variables = {
   user: { id: string; email: string };
 };
 
-// Query schema with mealType filter
+// Query schema with mealType filter and timezone offset
 const mealQuerySchema = dateRangeSchema.extend({
   mealType: mealTypeSchema.optional(),
+  timezoneOffset: z.coerce.number().optional(),
 });
 
 // Query schema for today endpoint with timezone offset
@@ -49,6 +50,7 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
       startDate: query.startDate,
       endDate: query.endDate,
       mealType: query.mealType,
+      timezoneOffset: query.timezoneOffset,
     });
 
     return c.json({ meals: mealsList });

@@ -14,14 +14,17 @@ interface UseMealsOptions {
 
 export function useMeals(options?: UseMealsOptions) {
   const queryClient = useQueryClient();
+  const timezoneOffset = new Date().getTimezoneOffset();
 
   const mealsQuery = useQuery({
-    queryKey: ['meals', options],
+    queryKey: ['meals', options, timezoneOffset],
     queryFn: async () => {
       const query: Record<string, string> = {};
       if (options?.startDate) query['startDate'] = options.startDate;
       if (options?.endDate) query['endDate'] = options.endDate;
       if (options?.mealType) query['mealType'] = options.mealType;
+      // Always pass timezone offset for correct date filtering
+      query['timezoneOffset'] = String(timezoneOffset);
 
       const res = await api.meals.$get({ query });
       if (!res.ok) {

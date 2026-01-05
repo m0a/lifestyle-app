@@ -55,7 +55,7 @@ export class MealService {
 
   async findByUserId(
     userId: string,
-    options?: { startDate?: string; endDate?: string; mealType?: MealType; limit?: number }
+    options?: { startDate?: string; endDate?: string; mealType?: MealType; limit?: number; timezoneOffset?: number }
   ) {
     const records = await this.db
       .select()
@@ -66,14 +66,25 @@ export class MealService {
 
     let filtered = records;
 
+    // timezoneOffset: minutes offset from UTC (e.g., -540 for JST)
+    const offset = options?.timezoneOffset ?? 0;
+
     if (options?.startDate) {
-      filtered = filtered.filter((r) => r.recordedAt >= options.startDate!);
+      // Convert local date to UTC range start
+      // e.g., "2026-01-04" in JST (offset=-540) starts at 2026-01-03T15:00:00Z in UTC
+      const [year, month, day] = options.startDate.split('-').map(Number) as [number, number, number];
+      const localStart = new Date(Date.UTC(year, month - 1, day));
+      const utcStart = new Date(localStart.getTime() + offset * 60 * 1000).toISOString();
+      filtered = filtered.filter((r) => r.recordedAt >= utcStart);
     }
 
     if (options?.endDate) {
-      // Append end-of-day time to include all records on the endDate
-      const endDateTime = options.endDate + 'T23:59:59.999Z';
-      filtered = filtered.filter((r) => r.recordedAt <= endDateTime);
+      // Convert local date to UTC range end (end of day)
+      // e.g., "2026-01-04" in JST (offset=-540) ends at 2026-01-04T14:59:59.999Z in UTC
+      const [year, month, day] = options.endDate.split('-').map(Number) as [number, number, number];
+      const localEnd = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999));
+      const utcEnd = new Date(localEnd.getTime() + offset * 60 * 1000).toISOString();
+      filtered = filtered.filter((r) => r.recordedAt <= utcEnd);
     }
 
     if (options?.mealType) {
