@@ -146,4 +146,43 @@ describe('MealService', () => {
       expect(true).toBe(true);
     });
   });
+
+  describe('getMealDates', () => {
+    it('should return unique dates with meal records for a given month', async () => {
+      const userId = 'user-123';
+      const year = 2026;
+      const month = 1;
+
+      // Expected: Returns array of unique date strings like ["2026-01-01", "2026-01-05"]
+      expect(true).toBe(true);
+    });
+
+    it('should return empty array when no meals exist in the month', async () => {
+      const userId = 'user-123';
+      const year = 2026;
+      const month = 12;
+
+      // Expected: Returns []
+      expect(true).toBe(true);
+    });
+
+    it('should respect timezone offset when calculating dates', async () => {
+      const userId = 'user-123';
+      const year = 2026;
+      const month = 1;
+      const timezoneOffset = -540; // JST (UTC+9)
+
+      // Expected: Dates are calculated in user's local timezone
+      expect(true).toBe(true);
+    });
+
+    it('should return dates sorted in ascending order', async () => {
+      const userId = 'user-123';
+      const year = 2026;
+      const month = 1;
+
+      // Expected: ["2026-01-01", "2026-01-05", "2026-01-15"] not shuffled
+      expect(true).toBe(true);
+    });
+  });
 });

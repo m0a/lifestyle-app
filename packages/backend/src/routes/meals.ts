@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import { createMealSchema, updateMealSchema, dateRangeSchema, mealTypeSchema } from '@lifestyle-app/shared';
+import { createMealSchema, updateMealSchema, dateRangeSchema, mealTypeSchema, mealDatesQuerySchema } from '@lifestyle-app/shared';
 import { MealService } from '../services/meal';
 import { authMiddleware } from '../middleware/auth';
 import type { Database } from '../db';
@@ -75,6 +75,16 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
     const summary = await mealService.getTodaysSummary(user.id, timezoneOffset);
 
     return c.json({ summary });
+  })
+  .get('/dates', zValidator('query', mealDatesQuerySchema), async (c) => {
+    const { year, month, timezoneOffset } = c.req.valid('query');
+    const db = c.get('db');
+    const user = c.get('user');
+
+    const mealService = new MealService(db);
+    const dates = await mealService.getMealDates(user.id, year, month, timezoneOffset);
+
+    return c.json({ dates });
   })
   .get('/:id', async (c) => {
     const id = c.req.param('id');

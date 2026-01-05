@@ -172,4 +172,38 @@ export class MealService {
 
     return this.getCalorieSummary(userId, { startDate, endDate });
   }
+
+  async getMealDates(
+    userId: string,
+    year: number,
+    month: number,
+    timezoneOffset?: number
+  ): Promise<string[]> {
+    // timezoneOffset: minutes offset from UTC (e.g., -540 for JST)
+    const offset = timezoneOffset ?? 0;
+
+    // Calculate start of month in user's timezone
+    const startOfMonth = new Date(Date.UTC(year, month - 1, 1));
+    const startDate = new Date(startOfMonth.getTime() + offset * 60 * 1000).toISOString();
+
+    // Calculate start of next month in user's timezone
+    const startOfNextMonth = new Date(Date.UTC(year, month, 1));
+    const endDate = new Date(startOfNextMonth.getTime() + offset * 60 * 1000).toISOString();
+
+    // Get all meals in the date range
+    const meals = await this.findByUserId(userId, { startDate, endDate });
+
+    // Extract unique dates (in user's local timezone)
+    const dateSet = new Set<string>();
+    for (const meal of meals) {
+      // Convert recordedAt to user's local date
+      const recordedAt = new Date(meal.recordedAt);
+      const localDate = new Date(recordedAt.getTime() - offset * 60 * 1000);
+      const dateStr = localDate.toISOString().split('T')[0] as string;
+      dateSet.add(dateStr);
+    }
+
+    // Return sorted array of dates
+    return Array.from(dateSet).sort();
+  }
 }
