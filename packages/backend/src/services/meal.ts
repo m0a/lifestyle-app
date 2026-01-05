@@ -1,28 +1,13 @@
 import { eq, desc } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
-import { parseISO, startOfDay, endOfDay, startOfMonth, endOfMonth, addMinutes, format } from 'date-fns';
+import { parseISO, startOfDay, endOfDay, startOfMonth, endOfMonth, format } from 'date-fns';
+import { toZonedTime, fromZonedTime } from 'date-fns-tz';
 import type { Database } from '../db';
 import { schema } from '../db';
 import { AppError } from '../middleware/error';
 import type { CreateMealInput, UpdateMealInput, MealType } from '@lifestyle-app/shared';
 
-/**
- * タイムゾーンオフセット（分）からUTC日時をユーザーのローカル日時に変換
- * @param utcDate UTC日時
- * @param offsetMinutes タイムゾーンオフセット（分）。JST=-540
- */
-function toLocalTime(utcDate: Date, offsetMinutes: number): Date {
-  return addMinutes(utcDate, -offsetMinutes);
-}
-
-/**
- * ユーザーのローカル日時をUTCに変換
- * @param localDate ローカル日時
- * @param offsetMinutes タイムゾーンオフセット（分）。JST=-540
- */
-function toUtcTime(localDate: Date, offsetMinutes: number): Date {
-  return addMinutes(localDate, offsetMinutes);
-}
+const DEFAULT_TIMEZONE = 'UTC';
 
 export class MealService {
   constructor(private db: Database) {}
@@ -74,7 +59,7 @@ export class MealService {
 
   async findByUserId(
     userId: string,
-    options?: { startDate?: string; endDate?: string; mealType?: MealType; limit?: number; timezoneOffset?: number }
+    options?: { startDate?: string; endDate?: string; mealType?: MealType; limit?: number; timezone?: string }
   ) {
     const records = await this.db
       .select()
@@ -85,7 +70,7 @@ export class MealService {
 
     let filtered = records;
 
-    const offset = options?.timezoneOffset ?? 0;
+    const tz = options?.timezone ?? DEFAULT_TIMEZONE;
 
     if (options?.startDate) {
       // ISO形式（'T'を含む）の場合はそのまま使用、YYYY-MM-DD形式の場合はタイムゾーン変換
@@ -95,7 +80,7 @@ export class MealService {
       } else {
         // ローカル日付の開始時刻をUTCに変換
         const localStart = startOfDay(parseISO(options.startDate));
-        const utcStart = toUtcTime(localStart, offset).toISOString();
+        const utcStart = fromZonedTime(localStart, tz).toISOString();
         filtered = filtered.filter((r) => r.recordedAt >= utcStart);
       }
     }
@@ -107,7 +92,7 @@ export class MealService {
       } else {
         // ローカル日付の終了時刻をUTCに変換
         const localEnd = endOfDay(parseISO(options.endDate));
-        const utcEnd = toUtcTime(localEnd, offset).toISOString();
+        const utcEnd = fromZonedTime(localEnd, tz).toISOString();
         filtered = filtered.filter((r) => r.recordedAt <= utcEnd);
       }
     }
@@ -189,17 +174,17 @@ export class MealService {
     await this.db.delete(schema.mealRecords).where(eq(schema.mealRecords.id, id));
   }
 
-  async getTodaysSummary(userId: string, timezoneOffset?: number) {
-    const offset = timezoneOffset ?? 0;
+  async getTodaysSummary(userId: string, timezone?: string) {
+    const tz = timezone ?? DEFAULT_TIMEZONE;
 
     // ユーザーのローカル時間での「今日」を取得
-    const userNow = toLocalTime(new Date(), offset);
+    const userNow = toZonedTime(new Date(), tz);
     const userTodayStart = startOfDay(userNow);
     const userTodayEnd = endOfDay(userNow);
 
     // UTCに変換
-    const startDate = toUtcTime(userTodayStart, offset).toISOString();
-    const endDate = toUtcTime(userTodayEnd, offset).toISOString();
+    const startDate = fromZonedTime(userTodayStart, tz).toISOString();
+    const endDate = fromZonedTime(userTodayEnd, tz).toISOString();
 
     return this.getCalorieSummary(userId, { startDate, endDate });
   }
@@ -208,17 +193,17 @@ export class MealService {
     userId: string,
     year: number,
     month: number,
-    timezoneOffset?: number
+    timezone?: string
   ): Promise<string[]> {
-    const offset = timezoneOffset ?? 0;
+    const tz = timezone ?? DEFAULT_TIMEZONE;
 
     // ユーザーのローカル時間での月の開始・終了を計算
     const localMonthStart = startOfMonth(new Date(year, month - 1, 1));
     const localMonthEnd = endOfMonth(new Date(year, month - 1, 1));
 
     // UTCに変換
-    const startDate = toUtcTime(localMonthStart, offset).toISOString();
-    const endDate = toUtcTime(localMonthEnd, offset).toISOString();
+    const startDate = fromZonedTime(localMonthStart, tz).toISOString();
+    const endDate = fromZonedTime(localMonthEnd, tz).toISOString();
 
     // 日付範囲内の食事を取得
     const meals = await this.findByUserId(userId, { startDate, endDate });
@@ -227,7 +212,7 @@ export class MealService {
     const dateSet = new Set<string>();
     for (const meal of meals) {
       const recordedAt = parseISO(meal.recordedAt);
-      const localDate = toLocalTime(recordedAt, offset);
+      const localDate = toZonedTime(recordedAt, tz);
       const dateStr = format(localDate, 'yyyy-MM-dd');
       dateSet.add(dateStr);
     }

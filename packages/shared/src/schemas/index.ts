@@ -171,7 +171,7 @@ export const maxRMResponseSchema = z.object({
 export const mealDatesQuerySchema = z.object({
   year: z.coerce.number().int().min(1970).max(2100),
   month: z.coerce.number().int().min(1).max(12),
-  timezoneOffset: z.coerce.number().optional(),
+  timezone: z.string().optional(),
 });
 
 export const mealDatesResponseSchema = z.object({

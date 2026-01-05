@@ -12,19 +12,22 @@ interface UseMealsOptions {
   mealType?: MealType;
 }
 
+// ユーザーのタイムゾーン名を取得（例: 'Asia/Tokyo'）
+const getUserTimezone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
+
 export function useMeals(options?: UseMealsOptions) {
   const queryClient = useQueryClient();
-  const timezoneOffset = new Date().getTimezoneOffset();
+  const timezone = getUserTimezone();
 
   const mealsQuery = useQuery({
-    queryKey: ['meals', options, timezoneOffset],
+    queryKey: ['meals', options, timezone],
     queryFn: async () => {
       const query: Record<string, string> = {};
       if (options?.startDate) query['startDate'] = options.startDate;
       if (options?.endDate) query['endDate'] = options.endDate;
       if (options?.mealType) query['mealType'] = options.mealType;
-      // Always pass timezone offset for correct date filtering
-      query['timezoneOffset'] = String(timezoneOffset);
+      // タイムゾーン名を渡す（例: 'Asia/Tokyo'）
+      query['timezone'] = timezone;
 
       const res = await api.meals.$get({ query });
       if (!res.ok) {
@@ -37,12 +40,11 @@ export function useMeals(options?: UseMealsOptions) {
   });
 
   const todaySummaryQuery = useQuery({
-    queryKey: ['meals', 'today-summary'],
+    queryKey: ['meals', 'today-summary', timezone],
     queryFn: async () => {
-      // Pass timezone offset so server can calculate "today" correctly
-      const timezoneOffset = new Date().getTimezoneOffset();
+      // タイムゾーン名を渡して「今日」を正しく計算
       const res = await api.meals.today.$get({
-        query: { timezoneOffset: String(timezoneOffset) },
+        query: { timezone },
       });
       if (!res.ok) {
         const error = await res.json().catch(() => ({ message: 'Failed to fetch today summary' }));
