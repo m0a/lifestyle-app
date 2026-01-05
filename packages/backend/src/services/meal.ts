@@ -71,7 +71,9 @@ export class MealService {
     }
 
     if (options?.endDate) {
-      filtered = filtered.filter((r) => r.recordedAt <= options.endDate!);
+      // Append end-of-day time to include all records on the endDate
+      const endDateTime = options.endDate + 'T23:59:59.999Z';
+      filtered = filtered.filter((r) => r.recordedAt <= endDateTime);
     }
 
     if (options?.mealType) {
