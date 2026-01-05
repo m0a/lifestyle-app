@@ -167,5 +167,19 @@ export const maxRMResponseSchema = z.object({
   maxRMs: z.array(maxRMRecordSchema),
 });
 
+// Meal dates query schema (for calendar feature)
+export const mealDatesQuerySchema = z.object({
+  year: z.coerce.number().int().min(1970).max(2100),
+  month: z.coerce.number().int().min(1).max(12),
+  timezoneOffset: z.coerce.number().optional(),
+});
+
+export const mealDatesResponseSchema = z.object({
+  dates: z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)),
+});
+
+export type MealDatesQuery = z.infer<typeof mealDatesQuerySchema>;
+export type MealDatesResponse = z.infer<typeof mealDatesResponseSchema>;
+
 // Meal analysis schemas
 export * from './meal-analysis';
