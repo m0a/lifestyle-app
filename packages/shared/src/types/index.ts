@@ -3,6 +3,7 @@ import {
   registerSchema,
   loginSchema,
   updateUserSchema,
+  updateGoalsSchema,
   createWeightSchema,
   updateWeightSchema,
   createMealSchema,
@@ -24,6 +25,7 @@ export * from './training-image';
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type UpdateUserInput = z.infer<typeof updateUserSchema>;
+export type UpdateGoalsInput = z.infer<typeof updateGoalsSchema>;
 export type CreateWeightInput = z.infer<typeof createWeightSchema>;
 export type UpdateWeightInput = z.infer<typeof updateWeightSchema>;
 export type CreateMealInput = z.infer<typeof createMealSchema>;
@@ -41,6 +43,7 @@ export interface User {
   id: string;
   email: string;
   goalWeight: number | null;
+  goalCalories: number | null;
   createdAt: string;
   updatedAt: string;
 }

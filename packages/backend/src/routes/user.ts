@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
+import { updateGoalsSchema } from '@lifestyle-app/shared';
 import { UserService } from '../services/user';
 import { AIUsageService } from '../services/ai-usage';
 import { authMiddleware } from '../middleware/auth';
@@ -91,4 +92,18 @@ export const user = new Hono<{ Bindings: Bindings; Variables: Variables }>()
     const summary = await service.getSummary(currentUser.id);
 
     return c.json(summary);
+  })
+  .patch('/goals', zValidator('json', updateGoalsSchema), async (c) => {
+    const currentUser = c.get('user');
+    const db = c.get('db');
+    const goals = c.req.valid('json');
+    const service = new UserService(db);
+
+    const updatedProfile = await service.updateGoals(currentUser.id, goals);
+
+    if (!updatedProfile) {
+      return c.json({ error: 'User not found' }, 404);
+    }
+
+    return c.json(updatedProfile);
   });

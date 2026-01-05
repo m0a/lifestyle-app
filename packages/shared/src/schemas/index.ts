@@ -47,6 +47,12 @@ export const loginSchema = z.object({
 
 export const updateUserSchema = z.object({
   goalWeight: z.number().min(20).max(300).optional(),
+  goalCalories: z.number().int().min(500).max(10000).optional(),
+});
+
+export const updateGoalsSchema = z.object({
+  goalWeight: z.number().min(20).max(300).nullable().optional(),
+  goalCalories: z.number().int().min(500).max(10000).nullable().optional(),
 });
 
 // Weight schemas
