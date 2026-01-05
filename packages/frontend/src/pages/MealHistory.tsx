@@ -1,8 +1,11 @@
 import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useMeals } from '../hooks/useMeals';
 import { MealList } from '../components/meal/MealList';
 import { MealCalendar } from '../components/meal/MealCalendar';
+import { CalorieSummary } from '../components/meal/CalorieSummary';
+import { api } from '../lib/client';
 import { getTodayDateString, formatDateString } from '../lib/dateValidation';
 import type { MealRecord } from '@lifestyle-app/shared';
 
@@ -23,6 +26,38 @@ export function MealHistory() {
     remove,
     isDeleting,
   } = useMeals(mealsOptions);
+
+  // Fetch user profile for goal calories
+  const { data: profile } = useQuery({
+    queryKey: ['user', 'profile'],
+    queryFn: async () => {
+      const res = await api.user.profile.$get();
+      if (!res.ok) throw new Error('Failed to fetch profile');
+      return res.json();
+    },
+  });
+
+  // Calculate summary from meals
+  const daySummary = useMemo(() => {
+    const mealsWithCalories = meals.filter((m) => m.calories != null);
+    const totalCalories = mealsWithCalories.reduce((sum, m) => sum + (m.calories ?? 0), 0);
+    const totalProtein = meals.reduce((sum, m) => sum + (m.totalProtein ?? 0), 0);
+    const totalFat = meals.reduce((sum, m) => sum + (m.totalFat ?? 0), 0);
+    const totalCarbs = meals.reduce((sum, m) => sum + (m.totalCarbs ?? 0), 0);
+    const count = mealsWithCalories.length;
+    const totalMeals = meals.length;
+    const averageCalories = count > 0 ? Math.round(totalCalories / count) : 0;
+
+    return {
+      totalCalories,
+      averageCalories,
+      count,
+      totalMeals,
+      totalProtein,
+      totalFat,
+      totalCarbs,
+    };
+  }, [meals]);
 
   // Format the selected date for display
   const formattedDate = useMemo(() => {
@@ -69,6 +104,21 @@ export function MealHistory() {
         selectedDate={new Date(selectedDate + 'T00:00:00')}
         onDateSelect={handleDateSelect}
       />
+
+      {/* Day Summary */}
+      {meals.length > 0 && (
+        <CalorieSummary
+          totalCalories={daySummary.totalCalories}
+          averageCalories={daySummary.averageCalories}
+          count={daySummary.count}
+          totalMeals={daySummary.totalMeals}
+          targetCalories={profile?.goalCalories ?? undefined}
+          totalProtein={daySummary.totalProtein}
+          totalFat={daySummary.totalFat}
+          totalCarbs={daySummary.totalCarbs}
+          isHistory
+        />
+      )}
 
       {/* Selected date meals */}
       <div>

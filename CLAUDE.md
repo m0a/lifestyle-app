@@ -99,6 +99,12 @@ tests/
 
 Preview uses separate D1 database (`health-tracker-preview-db`).
 
+### Preview Test Account
+
+PRプレビュー環境での動作確認用:
+- **メール**: `test-preview@example.com`
+- **パスワード**: `test1234`
+
 ## Recent Changes
 - 014-ai-usage-tracking: Added TypeScript 5.x (strict mode) + React 18+, Hono, Drizzle ORM, Zod, TanStack Query, Tailwind CSS, Vercel AI SDK
 - 013-nutrient-summary: Added TypeScript 5.x (strict mode) + React 18+, Hono, Drizzle ORM, Zod, TanStack Query, Tailwind CSS

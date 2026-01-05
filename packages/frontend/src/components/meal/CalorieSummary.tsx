@@ -7,6 +7,8 @@ interface CalorieSummaryProps {
   totalProtein: number;
   totalFat: number;
   totalCarbs: number;
+  /** 履歴画面用のラベル表示 */
+  isHistory?: boolean;
 }
 
 export function CalorieSummary({
@@ -18,15 +20,17 @@ export function CalorieSummary({
   totalProtein,
   totalFat,
   totalCarbs,
+  isHistory = false,
 }: CalorieSummaryProps) {
   const progress = Math.min((totalCalories / targetCalories) * 100, 100);
   const remaining = targetCalories - totalCalories;
   const isOverTarget = remaining < 0;
+  const dayLabel = isHistory ? 'この日' : '今日';
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <div className="rounded-lg border border-gray-200 bg-white p-4">
-        <p className="text-sm text-gray-500">今日のカロリー</p>
+        <p className="text-sm text-gray-500">{dayLabel}のカロリー</p>
         <p className="mt-1 text-2xl font-bold text-gray-900">
           {totalCalories.toLocaleString()} <span className="text-sm font-normal">kcal</span>
         </p>
@@ -76,7 +80,7 @@ export function CalorieSummary({
       </div>
 
       <div className="rounded-lg border border-gray-200 bg-white p-4">
-        <p className="text-sm text-gray-500">今日の食事数</p>
+        <p className="text-sm text-gray-500">{dayLabel}の食事数</p>
         <p className="mt-1 text-2xl font-bold text-gray-900">
           {totalMeals} <span className="text-sm font-normal">食</span>
         </p>

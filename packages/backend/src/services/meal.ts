@@ -1,9 +1,13 @@
 import { eq, desc } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
+import { parseISO, startOfDay, endOfDay, startOfMonth, endOfMonth, format } from 'date-fns';
+import { toZonedTime, fromZonedTime } from 'date-fns-tz';
 import type { Database } from '../db';
 import { schema } from '../db';
 import { AppError } from '../middleware/error';
 import type { CreateMealInput, UpdateMealInput, MealType } from '@lifestyle-app/shared';
+
+const DEFAULT_TIMEZONE = 'UTC';
 
 export class MealService {
   constructor(private db: Database) {}
@@ -55,7 +59,7 @@ export class MealService {
 
   async findByUserId(
     userId: string,
-    options?: { startDate?: string; endDate?: string; mealType?: MealType; limit?: number }
+    options?: { startDate?: string; endDate?: string; mealType?: MealType; limit?: number; timezone?: string }
   ) {
     const records = await this.db
       .select()
@@ -66,14 +70,31 @@ export class MealService {
 
     let filtered = records;
 
+    const tz = options?.timezone ?? DEFAULT_TIMEZONE;
+
     if (options?.startDate) {
-      filtered = filtered.filter((r) => r.recordedAt >= options.startDate!);
+      // ISO形式（'T'を含む）の場合はそのまま使用、YYYY-MM-DD形式の場合はタイムゾーン変換
+      const isIsoFormat = options.startDate.includes('T');
+      if (isIsoFormat) {
+        filtered = filtered.filter((r) => r.recordedAt >= options.startDate!);
+      } else {
+        // ローカル日付の開始時刻をUTCに変換
+        const localStart = startOfDay(parseISO(options.startDate));
+        const utcStart = fromZonedTime(localStart, tz).toISOString();
+        filtered = filtered.filter((r) => r.recordedAt >= utcStart);
+      }
     }
 
     if (options?.endDate) {
-      // Append end-of-day time to include all records on the endDate
-      const endDateTime = options.endDate + 'T23:59:59.999Z';
-      filtered = filtered.filter((r) => r.recordedAt <= endDateTime);
+      const isIsoFormat = options.endDate.includes('T');
+      if (isIsoFormat) {
+        filtered = filtered.filter((r) => r.recordedAt <= options.endDate!);
+      } else {
+        // ローカル日付の終了時刻をUTCに変換
+        const localEnd = endOfDay(parseISO(options.endDate));
+        const utcEnd = fromZonedTime(localEnd, tz).toISOString();
+        filtered = filtered.filter((r) => r.recordedAt <= utcEnd);
+      }
     }
 
     if (options?.mealType) {
@@ -153,24 +174,17 @@ export class MealService {
     await this.db.delete(schema.mealRecords).where(eq(schema.mealRecords.id, id));
   }
 
-  async getTodaysSummary(userId: string, timezoneOffset?: number) {
-    // timezoneOffset: minutes offset from UTC (e.g., -540 for JST)
-    // If not provided, defaults to UTC
-    const offset = timezoneOffset ?? 0;
+  async getTodaysSummary(userId: string, timezone?: string) {
+    const tz = timezone ?? DEFAULT_TIMEZONE;
 
-    // Get current time in user's timezone
-    const now = new Date();
-    const userNow = new Date(now.getTime() - offset * 60 * 1000);
+    // ユーザーのローカル時間での「今日」を取得
+    const userNow = toZonedTime(new Date(), tz);
+    const userTodayStart = startOfDay(userNow);
+    const userTodayEnd = endOfDay(userNow);
 
-    // Calculate start of today in user's timezone, then convert back to UTC
-    const userToday = new Date(userNow);
-    userToday.setUTCHours(0, 0, 0, 0);
-    const startDate = new Date(userToday.getTime() + offset * 60 * 1000).toISOString();
-
-    // Calculate start of tomorrow in user's timezone, then convert back to UTC
-    const userTomorrow = new Date(userToday);
-    userTomorrow.setUTCDate(userTomorrow.getUTCDate() + 1);
-    const endDate = new Date(userTomorrow.getTime() + offset * 60 * 1000).toISOString();
+    // UTCに変換
+    const startDate = fromZonedTime(userTodayStart, tz).toISOString();
+    const endDate = fromZonedTime(userTodayEnd, tz).toISOString();
 
     return this.getCalorieSummary(userId, { startDate, endDate });
   }
@@ -179,33 +193,30 @@ export class MealService {
     userId: string,
     year: number,
     month: number,
-    timezoneOffset?: number
+    timezone?: string
   ): Promise<string[]> {
-    // timezoneOffset: minutes offset from UTC (e.g., -540 for JST)
-    const offset = timezoneOffset ?? 0;
+    const tz = timezone ?? DEFAULT_TIMEZONE;
 
-    // Calculate start of month in user's timezone
-    const startOfMonth = new Date(Date.UTC(year, month - 1, 1));
-    const startDate = new Date(startOfMonth.getTime() + offset * 60 * 1000).toISOString();
+    // ユーザーのローカル時間での月の開始・終了を計算
+    const localMonthStart = startOfMonth(new Date(year, month - 1, 1));
+    const localMonthEnd = endOfMonth(new Date(year, month - 1, 1));
 
-    // Calculate start of next month in user's timezone
-    const startOfNextMonth = new Date(Date.UTC(year, month, 1));
-    const endDate = new Date(startOfNextMonth.getTime() + offset * 60 * 1000).toISOString();
+    // UTCに変換
+    const startDate = fromZonedTime(localMonthStart, tz).toISOString();
+    const endDate = fromZonedTime(localMonthEnd, tz).toISOString();
 
-    // Get all meals in the date range
+    // 日付範囲内の食事を取得
     const meals = await this.findByUserId(userId, { startDate, endDate });
 
-    // Extract unique dates (in user's local timezone)
+    // ユーザーのローカル日付でユニークな日付を抽出
     const dateSet = new Set<string>();
     for (const meal of meals) {
-      // Convert recordedAt to user's local date
-      const recordedAt = new Date(meal.recordedAt);
-      const localDate = new Date(recordedAt.getTime() - offset * 60 * 1000);
-      const dateStr = localDate.toISOString().split('T')[0] as string;
+      const recordedAt = parseISO(meal.recordedAt);
+      const localDate = toZonedTime(recordedAt, tz);
+      const dateStr = format(localDate, 'yyyy-MM-dd');
       dateSet.add(dateStr);
     }
 
-    // Return sorted array of dates
     return Array.from(dateSet).sort();
   }
 }

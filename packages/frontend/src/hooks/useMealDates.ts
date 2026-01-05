@@ -6,18 +6,21 @@ interface UseMealDatesOptions {
   month: number;
 }
 
+// ユーザーのタイムゾーン名を取得（例: 'Asia/Tokyo'）
+const getUserTimezone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
+
 export function useMealDates(options: UseMealDatesOptions) {
   const { year, month } = options;
-  const timezoneOffset = new Date().getTimezoneOffset();
+  const timezone = getUserTimezone();
 
   const query = useQuery({
-    queryKey: ['meals', 'dates', year, month],
+    queryKey: ['meals', 'dates', year, month, timezone],
     queryFn: async () => {
       const res = await api.meals.dates.$get({
         query: {
           year: String(year),
           month: String(month),
-          timezoneOffset: String(timezoneOffset),
+          timezone,
         },
       });
       if (!res.ok) {
