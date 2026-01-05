@@ -1,22 +1,27 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useAuthStore } from './stores/authStore';
 import { api } from './lib/client';
 
 export function App() {
-  const { setUser, setLoading, isAuthenticated, _hasHydrated } = useAuthStore();
+  const { setUser, setLoading, isAuthenticated } = useAuthStore();
+  const hasCheckedAuth = useRef(false);
 
   useEffect(() => {
-    // Wait for zustand persist to finish hydrating from localStorage
-    if (!_hasHydrated) {
+    // Only run auth check once
+    if (hasCheckedAuth.current) {
       return;
     }
+    hasCheckedAuth.current = true;
 
     const checkAuth = async () => {
       // Skip API check if not authenticated (no stored session)
+      // isLoading is already false, so unauthenticated users see login redirect immediately
       if (!isAuthenticated) {
-        setLoading(false);
         return;
       }
+
+      // For authenticated users, show loading while verifying session
+      setLoading(true);
 
       try {
         // Add timeout to prevent hanging
@@ -41,7 +46,7 @@ export function App() {
     };
 
     checkAuth();
-  }, [setUser, setLoading, isAuthenticated, _hasHydrated]);
+  }, [setUser, setLoading, isAuthenticated]);
 
   return null;
 }

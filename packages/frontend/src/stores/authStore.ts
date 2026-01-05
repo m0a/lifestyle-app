@@ -6,10 +6,8 @@ interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  _hasHydrated: boolean;
   setUser: (user: User | null) => void;
   setLoading: (loading: boolean) => void;
-  setHasHydrated: (hasHydrated: boolean) => void;
   logout: () => void;
 }
 
@@ -18,8 +16,9 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       user: null,
       isAuthenticated: false,
-      isLoading: true,
-      _hasHydrated: false,
+      // Start with isLoading: false - unauthenticated users see login redirect immediately
+      // For authenticated users, App.tsx will set isLoading: true before API verification
+      isLoading: false,
       setUser: (user) =>
         set({
           user,
@@ -27,7 +26,6 @@ export const useAuthStore = create<AuthState>()(
           isLoading: false,
         }),
       setLoading: (loading) => set({ isLoading: loading }),
-      setHasHydrated: (hasHydrated) => set({ _hasHydrated: hasHydrated }),
       logout: () =>
         set({
           user: null,
@@ -41,15 +39,3 @@ export const useAuthStore = create<AuthState>()(
     }
   )
 );
-
-// Register hydration callback after store is created
-// This is the reliable way to detect when persist has finished loading from storage
-const unsubscribe = useAuthStore.persist.onFinishHydration(() => {
-  useAuthStore.setState({ _hasHydrated: true });
-  unsubscribe();
-});
-
-// If hydration already completed before callback was registered, set state immediately
-if (useAuthStore.persist.hasHydrated()) {
-  useAuthStore.setState({ _hasHydrated: true });
-}
