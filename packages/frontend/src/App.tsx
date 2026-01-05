@@ -3,9 +3,14 @@ import { useAuthStore } from './stores/authStore';
 import { api } from './lib/client';
 
 export function App() {
-  const { setUser, setLoading, isAuthenticated } = useAuthStore();
+  const { setUser, setLoading, isAuthenticated, _hasHydrated } = useAuthStore();
 
   useEffect(() => {
+    // Wait for zustand persist to finish hydrating from localStorage
+    if (!_hasHydrated) {
+      return;
+    }
+
     const checkAuth = async () => {
       // Skip API check if not authenticated (no stored session)
       if (!isAuthenticated) {
@@ -36,7 +41,7 @@ export function App() {
     };
 
     checkAuth();
-  }, [setUser, setLoading, isAuthenticated]);
+  }, [setUser, setLoading, isAuthenticated, _hasHydrated]);
 
   return null;
 }
