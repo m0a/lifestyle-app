@@ -1,13 +1,28 @@
 import { api } from './client';
 import type { FieldErrors } from 'react-hook-form';
+import type { ErrorLog } from '@lifestyle-app/shared';
+import { useAuthStore } from '../stores/authStore';
 
-interface ErrorLog {
-  message: string;
-  stack?: string;
-  url: string;
-  userAgent?: string;
-  timestamp: string;
-  extra?: Record<string, unknown>;
+/**
+ * Module-scoped requestId for correlating errors with their originating request
+ * Set by client.ts when making API calls, consumed by error logger
+ */
+let currentRequestId: string | undefined;
+
+/**
+ * Set the current request ID for error correlation
+ * Called by client.ts before each API request
+ */
+export function setCurrentRequestId(requestId: string | undefined) {
+  currentRequestId = requestId;
+}
+
+/**
+ * Get the current user ID from auth store
+ */
+function getCurrentUserId(): string | undefined {
+  const state = useAuthStore.getState();
+  return state.user?.id;
 }
 
 export async function logError(error: Error, extra?: Record<string, unknown>) {
@@ -17,6 +32,8 @@ export async function logError(error: Error, extra?: Record<string, unknown>) {
     url: window.location.href,
     userAgent: navigator.userAgent,
     timestamp: new Date().toISOString(),
+    requestId: currentRequestId,
+    userId: getCurrentUserId(),
     extra,
   };
 
@@ -48,6 +65,8 @@ export async function logValidationError(
     url: window.location.href,
     userAgent: navigator.userAgent,
     timestamp: new Date().toISOString(),
+    requestId: currentRequestId,
+    userId: getCurrentUserId(),
     extra: {
       type: 'validation',
       formName,

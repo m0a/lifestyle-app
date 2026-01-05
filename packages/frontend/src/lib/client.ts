@@ -1,5 +1,7 @@
 import { hc } from 'hono/client';
 import type { AppType } from '@lifestyle-app/backend';
+import { generateRequestId } from './requestId';
+import { setCurrentRequestId } from './errorLogger';
 
 // In production (empty VITE_API_URL), use same origin
 // In development, use localhost:8787
@@ -20,17 +22,30 @@ const API_BASE_URL = getApiBaseUrl();
 // Hono RPC client with full type safety
 export const client = hc<AppType>(API_BASE_URL, {
   fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
-    console.log('[RPC] Request:', input, init?.method || 'GET');
+    // Generate unique Request ID for this request
+    const requestId = generateRequestId();
+
+    // Store requestId for error correlation
+    setCurrentRequestId(requestId);
+
+    console.log('[RPC] Request:', input, init?.method || 'GET', 'RequestID:', requestId);
     try {
       const response = await fetch(input, {
         ...init,
         credentials: 'include',
+        headers: {
+          ...init?.headers,
+          'X-Request-ID': requestId,
+        },
       });
       console.log('[RPC] Response:', response.status, response.statusText);
       return response;
     } catch (error) {
       console.error('[RPC] Fetch error:', error);
       throw error;
+    } finally {
+      // Clear requestId after request completes
+      setCurrentRequestId(undefined);
     }
   },
 });
