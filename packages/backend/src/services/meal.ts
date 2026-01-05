@@ -1,9 +1,28 @@
 import { eq, desc } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
+import { parseISO, startOfDay, endOfDay, startOfMonth, endOfMonth, addMinutes, format } from 'date-fns';
 import type { Database } from '../db';
 import { schema } from '../db';
 import { AppError } from '../middleware/error';
 import type { CreateMealInput, UpdateMealInput, MealType } from '@lifestyle-app/shared';
+
+/**
+ * タイムゾーンオフセット（分）からUTC日時をユーザーのローカル日時に変換
+ * @param utcDate UTC日時
+ * @param offsetMinutes タイムゾーンオフセット（分）。JST=-540
+ */
+function toLocalTime(utcDate: Date, offsetMinutes: number): Date {
+  return addMinutes(utcDate, -offsetMinutes);
+}
+
+/**
+ * ユーザーのローカル日時をUTCに変換
+ * @param localDate ローカル日時
+ * @param offsetMinutes タイムゾーンオフセット（分）。JST=-540
+ */
+function toUtcTime(localDate: Date, offsetMinutes: number): Date {
+  return addMinutes(localDate, offsetMinutes);
+}
 
 export class MealService {
   constructor(private db: Database) {}
@@ -66,35 +85,29 @@ export class MealService {
 
     let filtered = records;
 
-    // timezoneOffset: minutes offset from UTC (e.g., -540 for JST)
     const offset = options?.timezoneOffset ?? 0;
 
     if (options?.startDate) {
-      // Check if startDate is already in ISO format (contains 'T')
-      if (options.startDate.includes('T')) {
-        // Already in UTC ISO format, use directly
+      // ISO形式（'T'を含む）の場合はそのまま使用、YYYY-MM-DD形式の場合はタイムゾーン変換
+      const isIsoFormat = options.startDate.includes('T');
+      if (isIsoFormat) {
         filtered = filtered.filter((r) => r.recordedAt >= options.startDate!);
       } else {
-        // Convert local date to UTC range start
-        // e.g., "2026-01-04" in JST (offset=-540) starts at 2026-01-03T15:00:00Z in UTC
-        const [year, month, day] = options.startDate.split('-').map(Number) as [number, number, number];
-        const localStart = new Date(Date.UTC(year, month - 1, day));
-        const utcStart = new Date(localStart.getTime() + offset * 60 * 1000).toISOString();
+        // ローカル日付の開始時刻をUTCに変換
+        const localStart = startOfDay(parseISO(options.startDate));
+        const utcStart = toUtcTime(localStart, offset).toISOString();
         filtered = filtered.filter((r) => r.recordedAt >= utcStart);
       }
     }
 
     if (options?.endDate) {
-      // Check if endDate is already in ISO format (contains 'T')
-      if (options.endDate.includes('T')) {
-        // Already in UTC ISO format, use directly
+      const isIsoFormat = options.endDate.includes('T');
+      if (isIsoFormat) {
         filtered = filtered.filter((r) => r.recordedAt <= options.endDate!);
       } else {
-        // Convert local date to UTC range end (end of day)
-        // e.g., "2026-01-04" in JST (offset=-540) ends at 2026-01-04T14:59:59.999Z in UTC
-        const [year, month, day] = options.endDate.split('-').map(Number) as [number, number, number];
-        const localEnd = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999));
-        const utcEnd = new Date(localEnd.getTime() + offset * 60 * 1000).toISOString();
+        // ローカル日付の終了時刻をUTCに変換
+        const localEnd = endOfDay(parseISO(options.endDate));
+        const utcEnd = toUtcTime(localEnd, offset).toISOString();
         filtered = filtered.filter((r) => r.recordedAt <= utcEnd);
       }
     }
@@ -177,23 +190,16 @@ export class MealService {
   }
 
   async getTodaysSummary(userId: string, timezoneOffset?: number) {
-    // timezoneOffset: minutes offset from UTC (e.g., -540 for JST)
-    // If not provided, defaults to UTC
     const offset = timezoneOffset ?? 0;
 
-    // Get current time in user's timezone
-    const now = new Date();
-    const userNow = new Date(now.getTime() - offset * 60 * 1000);
+    // ユーザーのローカル時間での「今日」を取得
+    const userNow = toLocalTime(new Date(), offset);
+    const userTodayStart = startOfDay(userNow);
+    const userTodayEnd = endOfDay(userNow);
 
-    // Calculate start of today in user's timezone, then convert back to UTC
-    const userToday = new Date(userNow);
-    userToday.setUTCHours(0, 0, 0, 0);
-    const startDate = new Date(userToday.getTime() + offset * 60 * 1000).toISOString();
-
-    // Calculate start of tomorrow in user's timezone, then convert back to UTC
-    const userTomorrow = new Date(userToday);
-    userTomorrow.setUTCDate(userTomorrow.getUTCDate() + 1);
-    const endDate = new Date(userTomorrow.getTime() + offset * 60 * 1000).toISOString();
+    // UTCに変換
+    const startDate = toUtcTime(userTodayStart, offset).toISOString();
+    const endDate = toUtcTime(userTodayEnd, offset).toISOString();
 
     return this.getCalorieSummary(userId, { startDate, endDate });
   }
@@ -204,31 +210,28 @@ export class MealService {
     month: number,
     timezoneOffset?: number
   ): Promise<string[]> {
-    // timezoneOffset: minutes offset from UTC (e.g., -540 for JST)
     const offset = timezoneOffset ?? 0;
 
-    // Calculate start of month in user's timezone
-    const startOfMonth = new Date(Date.UTC(year, month - 1, 1));
-    const startDate = new Date(startOfMonth.getTime() + offset * 60 * 1000).toISOString();
+    // ユーザーのローカル時間での月の開始・終了を計算
+    const localMonthStart = startOfMonth(new Date(year, month - 1, 1));
+    const localMonthEnd = endOfMonth(new Date(year, month - 1, 1));
 
-    // Calculate start of next month in user's timezone
-    const startOfNextMonth = new Date(Date.UTC(year, month, 1));
-    const endDate = new Date(startOfNextMonth.getTime() + offset * 60 * 1000).toISOString();
+    // UTCに変換
+    const startDate = toUtcTime(localMonthStart, offset).toISOString();
+    const endDate = toUtcTime(localMonthEnd, offset).toISOString();
 
-    // Get all meals in the date range
+    // 日付範囲内の食事を取得
     const meals = await this.findByUserId(userId, { startDate, endDate });
 
-    // Extract unique dates (in user's local timezone)
+    // ユーザーのローカル日付でユニークな日付を抽出
     const dateSet = new Set<string>();
     for (const meal of meals) {
-      // Convert recordedAt to user's local date
-      const recordedAt = new Date(meal.recordedAt);
-      const localDate = new Date(recordedAt.getTime() - offset * 60 * 1000);
-      const dateStr = localDate.toISOString().split('T')[0] as string;
+      const recordedAt = parseISO(meal.recordedAt);
+      const localDate = toLocalTime(recordedAt, offset);
+      const dateStr = format(localDate, 'yyyy-MM-dd');
       dateSet.add(dateStr);
     }
 
-    // Return sorted array of dates
     return Array.from(dateSet).sort();
   }
 }
