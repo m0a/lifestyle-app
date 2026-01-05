@@ -44,6 +44,12 @@ export const useAuthStore = create<AuthState>()(
 
 // Register hydration callback after store is created
 // This is the reliable way to detect when persist has finished loading from storage
-useAuthStore.persist.onFinishHydration(() => {
+const unsubscribe = useAuthStore.persist.onFinishHydration(() => {
   useAuthStore.setState({ _hasHydrated: true });
+  unsubscribe();
 });
+
+// If hydration already completed before callback was registered, set state immediately
+if (useAuthStore.persist.hasHydrated()) {
+  useAuthStore.setState({ _hasHydrated: true });
+}
