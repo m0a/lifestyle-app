@@ -38,13 +38,12 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'auth-storage',
       partialize: (state) => ({ user: state.user, isAuthenticated: state.isAuthenticated }),
-      onRehydrateStorage: () => (state, error) => {
-        // Mark hydration as complete regardless of auth state or errors
-        // This allows App.tsx to properly handle the loading state
-        if (!error && state) {
-          state.setHasHydrated(true);
-        }
-      },
     }
   )
 );
+
+// Register hydration callback after store is created
+// This is the reliable way to detect when persist has finished loading from storage
+useAuthStore.persist.onFinishHydration(() => {
+  useAuthStore.setState({ _hasHydrated: true });
+});
