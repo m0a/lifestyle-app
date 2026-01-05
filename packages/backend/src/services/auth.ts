@@ -30,6 +30,7 @@ export class AuthService {
       email: input.email,
       passwordHash,
       goalWeight: input.goalWeight ?? null,
+      goalCalories: input.goalCalories ?? 2000,
       createdAt: now,
       updatedAt: now,
     });
@@ -38,7 +39,7 @@ export class AuthService {
       id,
       email: input.email,
       goalWeight: input.goalWeight ?? null,
-      goalCalories: null,
+      goalCalories: input.goalCalories ?? 2000,
       createdAt: now,
       updatedAt: now,
     };
