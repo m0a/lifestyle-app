@@ -15,11 +15,6 @@ export function PhotoCarousel({ photos, onPhotoClick }: PhotoCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const carouselRef = useRef<HTMLDivElement>(null);
 
-  // Don't render anything if no photos
-  if (photos.length === 0) {
-    return null;
-  }
-
   // Single photo - no carousel UI needed
   const isSinglePhoto = photos.length === 1;
 
@@ -38,6 +33,11 @@ export function PhotoCarousel({ photos, onPhotoClick }: PhotoCarouselProps) {
     carousel.addEventListener('scroll', handleScroll);
     return () => carousel.removeEventListener('scroll', handleScroll);
   }, [isSinglePhoto]);
+
+  // Don't render anything if no photos
+  if (photos.length === 0) {
+    return null;
+  }
 
   return (
     <div className="relative" data-testid="photo-carousel">
