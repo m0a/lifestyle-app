@@ -423,7 +423,7 @@ mealChat.post('/:mealId/chat/add-photo', async (c) => {
         // Automatically create food items from photo analysis
         console.log(`[Chat Photo] Creating ${analysisResult.result.foodItems.length} food items for photo ${photo.id}`);
         for (const item of analysisResult.result.foodItems) {
-          const foodItemId = nanoid();
+          const foodItemId = uuidv4();
           await db.insert(schema.mealFoodItems).values({
             id: foodItemId,
             mealId,
