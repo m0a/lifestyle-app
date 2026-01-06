@@ -28,15 +28,16 @@ export const client = hc<AppType>(API_BASE_URL, {
     // Store requestId for error correlation
     setCurrentRequestId(requestId);
 
+    // Create new Headers object to properly merge headers
+    const headers = new Headers(init?.headers);
+    headers.set('X-Request-ID', requestId);
+
     console.log('[RPC] Request:', input, init?.method || 'GET', 'RequestID:', requestId);
     try {
       const response = await fetch(input, {
         ...init,
         credentials: 'include',
-        headers: {
-          ...init?.headers,
-          'X-Request-ID': requestId,
-        },
+        headers,
       });
       console.log('[RPC] Response:', response.status, response.statusText);
       return response;
