@@ -11,7 +11,7 @@ import { AIUsageService } from '../services/ai-usage';
 import { getAIConfigFromEnv } from '../lib/ai-provider';
 import { authMiddleware } from '../middleware/auth';
 import { eq, and } from 'drizzle-orm';
-import { mealRecords, mealFoodItems } from '../db/schema';
+import { mealRecords } from '../db/schema';
 import type { Database } from '../db';
 import { schema } from '../db';
 
