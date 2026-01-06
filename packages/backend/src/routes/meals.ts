@@ -54,7 +54,7 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
       const user = c.get('user');
 
       // Extract form fields
-      const mealType = formData.get('mealType') as string;
+      const mealTypeRaw = formData.get('mealType') as string;
       const content = formData.get('content') as string;
       const recordedAt = formData.get('recordedAt') as string;
 
@@ -67,9 +67,16 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
       }
 
       // Validate required fields
-      if (!mealType || !content || !recordedAt) {
+      if (!mealTypeRaw || !content || !recordedAt) {
         return c.json({ message: 'Missing required fields' }, 400);
       }
+
+      // Validate mealType
+      const mealTypeValidation = z.enum(['breakfast', 'lunch', 'dinner', 'snack']).safeParse(mealTypeRaw);
+      if (!mealTypeValidation.success) {
+        return c.json({ message: 'Invalid mealType' }, 400);
+      }
+      const mealType = mealTypeValidation.data;
 
       // Validate photos
       if (photos.length === 0) {
@@ -93,7 +100,7 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
       // Create meal record (T056)
       const mealService = new MealService(db);
       const meal = await mealService.create(user.id, {
-        mealType: mealType as any,
+        mealType,
         content,
         recordedAt,
       });
