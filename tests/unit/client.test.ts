@@ -36,9 +36,10 @@ describe('Hono RPC Client - Request ID Header Injection', () => {
     const requestInit = callArgs[1] as RequestInit;
 
     expect(requestInit.headers).toBeDefined();
-    const headers = requestInit.headers as Record<string, string>;
-    expect(headers['X-Request-ID']).toBeDefined();
-    expect(headers['X-Request-ID']).toMatch(
+    const headers = requestInit.headers as Headers;
+    const requestId = headers.get('X-Request-ID');
+    expect(requestId).toBeDefined();
+    expect(requestId).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
     );
   });
@@ -63,9 +64,9 @@ describe('Hono RPC Client - Request ID Header Injection', () => {
     expect(mockFetch).toHaveBeenCalled();
     const callArgs = mockFetch.mock.calls[0];
     const requestInit = callArgs[1] as RequestInit;
-    const headers = requestInit.headers as Record<string, string>;
+    const headers = requestInit.headers as Headers;
 
-    expect(headers['X-Request-ID']).toBeDefined();
+    expect(headers.get('X-Request-ID')).toBeDefined();
   });
 
   it('should preserve existing headers when adding X-Request-ID', async () => {
@@ -84,10 +85,10 @@ describe('Hono RPC Client - Request ID Header Injection', () => {
 
     const callArgs = mockFetch.mock.calls[0];
     const requestInit = callArgs[1] as RequestInit;
-    const headers = requestInit.headers as Record<string, string>;
+    const headers = requestInit.headers as Headers;
 
     // Should have both X-Request-ID and existing headers
-    expect(headers['X-Request-ID']).toBeDefined();
+    expect(headers.get('X-Request-ID')).toBeDefined();
     // Credentials should still be included
     expect(requestInit.credentials).toBe('include');
   });
