@@ -67,6 +67,7 @@ export function useMealPhotos(mealId: string) {
     isLoading: photosQuery.isLoading,
     error: photosQuery.error,
     upload: uploadMutation.mutate,
+    uploadAsync: uploadMutation.mutateAsync,
     remove: deleteMutation.mutate,
     refresh,
     isUploading: uploadMutation.isPending,

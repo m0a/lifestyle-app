@@ -117,6 +117,17 @@ export default function MealDetailPage() {
     }
   }, [mealId]);
 
+  const reloadFoodItems = useCallback(async () => {
+    if (!mealId) return;
+
+    try {
+      const { foodItems: items } = await mealAnalysisApi.getFoodItems(mealId);
+      setFoodItems(items);
+    } catch (err) {
+      console.error('Failed to reload food items:', err);
+    }
+  }, [mealId]);
+
   const handleEditSave = useCallback(() => {
     setHasUnsavedChanges(false);
     setIsEditing(false);
@@ -188,6 +199,7 @@ export default function MealDetailPage() {
           onSave={handleEditSave}
           onCancel={handleEditCancel}
           onDirtyChange={setHasUnsavedChanges}
+          onFoodItemsReload={reloadFoodItems}
         />
       </div>
     );

@@ -15,6 +15,7 @@ interface MealEditModeProps {
   onSave: () => void;
   onCancel: () => void;
   onDirtyChange?: (isDirty: boolean) => void;
+  onFoodItemsReload?: () => Promise<void>;
 }
 
 export function MealEditMode({
@@ -24,6 +25,7 @@ export function MealEditMode({
   onSave,
   onCancel,
   onDirtyChange,
+  onFoodItemsReload,
 }: MealEditModeProps) {
   const toast = useToast();
   const [foodItems, setFoodItems] = useState<FoodItem[]>(initialFoodItems);
@@ -44,7 +46,7 @@ export function MealEditMode({
     photos,
     totals: photoTotals,
     isLoading: isPhotosLoading,
-    upload,
+    uploadAsync,
     remove: removePhoto,
     isUploading,
     isDeleting,
@@ -202,15 +204,20 @@ export function MealEditMode({
   const handlePhotoUpload = useCallback(
     async (file: File) => {
       try {
-        upload(file);
+        await uploadAsync(file);
         setIsDirty(true);
         toast.success('写真をアップロードしました');
+
+        // Reload food items after photo analysis completes
+        if (onFoodItemsReload) {
+          await onFoodItemsReload();
+        }
       } catch (error) {
         console.error('Failed to upload photo:', error);
         toast.error('写真のアップロードに失敗しました');
       }
     },
-    [upload, toast]
+    [uploadAsync, toast, onFoodItemsReload]
   );
 
   // Handler for photo deletion (T029)
