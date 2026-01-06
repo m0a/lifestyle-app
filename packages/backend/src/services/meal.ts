@@ -133,8 +133,9 @@ export class MealService {
         photoCounts.set(mealId, photos.length);
         // Sort by displayOrder and get first photo
         const sortedPhotos = photos.sort((a, b) => a.displayOrder - b.displayOrder);
-        if (sortedPhotos.length > 0) {
-          firstPhotoKeys.set(mealId, sortedPhotos[0].photoKey);
+        const firstPhoto = sortedPhotos[0];
+        if (firstPhoto) {
+          firstPhotoKeys.set(mealId, firstPhoto.photoKey);
         }
       }
     }
