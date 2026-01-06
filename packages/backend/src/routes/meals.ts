@@ -218,22 +218,21 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
           // Update photo with analysis results
           await photoService.updateAnalysisResult(photo.id, analysisResult.result.totals);
 
-          // Automatically create food item from photo analysis
-          const photoCount = await photoService.getMealPhotos(mealId);
-          const foodItemName = photoCount.length === 1 ? '写真から分析' : `写真${photoCount.length}から分析`;
-
-          await db.insert(schema.mealFoodItems).values({
-            id: nanoid(),
-            mealId,
-            photoId: photo.id,
-            name: foodItemName,
-            portion: 'medium',
-            calories: analysisResult.result.totals.calories,
-            protein: analysisResult.result.totals.protein,
-            fat: analysisResult.result.totals.fat,
-            carbs: analysisResult.result.totals.carbs,
-            createdAt: new Date().toISOString(),
-          });
+          // Automatically create food items from photo analysis
+          for (const item of analysisResult.result.foodItems) {
+            await db.insert(schema.mealFoodItems).values({
+              id: nanoid(),
+              mealId,
+              photoId: photo.id,
+              name: item.name,
+              portion: item.portion,
+              calories: item.calories,
+              protein: item.protein,
+              fat: item.fat,
+              carbs: item.carbs,
+              createdAt: new Date().toISOString(),
+            });
+          }
 
           // Record AI usage
           if (analysisResult.usage) {
@@ -266,23 +265,21 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
             if (analysisResult.success) {
               await photoService.updateAnalysisResult(pendingPhoto.id, analysisResult.result.totals);
 
-              // Automatically create food item from pending photo analysis
-              const currentPhotos = await photoService.getMealPhotos(mealId);
-              const photoIndex = currentPhotos.findIndex((p) => p.id === pendingPhoto.id) + 1;
-              const foodItemName = photoIndex === 1 ? '写真から分析' : `写真${photoIndex}から分析`;
-
-              await db.insert(schema.mealFoodItems).values({
-                id: nanoid(),
-                mealId,
-                photoId: pendingPhoto.id,
-                name: foodItemName,
-                portion: 'medium',
-                calories: analysisResult.result.totals.calories,
-                protein: analysisResult.result.totals.protein,
-                fat: analysisResult.result.totals.fat,
-                carbs: analysisResult.result.totals.carbs,
-                createdAt: new Date().toISOString(),
-              });
+              // Automatically create food items from pending photo analysis
+              for (const item of analysisResult.result.foodItems) {
+                await db.insert(schema.mealFoodItems).values({
+                  id: nanoid(),
+                  mealId,
+                  photoId: pendingPhoto.id,
+                  name: item.name,
+                  portion: item.portion,
+                  calories: item.calories,
+                  protein: item.protein,
+                  fat: item.fat,
+                  carbs: item.carbs,
+                  createdAt: new Date().toISOString(),
+                });
+              }
 
               if (analysisResult.usage) {
                 await aiUsageService.recordUsage(user.id, 'image_analysis', analysisResult.usage);
