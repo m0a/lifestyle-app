@@ -34,8 +34,10 @@ export function MealChat({ mealId, currentFoodItems: _currentFoodItems, onUpdate
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [pendingChanges, setPendingChanges] = useState<ChatChange[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load chat history on mount
   useEffect(() => {
@@ -164,6 +166,98 @@ export function MealChat({ mealId, currentFoodItems: _currentFoodItems, onUpdate
     [handleSend]
   );
 
+  const handlePhotoUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file size (10MB max)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('写真のサイズは10MB以下にしてください');
+      return;
+    }
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('画像ファイルを選択してください');
+      return;
+    }
+
+    setIsUploading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('photo', file);
+
+      const response = await fetch(`/api/meals/${mealId}/chat/add-photo`, {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json() as { message?: string };
+        throw new Error(errorData.message || '写真のアップロードに失敗しました');
+      }
+
+      const result = await response.json() as {
+        ackMessageId?: string;
+        resultMessageId?: string;
+        foodItems?: FoodItem[];
+        updatedTotals?: NutritionTotals;
+        error?: string;
+      };
+
+      // Add acknowledgment message to chat
+      if (result.ackMessageId) {
+        const ackMsgId = result.ackMessageId;
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: ackMsgId,
+            role: 'assistant',
+            content: '写真を追加しました。AI分析を実行中です...',
+          },
+        ]);
+      }
+
+      // Wait a bit and add result message
+      if (result.resultMessageId && result.updatedTotals && result.foodItems) {
+        const resultMsgId = result.resultMessageId;
+        const foodItems = result.foodItems;
+        const updatedTotals = result.updatedTotals;
+
+        setTimeout(() => {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: resultMsgId,
+              role: 'assistant',
+              content: `分析が完了しました！\n\n追加された食材:\n${foodItems.map((item: FoodItem) => `- ${item.name} (${item.calories}kcal)`).join('\n')}\n\n合計栄養素:\nカロリー: ${updatedTotals.calories}kcal\nタンパク質: ${updatedTotals.protein.toFixed(1)}g\n脂質: ${updatedTotals.fat.toFixed(1)}g\n炭水化物: ${updatedTotals.carbs.toFixed(1)}g`,
+            },
+          ]);
+
+          // Update parent component with new totals
+          // Note: We don't have the full food items list here, so we'll reload on the parent
+          // For now, just show success message
+          toast.success('写真を追加し、AI分析が完了しました');
+        }, 2000);
+      }
+    } catch (error) {
+      console.error('Photo upload error:', error);
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error('写真のアップロードに失敗しました');
+      }
+    } finally {
+      setIsUploading(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  }, [mealId, toast]);
+
   return (
     <div className="rounded-lg border">
       {/* Messages */}
@@ -227,23 +321,58 @@ export function MealChat({ mealId, currentFoodItems: _currentFoodItems, onUpdate
       )}
 
       {/* Input */}
-      <div className="flex border-t p-3">
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyPress={handleKeyPress}
-          placeholder="メッセージを入力..."
-          disabled={isLoading}
-          className="flex-1 rounded-l-lg border-y border-l px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-        <button
-          onClick={handleSend}
-          disabled={isLoading || !input.trim()}
-          className="rounded-r-lg bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 disabled:opacity-50"
-        >
-          送信
-        </button>
+      <div className="border-t p-3">
+        <div className="mb-2 flex items-center gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handlePhotoUpload}
+            className="hidden"
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading || isLoading}
+            className="flex items-center gap-1 rounded bg-gray-200 px-3 py-2 text-sm text-gray-700 hover:bg-gray-300 disabled:opacity-50"
+            title="写真を追加"
+          >
+            <svg
+              className="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+              />
+            </svg>
+            {isUploading ? 'アップロード中...' : '写真を追加'}
+          </button>
+          {isUploading && (
+            <span className="text-sm text-gray-500">AI分析を実行中...</span>
+          )}
+        </div>
+        <div className="flex">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder="メッセージを入力..."
+            disabled={isLoading}
+            className="flex-1 rounded-l-lg border-y border-l px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <button
+            onClick={handleSend}
+            disabled={isLoading || !input.trim()}
+            className="rounded-r-lg bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 disabled:opacity-50"
+          >
+            送信
+          </button>
+        </div>
       </div>
     </div>
   );

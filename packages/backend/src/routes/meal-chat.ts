@@ -1,11 +1,16 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { v4 as uuidv4 } from 'uuid';
+import { nanoid } from 'nanoid';
 import { eq, and, asc } from 'drizzle-orm';
 import { authMiddleware } from '../middleware/auth';
 import { mealRecords, mealFoodItems, mealChatMessages } from '../db/schema';
+import * as schema from '../db/schema';
 import { AIChatService } from '../services/ai-chat';
 import { AIUsageService } from '../services/ai-usage';
+import { AIAnalysisService } from '../services/ai-analysis';
+import { MealPhotoService } from '../services/meal-photo.service';
+import { PhotoStorageService } from '../services/photo-storage';
 import { getAIConfigFromEnv } from '../lib/ai-provider';
 import type { Database } from '../db';
 import {
@@ -338,3 +343,189 @@ mealChat.post(
     });
   }
 );
+
+// POST /api/meals/:mealId/chat/add-photo - Add photo via chat interface
+mealChat.post('/:mealId/chat/add-photo', async (c) => {
+  const mealId = c.req.param('mealId');
+  const db = c.get('db');
+  const user = c.get('user');
+
+  // Parse multipart form data
+  const formData = await c.req.formData();
+  const photoFile = formData.get('photo');
+
+  if (!photoFile || !(photoFile instanceof File)) {
+    return c.json({ message: 'Photo file required', code: 'MISSING_PHOTO' }, 400);
+  }
+
+  // Verify meal belongs to user
+  const meal = await db.query.mealRecords.findFirst({
+    where: and(eq(mealRecords.id, mealId), eq(mealRecords.userId, user.id)),
+  });
+
+  if (!meal) {
+    return c.json({ error: 'not_found', message: '食事記録が見つかりません' }, 404);
+  }
+
+  // Validate file size (10MB max)
+  if (photoFile.size > 10 * 1024 * 1024) {
+    return c.json({ message: 'Max 10MB file size', code: 'FILE_TOO_LARGE' }, 413);
+  }
+
+  const photoService = new MealPhotoService(db);
+  const photoStorage = new PhotoStorageService(c.env.PHOTOS);
+
+  try {
+    // Upload to R2
+    const photoId = nanoid();
+    const photoKey = `photos/${user.id}/${mealId}/${photoId}.jpg`;
+    await photoStorage.uploadPhoto(photoKey, photoFile);
+
+    // Create DB record
+    const photo = await photoService.addPhoto({
+      mealId,
+      photoKey,
+    });
+
+    // Create acknowledgment chat message immediately
+    const ackMessageId = uuidv4();
+    const now = new Date().toISOString();
+
+    await db.insert(mealChatMessages).values({
+      id: ackMessageId,
+      mealId,
+      role: 'assistant',
+      content: '写真を追加しました。AI分析を実行中です...',
+      createdAt: now,
+    });
+
+    // Analyze newly uploaded photo with AI
+    const aiConfig = getAIConfigFromEnv(c.env);
+    const aiService = new AIAnalysisService(aiConfig);
+    const aiUsageService = new AIUsageService(db);
+    const photoData = await photoFile.arrayBuffer();
+
+    try {
+      const analysisResult = await aiService.analyzeMealPhoto(photoData, photoFile.type);
+
+      if (analysisResult.success) {
+        // Update photo with analysis results
+        await photoService.updateAnalysisResult(photo.id, analysisResult.result.totals);
+
+        // Automatically create food items from photo analysis
+        console.log(`[Chat Photo] Creating ${analysisResult.result.foodItems.length} food items for photo ${photo.id}`);
+        for (const item of analysisResult.result.foodItems) {
+          const foodItemId = nanoid();
+          await db.insert(schema.mealFoodItems).values({
+            id: foodItemId,
+            mealId,
+            photoId: photo.id,
+            name: item.name,
+            portion: item.portion,
+            calories: item.calories,
+            protein: item.protein,
+            fat: item.fat,
+            carbs: item.carbs,
+            createdAt: now,
+          });
+          console.log(`[Chat Photo] Created food item: ${foodItemId} - ${item.name}`);
+        }
+
+        // Record AI usage
+        if (analysisResult.usage) {
+          await aiUsageService.recordUsage(user.id, 'image_analysis', analysisResult.usage);
+        }
+
+        // Update meal totals and content from all food items
+        const allFoodItems = await db.query.mealFoodItems.findMany({
+          where: eq(schema.mealFoodItems.mealId, mealId),
+        });
+
+        const totalCalories = allFoodItems.reduce((sum, item) => sum + item.calories, 0);
+        const totalProtein = allFoodItems.reduce((sum, item) => sum + item.protein, 0);
+        const totalFat = allFoodItems.reduce((sum, item) => sum + item.fat, 0);
+        const totalCarbs = allFoodItems.reduce((sum, item) => sum + item.carbs, 0);
+        const contentNames = allFoodItems.map(item => item.name).join('、');
+
+        await db.update(mealRecords)
+          .set({
+            content: contentNames,
+            calories: totalCalories,
+            totalProtein,
+            totalFat,
+            totalCarbs,
+          })
+          .where(eq(mealRecords.id, mealId));
+
+        console.log(`[Chat Photo] Updated meal totals: ${totalCalories} kcal, content: ${contentNames}`);
+
+        // Create follow-up message with analysis results
+        const resultMessageId = uuidv4();
+        const resultMessage = `分析が完了しました！\n\n追加された食材:\n${analysisResult.result.foodItems.map(item => `- ${item.name} (${item.calories}kcal)`).join('\n')}\n\n合計栄養素:\nカロリー: ${totalCalories}kcal\nタンパク質: ${totalProtein.toFixed(1)}g\n脂質: ${totalFat.toFixed(1)}g\n炭水化物: ${totalCarbs.toFixed(1)}g`;
+
+        await db.insert(mealChatMessages).values({
+          id: resultMessageId,
+          mealId,
+          role: 'assistant',
+          content: resultMessage,
+          createdAt: new Date().toISOString(),
+        });
+
+        // Generate presigned URL
+        const photoUrl = await photoStorage.getPresignedUrl(photoKey);
+
+        return c.json({
+          photo: { ...photo, photoUrl },
+          ackMessageId,
+          resultMessageId,
+          foodItems: analysisResult.result.foodItems,
+          updatedTotals: {
+            calories: totalCalories,
+            protein: totalProtein,
+            fat: totalFat,
+            carbs: totalCarbs,
+          },
+        }, 201);
+      } else {
+        // Mark analysis as failed
+        console.error('[Chat Photo] Analysis failed:', analysisResult.failure);
+        await photoService.markAnalysisFailed(photo.id);
+
+        // Update acknowledgment message to indicate failure
+        await db.update(mealChatMessages)
+          .set({ content: '写真を追加しましたが、AI分析に失敗しました。後で再試行できます。' })
+          .where(eq(mealChatMessages.id, ackMessageId));
+
+        const photoUrl = await photoStorage.getPresignedUrl(photoKey);
+
+        return c.json({
+          photo: { ...photo, photoUrl },
+          ackMessageId,
+          error: 'AI分析に失敗しました',
+        }, 201);
+      }
+    } catch (analysisError) {
+      // Log error but don't fail the upload
+      console.error('[Chat Photo] Photo analysis failed:', analysisError);
+      await photoService.markAnalysisFailed(photo.id);
+
+      // Update acknowledgment message
+      await db.update(mealChatMessages)
+        .set({ content: '写真を追加しましたが、AI分析でエラーが発生しました。' })
+        .where(eq(mealChatMessages.id, ackMessageId));
+
+      const photoUrl = await photoStorage.getPresignedUrl(photoKey);
+
+      return c.json({
+        photo: { ...photo, photoUrl },
+        ackMessageId,
+        error: '分析エラー',
+      }, 201);
+    }
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('Maximum 10 photos')) {
+      return c.json({ message: error.message, code: 'PHOTO_LIMIT_EXCEEDED' }, 400);
+    }
+    throw error;
+  }
+});
