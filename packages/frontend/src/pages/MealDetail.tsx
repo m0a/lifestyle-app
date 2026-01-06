@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { api, getPhotoUrl, mealAnalysisApi } from '../lib/api';
+import { api, mealAnalysisApi } from '../lib/api';
 import { MealEditMode } from '../components/meal/MealEditMode';
 import type { MealRecord, FoodItem, ChatMessage, NutritionTotals } from '@lifestyle-app/shared';
 import { MEAL_TYPE_LABELS } from '@lifestyle-app/shared';
