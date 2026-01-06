@@ -16,6 +16,12 @@ function getMealTypeLabel(mealType: MealType): string {
   return labels[mealType];
 }
 
+// Helper function to get food item name by ID
+function getFoodItemName(foodItemId: string, foodItems: FoodItem[]): string {
+  const item = foodItems.find(f => f.id === foodItemId);
+  return item?.name || '(食材名不明)';
+}
+
 interface MealChatProps {
   mealId: string;
   currentFoodItems: FoodItem[];
@@ -30,7 +36,7 @@ interface DisplayMessage {
   isStreaming?: boolean;
 }
 
-export function MealChat({ mealId, currentFoodItems: _currentFoodItems, onUpdate }: MealChatProps) {
+export function MealChat({ mealId, currentFoodItems, onUpdate }: MealChatProps) {
   const toast = useToast();
   const queryClient = useQueryClient();
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
@@ -303,11 +309,11 @@ export function MealChat({ mealId, currentFoodItems: _currentFoodItems, onUpdate
           <ul className="mb-2 text-sm text-gray-600">
             {pendingChanges.map((change, i) => (
               <li key={i}>
-                {change.action === 'add' && `追加: ${change.foodItem?.name || '(食材名不明)'}`}
-                {change.action === 'remove' && `削除: ${change.foodItem?.name || '(食材名不明)'} (ID: ${change.foodItemId || 'なし'})`}
-                {change.action === 'update' && `変更: ${change.foodItem?.name || '(食材名不明)'}`}
-                {change.action === 'set_datetime' && `日時変更: ${toDateTimeLocal(change.recordedAt || '')}`}
-                {change.action === 'set_meal_type' && `食事タイプ変更: ${getMealTypeLabel(change.mealType || 'breakfast')}`}
+                {change.action === 'add' && `追加: ${change.foodItem.name}`}
+                {change.action === 'remove' && `削除: ${getFoodItemName(change.foodItemId, currentFoodItems)}`}
+                {change.action === 'update' && `変更: ${getFoodItemName(change.foodItemId, currentFoodItems)}`}
+                {change.action === 'set_datetime' && `日時変更: ${toDateTimeLocal(change.recordedAt)}`}
+                {change.action === 'set_meal_type' && `食事タイプ変更: ${getMealTypeLabel(change.mealType)}`}
               </li>
             ))}
           </ul>
