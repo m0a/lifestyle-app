@@ -21,11 +21,17 @@ export function Register() {
 
   const onSubmit = async (data: RegisterInput) => {
     setError(null);
+    console.log('[Register] Submitting data:', JSON.stringify(data, null, 2));
     try {
       const res = await api.auth.register.$post({ json: data });
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({ message: '登録に失敗しました' }));
-        throw new Error((errorData as { message?: string }).message || '登録に失敗しました');
+        console.error('[Register] Error response:', errorData);
+        const errorObj = errorData as { message?: string; error?: { issues?: unknown[] } };
+        const errorMessage = errorObj.error?.issues
+          ? JSON.stringify(errorObj.error.issues, null, 2)
+          : errorObj.message || '登録に失敗しました';
+        throw new Error(errorMessage);
       }
       const response = await res.json();
       setUser(response.user);
