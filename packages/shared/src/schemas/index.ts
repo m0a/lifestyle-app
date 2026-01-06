@@ -33,16 +33,32 @@ const datetimeSchema = z.string().transform((val, ctx) => {
 export const mealTypeSchema = z.enum(['breakfast', 'lunch', 'dinner', 'snack']);
 export type MealType = z.infer<typeof mealTypeSchema>;
 
-// Helper to preprocess empty strings to undefined for optional number fields
-const optionalNumber = (schema: z.ZodNumber) =>
-  z.preprocess((val) => (val === '' || val === null ? undefined : val), schema.optional());
-
 // User schemas
 export const registerSchema = z.object({
   email: z.string().email('有効なメールアドレスを入力してください'),
   password: z.string().min(8, 'パスワードは8文字以上必要です').max(100),
-  goalWeight: optionalNumber(z.number().min(20).max(300)),
-  goalCalories: optionalNumber(z.number().int().min(500).max(10000)),
+  goalWeight: z
+    .union([z.string(), z.number()])
+    .optional()
+    .transform((val) => {
+      if (val === '' || val === null || val === undefined) return undefined;
+      const num = typeof val === 'number' ? val : parseFloat(val);
+      return isNaN(num) ? undefined : num;
+    })
+    .refine((val) => val === undefined || (val >= 20 && val <= 300), {
+      message: '目標体重は20-300kgの範囲で入力してください',
+    }),
+  goalCalories: z
+    .union([z.string(), z.number()])
+    .optional()
+    .transform((val) => {
+      if (val === '' || val === null || val === undefined) return undefined;
+      const num = typeof val === 'number' ? val : parseInt(val, 10);
+      return isNaN(num) ? undefined : num;
+    })
+    .refine((val) => val === undefined || (val >= 500 && val <= 10000), {
+      message: '目標カロリーは500-10000kcalの範囲で入力してください',
+    }),
 });
 
 export const loginSchema = z.object({
