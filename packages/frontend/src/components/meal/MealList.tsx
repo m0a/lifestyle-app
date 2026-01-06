@@ -153,13 +153,13 @@ export function MealList({
                             </span>
                           )}
                           {meal.totalProtein != null && (
-                            <span>P: {meal.totalProtein}g</span>
+                            <span>P: {meal.totalProtein.toFixed(1)}g</span>
                           )}
                           {meal.totalFat != null && (
-                            <span>F: {meal.totalFat}g</span>
+                            <span>F: {meal.totalFat.toFixed(1)}g</span>
                           )}
                           {meal.totalCarbs != null && (
-                            <span>C: {meal.totalCarbs}g</span>
+                            <span>C: {meal.totalCarbs.toFixed(1)}g</span>
                           )}
                         </div>
                       </Link>

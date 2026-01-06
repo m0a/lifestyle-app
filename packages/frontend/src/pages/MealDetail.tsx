@@ -278,19 +278,19 @@ export default function MealDetailPage() {
           </div>
           <div className="rounded-lg bg-red-50 p-2">
             <div className="text-lg font-bold text-red-600">
-              {meal.totalProtein ?? '-'}
+              {meal.totalProtein != null ? meal.totalProtein.toFixed(1) : '-'}
             </div>
             <div className="text-xs text-gray-500">P (g)</div>
           </div>
           <div className="rounded-lg bg-yellow-50 p-2">
             <div className="text-lg font-bold text-yellow-600">
-              {meal.totalFat ?? '-'}
+              {meal.totalFat != null ? meal.totalFat.toFixed(1) : '-'}
             </div>
             <div className="text-xs text-gray-500">F (g)</div>
           </div>
           <div className="rounded-lg bg-blue-50 p-2">
             <div className="text-lg font-bold text-blue-600">
-              {meal.totalCarbs ?? '-'}
+              {meal.totalCarbs != null ? meal.totalCarbs.toFixed(1) : '-'}
             </div>
             <div className="text-xs text-gray-500">C (g)</div>
           </div>
@@ -324,7 +324,7 @@ export default function MealDetailPage() {
                 <div className="text-right text-sm">
                   <span className="font-medium">{item.calories} kcal</span>
                   <div className="text-xs text-gray-400">
-                    P:{item.protein}g F:{item.fat}g C:{item.carbs}g
+                    P:{item.protein.toFixed(1)}g F:{item.fat.toFixed(1)}g C:{item.carbs.toFixed(1)}g
                   </div>
                 </div>
               </div>

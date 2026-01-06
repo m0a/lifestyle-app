@@ -395,7 +395,7 @@ export function MealEditMode({
                     <div className="absolute bottom-2 left-2 right-2 rounded bg-black bg-opacity-75 p-2 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">
                       <div className="flex justify-between">
                         <span>{photo.calories} kcal</span>
-                        <span>P:{photo.protein}g F:{photo.fat}g C:{photo.carbs}g</span>
+                        <span>P:{photo.protein?.toFixed(1) ?? 0}g F:{photo.fat?.toFixed(1) ?? 0}g C:{photo.carbs?.toFixed(1) ?? 0}g</span>
                       </div>
                     </div>
                   )}
@@ -416,15 +416,15 @@ export function MealEditMode({
                   </div>
                   <div>
                     <span className="text-gray-600">タンパク質:</span>
-                    <span className="ml-1 font-medium text-blue-900">{photoTotals.protein}g</span>
+                    <span className="ml-1 font-medium text-blue-900">{photoTotals.protein.toFixed(1)}g</span>
                   </div>
                   <div>
                     <span className="text-gray-600">脂質:</span>
-                    <span className="ml-1 font-medium text-blue-900">{photoTotals.fat}g</span>
+                    <span className="ml-1 font-medium text-blue-900">{photoTotals.fat.toFixed(1)}g</span>
                   </div>
                   <div>
                     <span className="text-gray-600">炭水化物:</span>
-                    <span className="ml-1 font-medium text-blue-900">{photoTotals.carbs}g</span>
+                    <span className="ml-1 font-medium text-blue-900">{photoTotals.carbs.toFixed(1)}g</span>
                   </div>
                 </div>
                 <p className="mt-2 text-xs text-blue-700">
