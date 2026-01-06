@@ -143,6 +143,8 @@ export function MealChat({ mealId, currentFoodItems: _currentFoodItems, onUpdate
   const handleApplyChanges = useCallback(async () => {
     if (pendingChanges.length === 0) return;
 
+    console.log('[MealChat] Applying changes:', pendingChanges);
+
     try {
       const result = await mealAnalysisApi.applyChatSuggestion(mealId, pendingChanges);
       onUpdate(result.foodItems, result.updatedTotals, result.recordedAt, result.mealType);
@@ -301,11 +303,11 @@ export function MealChat({ mealId, currentFoodItems: _currentFoodItems, onUpdate
           <ul className="mb-2 text-sm text-gray-600">
             {pendingChanges.map((change, i) => (
               <li key={i}>
-                {change.action === 'add' && `追加: ${change.foodItem?.name}`}
-                {change.action === 'remove' && '削除: (食材)'}
-                {change.action === 'update' && '変更: (食材)'}
-                {change.action === 'set_datetime' && `日時変更: ${toDateTimeLocal(change.recordedAt)}`}
-                {change.action === 'set_meal_type' && `食事タイプ変更: ${getMealTypeLabel(change.mealType)}`}
+                {change.action === 'add' && `追加: ${change.foodItem?.name || '(食材名不明)'}`}
+                {change.action === 'remove' && `削除: ${change.foodItem?.name || '(食材名不明)'} (ID: ${change.foodItemId || 'なし'})`}
+                {change.action === 'update' && `変更: ${change.foodItem?.name || '(食材名不明)'}`}
+                {change.action === 'set_datetime' && `日時変更: ${toDateTimeLocal(change.recordedAt || '')}`}
+                {change.action === 'set_meal_type' && `食事タイプ変更: ${getMealTypeLabel(change.mealType || 'breakfast')}`}
               </li>
             ))}
           </ul>
