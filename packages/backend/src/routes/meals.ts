@@ -219,9 +219,11 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
           await photoService.updateAnalysisResult(photo.id, analysisResult.result.totals);
 
           // Automatically create food items from photo analysis
+          console.log(`[Photo Analysis] Creating ${analysisResult.result.foodItems.length} food items for photo ${photo.id}`);
           for (const item of analysisResult.result.foodItems) {
+            const foodItemId = nanoid();
             await db.insert(schema.mealFoodItems).values({
-              id: nanoid(),
+              id: foodItemId,
               mealId,
               photoId: photo.id,
               name: item.name,
@@ -232,6 +234,7 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
               carbs: item.carbs,
               createdAt: new Date().toISOString(),
             });
+            console.log(`[Photo Analysis] Created food item: ${foodItemId} - ${item.name}`);
           }
 
           // Record AI usage
@@ -240,6 +243,7 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
           }
         } else {
           // Mark analysis as failed
+          console.error('[Photo Analysis] Analysis failed:', analysisResult.failure);
           await photoService.markAnalysisFailed(photo.id);
         }
       } catch (analysisError) {
@@ -266,9 +270,11 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
               await photoService.updateAnalysisResult(pendingPhoto.id, analysisResult.result.totals);
 
               // Automatically create food items from pending photo analysis
+              console.log(`[Pending Photo Analysis] Creating ${analysisResult.result.foodItems.length} food items for pending photo ${pendingPhoto.id}`);
               for (const item of analysisResult.result.foodItems) {
+                const foodItemId = nanoid();
                 await db.insert(schema.mealFoodItems).values({
-                  id: nanoid(),
+                  id: foodItemId,
                   mealId,
                   photoId: pendingPhoto.id,
                   name: item.name,
@@ -279,12 +285,14 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
                   carbs: item.carbs,
                   createdAt: new Date().toISOString(),
                 });
+                console.log(`[Pending Photo Analysis] Created food item: ${foodItemId} - ${item.name}`);
               }
 
               if (analysisResult.usage) {
                 await aiUsageService.recordUsage(user.id, 'image_analysis', analysisResult.usage);
               }
             } else {
+              console.error('[Pending Photo Analysis] Analysis failed:', analysisResult.failure);
               await photoService.markAnalysisFailed(pendingPhoto.id);
             }
           }

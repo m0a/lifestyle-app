@@ -121,11 +121,13 @@ export default function MealDetailPage() {
     if (!mealId) return [];
 
     try {
+      console.log('[MealDetail] Fetching food items for meal:', mealId);
       const { foodItems: items } = await mealAnalysisApi.getFoodItems(mealId);
+      console.log('[MealDetail] Fetched food items:', items);
       setFoodItems(items);
       return items;
     } catch (err) {
-      console.error('Failed to reload food items:', err);
+      console.error('[MealDetail] Failed to reload food items:', err);
       return [];
     }
   }, [mealId]);

@@ -204,13 +204,16 @@ export function MealEditMode({
   const handlePhotoUpload = useCallback(
     async (file: File) => {
       try {
+        console.log('[MealEditMode] Starting photo upload');
         await uploadAsync(file);
         setIsDirty(true);
         toast.success('写真をアップロードしました');
 
         // Reload food items after photo analysis completes
         if (onFoodItemsReload) {
+          console.log('[MealEditMode] Reloading food items after photo upload');
           const updatedFoodItems = await onFoodItemsReload();
+          console.log('[MealEditMode] Food items reloaded:', updatedFoodItems.length, 'items');
           setFoodItems(updatedFoodItems);
 
           // Recalculate totals from updated food items
@@ -224,6 +227,9 @@ export function MealEditMode({
             { calories: 0, protein: 0, fat: 0, carbs: 0 }
           );
           setTotals(newTotals);
+          console.log('[MealEditMode] Updated totals:', newTotals);
+        } else {
+          console.warn('[MealEditMode] onFoodItemsReload is not provided');
         }
       } catch (error) {
         console.error('Failed to upload photo:', error);
