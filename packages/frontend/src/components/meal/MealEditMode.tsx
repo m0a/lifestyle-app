@@ -211,15 +211,17 @@ export function MealEditMode({
 
         // Reload food items after photo analysis completes
         if (onFoodItemsReload) {
-          console.log('[MealEditMode] Waiting 500ms before reloading food items...');
+          console.log('[MealEditMode] Waiting 1000ms before reloading food items...');
           // Wait a bit to ensure backend processing is complete
-          await new Promise(resolve => setTimeout(resolve, 500));
+          await new Promise(resolve => setTimeout(resolve, 1000));
 
           console.log('[MealEditMode] Reloading food items after photo upload');
           const updatedFoodItems = await onFoodItemsReload();
           console.log('[MealEditMode] Food items reloaded:', updatedFoodItems.length, 'items');
           console.log('[MealEditMode] Food items:', updatedFoodItems);
-          setFoodItems(updatedFoodItems);
+
+          // Force state update with new array reference
+          setFoodItems([...updatedFoodItems]);
 
           // Recalculate totals from updated food items
           const newTotals = updatedFoodItems.reduce(
@@ -231,8 +233,9 @@ export function MealEditMode({
             }),
             { calories: 0, protein: 0, fat: 0, carbs: 0 }
           );
-          setTotals(newTotals);
+          setTotals({...newTotals});
           console.log('[MealEditMode] Updated totals:', newTotals);
+          console.log('[MealEditMode] State update completed');
         } else {
           console.warn('[MealEditMode] onFoodItemsReload is not provided');
         }
