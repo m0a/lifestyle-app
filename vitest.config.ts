@@ -16,6 +16,7 @@ export default defineConfig({
     alias: {
       '@lifestyle-app/shared': path.resolve(__dirname, 'packages/shared/src'),
       '@lifestyle-app/backend': path.resolve(__dirname, 'packages/backend/src'),
+      '@lifestyle-app/frontend': path.resolve(__dirname, 'packages/frontend/src'),
     },
   },
 });

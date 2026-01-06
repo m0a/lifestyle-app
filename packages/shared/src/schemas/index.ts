@@ -183,3 +183,6 @@ export type MealDatesResponse = z.infer<typeof mealDatesResponseSchema>;
 
 // Meal analysis schemas
 export * from './meal-analysis';
+
+// Logging schemas
+export * from './log';

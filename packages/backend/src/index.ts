@@ -14,6 +14,7 @@ import { logs } from './routes/logs';
 import { mealAnalysis } from './routes/meal-analysis';
 import { mealChat } from './routes/meal-chat';
 import { PhotoStorageService } from './services/photo-storage';
+import { requestContext } from './middleware/requestContext';
 
 type Bindings = {
   DB: D1Database;
@@ -33,10 +34,21 @@ const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
 // Global error handler
 app.onError((err, c) => {
-  console.error('Error:', err);
+  // Extract request context for error tracing
+  const requestContext = c.get('requestContext');
+  const requestId = requestContext?.requestId;
+  const userId = requestContext?.userId;
+
+  // Enhanced error logging with Request ID and User ID
+  const logPrefix = requestId ? `[${requestId}]` : '[NO_REQUEST_ID]';
+  const userInfo = userId ? ` [User: ${userId}]` : ' [Unauthenticated]';
+  console.error(`${logPrefix}${userInfo} Error:`, err);
 
   if (err instanceof HTTPException) {
-    return c.json({ message: err.message, code: 'HTTP_ERROR' }, err.status);
+    return c.json(
+      { message: err.message, code: 'HTTP_ERROR', requestId },
+      err.status
+    );
   }
 
   if (err instanceof ZodError) {
@@ -44,6 +56,7 @@ app.onError((err, c) => {
       message: 'バリデーションエラー',
       code: 'VALIDATION_ERROR',
       errors: err.errors.map((e) => ({ path: e.path.join('.'), message: e.message })),
+      requestId,
     }, 400);
   }
 
@@ -52,16 +65,20 @@ app.onError((err, c) => {
   if (e['name'] === 'AppError' && typeof e['statusCode'] === 'number') {
     const statusCode = e['statusCode'] as 400 | 401 | 403 | 404 | 500;
     return c.json(
-      { message: err.message, code: e['code'] as string },
+      { message: err.message, code: e['code'] as string, requestId },
       statusCode
     );
   }
 
-  return c.json({ message: 'サーバーエラーが発生しました', code: 'INTERNAL_ERROR' }, 500);
+  return c.json(
+    { message: 'サーバーエラーが発生しました', code: 'INTERNAL_ERROR', requestId },
+    500
+  );
 });
 
 // Middleware
 app.use('*', logger());
+app.use('*', requestContext()); // Request ID tracking - MUST be after logger
 app.use(
   '*',
   cors({
