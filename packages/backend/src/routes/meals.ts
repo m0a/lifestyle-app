@@ -252,9 +252,22 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
         await photoService.markAnalysisFailed(photo.id);
       }
 
-      // Re-analyze all pending photos (including legacy photo if pending)
+      // Re-analyze all pending photos and photos without food items
       const allPhotos = await photoService.getMealPhotos(mealId);
-      const pendingPhotos = allPhotos.filter((p) => p.analysisStatus === 'pending');
+
+      // Get all food items for this meal to check which photos have food items
+      const allFoodItems = await db.select().from(schema.mealFoodItems).where(eq(schema.mealFoodItems.mealId, mealId)).all();
+      const photosWithFoodItems = new Set(allFoodItems.filter(item => item.photoId).map(item => item.photoId));
+
+      // Re-analyze photos that are pending OR completed but have no food items
+      const pendingPhotos = allPhotos.filter((p) =>
+        p.analysisStatus === 'pending' ||
+        (p.analysisStatus === 'complete' && !photosWithFoodItems.has(p.id))
+      );
+
+      if (pendingPhotos.length > 0) {
+        console.log(`[Photo Upload] Found ${pendingPhotos.length} photos to analyze (pending or without food items)`);
+      }
 
       for (const pendingPhoto of pendingPhotos) {
         try {
