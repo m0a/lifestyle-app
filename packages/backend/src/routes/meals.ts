@@ -149,12 +149,37 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
     const photoService = new MealPhotoService(db);
     const photoStorage = new PhotoStorageService(c.env.PHOTOS);
 
+    // Get photos from meal_photos table
     const photos = await photoService.getMealPhotos(mealId);
-    const totals = photoService.calculateTotals(photos);
+
+    // Include legacy photo from meal_records.photo_key if not yet migrated
+    const allPhotos = [...photos];
+    if (meal.photoKey) {
+      // Check if legacy photo already migrated to meal_photos
+      const legacyExists = photos.some((p) => p.photoKey === meal.photoKey);
+      if (!legacyExists) {
+        // Add legacy photo as first photo with analysis_status based on meal data
+        const legacyStatus = meal.analysisSource === 'ai' ? 'complete' : 'pending';
+        allPhotos.unshift({
+          id: `legacy-${mealId}`,
+          mealId,
+          photoKey: meal.photoKey,
+          displayOrder: -1, // Display first
+          analysisStatus: legacyStatus,
+          calories: legacyStatus === 'complete' ? meal.calories : null,
+          protein: legacyStatus === 'complete' ? meal.totalProtein : null,
+          fat: legacyStatus === 'complete' ? meal.totalFat : null,
+          carbs: legacyStatus === 'complete' ? meal.totalCarbs : null,
+          createdAt: meal.createdAt,
+        });
+      }
+    }
+
+    const totals = photoService.calculateTotals(allPhotos);
 
     // Generate presigned URLs
     const photosWithUrls = await Promise.all(
-      photos.map(async (photo) => ({
+      allPhotos.map(async (photo) => ({
         ...photo,
         photoUrl: await photoStorage.getPresignedUrl(photo.photoKey),
       }))
@@ -203,9 +228,10 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
         photoKey,
       });
 
-      // Analyze photo with AI
+      // Analyze newly uploaded photo with AI
       const aiConfig = getAIConfigFromEnv(c.env);
       const aiService = new AIAnalysisService(aiConfig);
+      const aiUsageService = new AIUsageService(db);
       const photoData = await photoFile.arrayBuffer();
 
       try {
@@ -217,7 +243,6 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
           // Record AI usage
           if (analysisResult.usage) {
-            const aiUsageService = new AIUsageService(db);
             await aiUsageService.recordUsage(user.id, 'image_analysis', analysisResult.usage);
           }
         } else {
@@ -228,6 +253,35 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
         // Log error but don't fail the upload
         console.error('Photo analysis failed:', analysisError);
         await photoService.markAnalysisFailed(photo.id);
+      }
+
+      // Re-analyze all pending photos (including legacy photo if pending)
+      const allPhotos = await photoService.getMealPhotos(mealId);
+      const pendingPhotos = allPhotos.filter((p) => p.analysisStatus === 'pending');
+
+      for (const pendingPhoto of pendingPhotos) {
+        try {
+          // Get photo data from R2 using getPhotoForAnalysis
+          const photoData = await photoStorage.getPhotoForAnalysis(pendingPhoto.photoKey);
+          if (photoData) {
+            const analysisResult = await aiService.analyzeMealPhoto(
+              photoData.data,
+              photoData.mimeType
+            );
+
+            if (analysisResult.success) {
+              await photoService.updateAnalysisResult(pendingPhoto.id, analysisResult.result.totals);
+              if (analysisResult.usage) {
+                await aiUsageService.recordUsage(user.id, 'image_analysis', analysisResult.usage);
+              }
+            } else {
+              await photoService.markAnalysisFailed(pendingPhoto.id);
+            }
+          }
+        } catch (error) {
+          console.error(`Failed to analyze pending photo ${pendingPhoto.id}:`, error);
+          await photoService.markAnalysisFailed(pendingPhoto.id);
+        }
       }
 
       // Generate presigned URL
