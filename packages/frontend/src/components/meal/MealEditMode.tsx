@@ -211,9 +211,14 @@ export function MealEditMode({
 
         // Reload food items after photo analysis completes
         if (onFoodItemsReload) {
+          console.log('[MealEditMode] Waiting 500ms before reloading food items...');
+          // Wait a bit to ensure backend processing is complete
+          await new Promise(resolve => setTimeout(resolve, 500));
+
           console.log('[MealEditMode] Reloading food items after photo upload');
           const updatedFoodItems = await onFoodItemsReload();
           console.log('[MealEditMode] Food items reloaded:', updatedFoodItems.length, 'items');
+          console.log('[MealEditMode] Food items:', updatedFoodItems);
           setFoodItems(updatedFoodItems);
 
           // Recalculate totals from updated food items
