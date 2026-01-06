@@ -162,7 +162,6 @@ export default function MealDetailPage() {
           meal={meal}
           foodItems={foodItems}
           totals={getTotals()}
-          photoUrl={photoUrl ?? undefined}
           onSave={handleEditSave}
           onCancel={handleEditCancel}
           onDirtyChange={setHasUnsavedChanges}

@@ -1,5 +1,5 @@
 import { nanoid } from 'nanoid';
-import { eq, and, asc } from 'drizzle-orm';
+import { eq, asc } from 'drizzle-orm';
 import type { Database } from '../db';
 import { mealPhotos, type MealPhoto } from '../db/schema';
 

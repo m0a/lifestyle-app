@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 
 // Note: Integration tests require full app setup with D1 and R2 bindings
 // This is a simplified version for demonstration

@@ -1,9 +1,8 @@
 import { useState, useCallback, useEffect } from 'react';
 import { AnalysisResult } from './AnalysisResult';
 import { MealChat } from './MealChat';
-import { PhotoCapture } from './PhotoCapture';
 import { PhotoUploadButton } from './PhotoUploadButton';
-import { mealAnalysisApi, getPhotoUrl, api } from '../../lib/api';
+import { mealAnalysisApi, api } from '../../lib/api';
 import { useToast } from '../ui/Toast';
 import { validateNotFuture, toDateTimeLocal, getCurrentDateTimeLocal } from '../../lib/dateValidation';
 import { useMealPhotos } from '../../hooks/useMealPhotos';
@@ -13,7 +12,6 @@ interface MealEditModeProps {
   meal: MealRecord;
   foodItems: FoodItem[];
   totals: NutritionTotals;
-  photoUrl?: string;
   onSave: () => void;
   onCancel: () => void;
   onDirtyChange?: (isDirty: boolean) => void;
@@ -23,7 +21,6 @@ export function MealEditMode({
   meal,
   foodItems: initialFoodItems,
   totals: initialTotals,
-  photoUrl,
   onSave,
   onCancel,
   onDirtyChange,
@@ -31,12 +28,9 @@ export function MealEditMode({
   const toast = useToast();
   const [foodItems, setFoodItems] = useState<FoodItem[]>(initialFoodItems);
   const [totals, setTotals] = useState<NutritionTotals>(initialTotals);
-  const [currentPhotoUrl, setCurrentPhotoUrl] = useState<string | undefined>(photoUrl);
   const [isDirty, setIsDirty] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showChat, setShowChat] = useState(false);
-  const [showPhotoCapture, setShowPhotoCapture] = useState(false);
-  const [isPhotoLoading, setIsPhotoLoading] = useState(false);
   // Date/time editing state
   const [recordedAt, setRecordedAt] = useState<string>(toDateTimeLocal(meal.recordedAt));
   const [dateError, setDateError] = useState<string | null>(null);
@@ -154,45 +148,6 @@ export function MealEditMode({
     },
     [toast]
   );
-
-  // Handler for photo upload (T036)
-  const handlePhotoCapture = useCallback(
-    async (photo: Blob) => {
-      setIsPhotoLoading(true);
-      try {
-        const result = await mealAnalysisApi.uploadPhoto(meal.id, photo);
-        setCurrentPhotoUrl(getPhotoUrl(result.photoKey) ?? undefined);
-        setShowPhotoCapture(false);
-        setIsDirty(true);
-        toast.success('写真をアップロードしました');
-      } catch (error) {
-        console.error('Failed to upload photo:', error);
-        toast.error('写真のアップロードに失敗しました');
-      } finally {
-        setIsPhotoLoading(false);
-      }
-    },
-    [meal.id, toast]
-  );
-
-  // Handler for photo delete (T037)
-  const handlePhotoDelete = useCallback(async () => {
-    const confirmed = window.confirm('本当に写真を削除しますか？');
-    if (!confirmed) return;
-
-    setIsPhotoLoading(true);
-    try {
-      await mealAnalysisApi.deletePhoto(meal.id);
-      setCurrentPhotoUrl(undefined);
-      setIsDirty(true);
-      toast.success('写真を削除しました');
-    } catch (error) {
-      console.error('Failed to delete photo:', error);
-      toast.error('写真の削除に失敗しました');
-    } finally {
-      setIsPhotoLoading(false);
-    }
-  }, [meal.id, toast]);
 
   // Handler for date/time change (FR-002)
   const handleDateTimeChange = useCallback(
@@ -479,7 +434,6 @@ export function MealEditMode({
 
       {/* Analysis result with edit capabilities */}
       <AnalysisResult
-        photoUrl={currentPhotoUrl}
         foodItems={foodItems}
         totals={totals}
         onUpdateItem={handleUpdateItem}
