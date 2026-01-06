@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { api, getPhotoUrl, mealAnalysisApi } from '../lib/api';
+import { api, mealAnalysisApi } from '../lib/api';
 import { MealEditMode } from '../components/meal/MealEditMode';
 import type { MealRecord, FoodItem, ChatMessage, NutritionTotals } from '@lifestyle-app/shared';
 import { MEAL_TYPE_LABELS } from '@lifestyle-app/shared';
@@ -24,12 +24,19 @@ interface MealDetailResponse {
   meal: MealRecord;
 }
 
+interface MealPhoto {
+  id: string;
+  photoKey: string;
+  photoUrl: string;
+}
+
 export default function MealDetailPage() {
   const { mealId } = useParams<{ mealId: string }>();
   const navigate = useNavigate();
   const [meal, setMeal] = useState<MealRecord | null>(null);
   const [foodItems, setFoodItems] = useState<FoodItem[]>([]);
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
+  const [photos, setPhotos] = useState<MealPhoto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -49,6 +56,14 @@ export default function MealDetailPage() {
         // Load meal record
         const mealResponse = await api.get<MealDetailResponse>(`/api/meals/${mealId}`);
         setMeal(mealResponse.meal);
+
+        // Load photos
+        try {
+          const photosResponse = await api.get<{ photos: MealPhoto[] }>(`/api/meals/${mealId}/photos`);
+          setPhotos(photosResponse.photos);
+        } catch {
+          setPhotos([]);
+        }
 
         // Load food items if this is an AI-analyzed meal
         if (mealResponse.meal.analysisSource === 'ai') {
@@ -85,12 +100,44 @@ export default function MealDetailPage() {
       const mealResponse = await api.get<MealDetailResponse>(`/api/meals/${mealId}`);
       setMeal(mealResponse.meal);
 
+      // Reload photos
+      try {
+        const photosResponse = await api.get<{ photos: MealPhoto[] }>(`/api/meals/${mealId}/photos`);
+        setPhotos(photosResponse.photos);
+      } catch {
+        setPhotos([]);
+      }
+
       if (mealResponse.meal.analysisSource === 'ai') {
         const { foodItems: items } = await mealAnalysisApi.getFoodItems(mealId);
         setFoodItems(items);
       }
     } catch (err) {
       console.error('Failed to reload meal data:', err);
+    }
+  }, [mealId]);
+
+  const reloadMealOnly = useCallback(async () => {
+    if (!mealId) return;
+
+    try {
+      const mealResponse = await api.get<MealDetailResponse>(`/api/meals/${mealId}`);
+      setMeal(mealResponse.meal);
+    } catch (err) {
+      console.error('Failed to reload meal:', err);
+    }
+  }, [mealId]);
+
+  const reloadFoodItems = useCallback(async () => {
+    if (!mealId) return [];
+
+    try {
+      const { foodItems: items } = await mealAnalysisApi.getFoodItems(mealId);
+      setFoodItems(items);
+      return items;
+    } catch (err) {
+      console.error('Failed to reload food items:', err);
+      return [];
     }
   }, [mealId]);
 
@@ -139,7 +186,7 @@ export default function MealDetailPage() {
     );
   }
 
-  const photoUrl = getPhotoUrl(meal.photoKey);
+  const firstPhoto = photos.length > 0 ? photos[0] : null;
 
   // Edit mode view
   if (isEditing) {
@@ -162,10 +209,11 @@ export default function MealDetailPage() {
           meal={meal}
           foodItems={foodItems}
           totals={getTotals()}
-          photoUrl={photoUrl ?? undefined}
           onSave={handleEditSave}
           onCancel={handleEditCancel}
           onDirtyChange={setHasUnsavedChanges}
+          onFoodItemsReload={reloadFoodItems}
+          onMealReload={reloadMealOnly}
         />
       </div>
     );
@@ -197,10 +245,10 @@ export default function MealDetailPage() {
       </div>
 
       {/* Photo */}
-      {photoUrl && (
+      {firstPhoto && (
         <div className="mb-4 overflow-hidden rounded-lg">
           <img
-            src={photoUrl}
+            src={firstPhoto.photoUrl}
             alt={meal.content}
             className="w-full object-cover"
           />

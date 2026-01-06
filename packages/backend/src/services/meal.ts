@@ -105,7 +105,47 @@ export class MealService {
       filtered = filtered.slice(0, options.limit);
     }
 
-    return filtered;
+    // Get photo counts and first photo keys for all filtered meals
+    const mealIds = filtered.map((m) => m.id);
+    const photoCounts = new Map<string, number>();
+    const firstPhotoKeys = new Map<string, string>();
+
+    if (mealIds.length > 0) {
+      // Query all photos
+      const photoRecords = await this.db
+        .select()
+        .from(schema.mealPhotos)
+        .all();
+
+      // Group photos by mealId
+      const photosByMeal = new Map<string, typeof photoRecords>();
+      for (const photo of photoRecords) {
+        if (mealIds.includes(photo.mealId)) {
+          if (!photosByMeal.has(photo.mealId)) {
+            photosByMeal.set(photo.mealId, []);
+          }
+          photosByMeal.get(photo.mealId)!.push(photo);
+        }
+      }
+
+      // Count photos and get first photo key per meal
+      for (const [mealId, photos] of photosByMeal.entries()) {
+        photoCounts.set(mealId, photos.length);
+        // Sort by displayOrder and get first photo
+        const sortedPhotos = photos.sort((a, b) => a.displayOrder - b.displayOrder);
+        const firstPhoto = sortedPhotos[0];
+        if (firstPhoto) {
+          firstPhotoKeys.set(mealId, firstPhoto.photoKey);
+        }
+      }
+    }
+
+    // Add photo information to records
+    return filtered.map((record) => ({
+      ...record,
+      photoCount: photoCounts.get(record.id) || 0,
+      firstPhotoKey: firstPhotoKeys.get(record.id) || null,
+    }));
   }
 
   async getCalorieSummary(

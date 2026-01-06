@@ -89,7 +89,7 @@ export class PhotoStorageService {
     // 1. Use a public R2 bucket with custom domain
     // 2. Create a Worker endpoint to serve photos
     // For now, we return a placeholder that can be handled by a route
-    return `/api/photos/${encodeURIComponent(key)}`;
+    return `/api/meals/photos/${encodeURIComponent(key)}`;
   }
 
   /**
@@ -105,5 +105,30 @@ export class PhotoStorageService {
       body: object.body,
       contentType: object.httpMetadata?.contentType || 'image/jpeg',
     };
+  }
+
+  /**
+   * Upload photo directly to permanent storage.
+   * Used for multi-photo meals.
+   */
+  async uploadPhoto(photoKey: string, file: File | ArrayBuffer): Promise<void> {
+    const data = file instanceof File ? await file.arrayBuffer() : file;
+    const mimeType = file instanceof File ? file.type : 'image/jpeg';
+
+    await this.r2.put(photoKey, data, {
+      httpMetadata: {
+        contentType: mimeType,
+      },
+    });
+  }
+
+  /**
+   * Get presigned URL for photo (1 hour expiry).
+   * Note: R2 doesn't support presigned URLs in Workers, so we use Worker endpoint.
+   */
+  async getPresignedUrl(photoKey: string): Promise<string> {
+    // In production with custom domain: return actual R2 URL
+    // For now: return Worker endpoint that serves the photo
+    return `/api/meals/photos/${encodeURIComponent(photoKey)}`;
   }
 }

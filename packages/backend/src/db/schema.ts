@@ -52,6 +52,27 @@ export const mealRecords = sqliteTable(
   })
 );
 
+export const mealPhotos = sqliteTable(
+  'meal_photos',
+  {
+    id: text('id').primaryKey(),
+    mealId: text('meal_id')
+      .notNull()
+      .references(() => mealRecords.id, { onDelete: 'cascade' }),
+    photoKey: text('photo_key').notNull(),
+    displayOrder: integer('display_order').notNull(),
+    analysisStatus: text('analysis_status'), // 'pending' | 'analyzing' | 'complete' | 'failed'
+    calories: integer('calories'),
+    protein: real('protein'),
+    fat: real('fat'),
+    carbs: real('carbs'),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => ({
+    idx_meal_photos_meal: index('idx_meal_photos_meal').on(table.mealId, table.displayOrder),
+  })
+);
+
 export const mealFoodItems = sqliteTable(
   'meal_food_items',
   {
@@ -59,6 +80,7 @@ export const mealFoodItems = sqliteTable(
     mealId: text('meal_id')
       .notNull()
       .references(() => mealRecords.id, { onDelete: 'cascade' }),
+    photoId: text('photo_id').references(() => mealPhotos.id, { onDelete: 'set null' }),
     name: text('name').notNull(),
     portion: text('portion').notNull(), // 'small' | 'medium' | 'large'
     calories: integer('calories').notNull(),
@@ -69,6 +91,7 @@ export const mealFoodItems = sqliteTable(
   },
   (table) => ({
     idx_food_items_meal: index('idx_food_items_meal').on(table.mealId),
+    idx_food_items_photo: index('idx_food_items_photo').on(table.photoId),
   })
 );
 
@@ -142,6 +165,8 @@ export type WeightRecord = typeof weightRecords.$inferSelect;
 export type NewWeightRecord = typeof weightRecords.$inferInsert;
 export type MealRecord = typeof mealRecords.$inferSelect;
 export type NewMealRecord = typeof mealRecords.$inferInsert;
+export type MealPhoto = typeof mealPhotos.$inferSelect;
+export type NewMealPhoto = typeof mealPhotos.$inferInsert;
 export type ExerciseRecord = typeof exerciseRecords.$inferSelect;
 export type NewExerciseRecord = typeof exerciseRecords.$inferInsert;
 export type MealFoodItem = typeof mealFoodItems.$inferSelect;

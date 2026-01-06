@@ -37,8 +37,28 @@ export type MealType = z.infer<typeof mealTypeSchema>;
 export const registerSchema = z.object({
   email: z.string().email('有効なメールアドレスを入力してください'),
   password: z.string().min(8, 'パスワードは8文字以上必要です').max(100),
-  goalWeight: z.number().min(20).max(300).optional(),
-  goalCalories: z.number().int().min(500).max(10000).optional(),
+  goalWeight: z
+    .union([z.string(), z.number()])
+    .optional()
+    .transform((val) => {
+      if (val === '' || val === null || val === undefined) return undefined;
+      const num = typeof val === 'number' ? val : parseFloat(val);
+      return isNaN(num) ? undefined : num;
+    })
+    .refine((val) => val === undefined || (val >= 20 && val <= 300), {
+      message: '目標体重は20-300kgの範囲で入力してください',
+    }),
+  goalCalories: z
+    .union([z.string(), z.number()])
+    .optional()
+    .transform((val) => {
+      if (val === '' || val === null || val === undefined) return undefined;
+      const num = typeof val === 'number' ? val : parseInt(val, 10);
+      return isNaN(num) ? undefined : num;
+    })
+    .refine((val) => val === undefined || (val >= 500 && val <= 10000), {
+      message: '目標カロリーは500-10000kcalの範囲で入力してください',
+    }),
 });
 
 export const loginSchema = z.object({

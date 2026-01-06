@@ -71,6 +71,9 @@ export interface MealRecord {
   recordedAt: string;
   createdAt: string;
   updatedAt: string;
+  // Extended fields for photo information from meal_photos table
+  photoCount?: number;
+  firstPhotoKey?: string | null;
 }
 
 export interface ExerciseRecord {

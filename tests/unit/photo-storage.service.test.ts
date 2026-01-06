@@ -143,7 +143,7 @@ describe('PhotoStorageService', () => {
     it('should return API path for photo', async () => {
       const url = await service.getPhotoUrl('meals/meal-123/photo.jpg');
 
-      expect(url).toBe('/api/photos/meals%2Fmeal-123%2Fphoto.jpg');
+      expect(url).toBe('/api/meals/photos/meals%2Fmeal-123%2Fphoto.jpg');
     });
   });
 
