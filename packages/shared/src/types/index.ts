@@ -74,6 +74,7 @@ export interface MealRecord {
   // Extended fields for photo information from meal_photos table
   photoCount?: number;
   firstPhotoKey?: string | null;
+  photos?: Array<{ id: string; photoKey: string; photoUrl: string }>;
 }
 
 export interface ExerciseRecord {

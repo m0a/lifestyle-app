@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { MealRecord } from '@lifestyle-app/shared';
 import { MEAL_TYPE_LABELS } from '@lifestyle-app/shared';
-import { getPhotoUrl } from '../../lib/api';
+import { PhotoCarousel } from './PhotoCarousel';
 
 interface MealListProps {
   meals: MealRecord[];
@@ -63,7 +63,7 @@ export function MealList({
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" style={{ touchAction: 'pan-y' }}>
       {Object.entries(groupedMeals).map(([date, dateMeals]) => (
         <div key={date}>
           <h3 className="mb-3 text-sm font-medium text-gray-500">{date}</h3>
@@ -93,29 +93,14 @@ export function MealList({
                     </div>
                   </div>
                 ) : (
-                  <div className="flex gap-3">
-                    {/* Photo thumbnail - clickable to detail */}
-                    {meal.firstPhotoKey && (
-                      <Link to={`/meals/${meal.id}`} className="flex-shrink-0 relative">
-                        <img
-                          src={getPhotoUrl(meal.firstPhotoKey) || undefined}
-                          alt={meal.content}
-                          className="h-16 w-16 rounded-lg object-cover hover:opacity-80 transition-opacity"
-                        />
-                        {/* Photo count badge */}
-                        {meal.photoCount !== undefined && meal.photoCount > 1 && (
-                          <div className="absolute -bottom-1 -right-1 flex items-center justify-center rounded-full bg-blue-500 px-1.5 py-0.5 text-xs text-white shadow-sm">
-                            <span>📷 {meal.photoCount}</span>
-                          </div>
-                        )}
-                        {meal.photoCount === 1 && (
-                          <div className="absolute -bottom-1 -right-1 flex items-center justify-center rounded-full bg-blue-500 px-1.5 py-0.5 text-xs text-white shadow-sm">
-                            <span>📷</span>
-                          </div>
-                        )}
+                  <div className="flex flex-col gap-3">
+                    {/* Photo carousel */}
+                    {meal.photos && meal.photos.length > 0 && (
+                      <Link to={`/meals/${meal.id}`}>
+                        <PhotoCarousel photos={meal.photos} />
                       </Link>
                     )}
-                    <div className="flex flex-1 items-start justify-between">
+                    <div className="flex items-start justify-between">
                       <Link to={`/meals/${meal.id}`} className="flex-1 hover:opacity-80 transition-opacity">
                         <div className="flex flex-wrap items-center gap-2">
                           <span
