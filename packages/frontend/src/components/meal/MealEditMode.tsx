@@ -204,21 +204,16 @@ export function MealEditMode({
   const handlePhotoUpload = useCallback(
     async (file: File) => {
       try {
-        console.log('[MealEditMode] Starting photo upload');
         await uploadAsync(file);
         setIsDirty(true);
         toast.success('写真をアップロードしました');
 
         // Reload food items after photo analysis completes
         if (onFoodItemsReload) {
-          console.log('[MealEditMode] Waiting 1000ms before reloading food items...');
-          // Wait a bit to ensure backend processing is complete
+          // Wait to ensure backend processing is complete
           await new Promise(resolve => setTimeout(resolve, 1000));
 
-          console.log('[MealEditMode] Reloading food items after photo upload');
           const updatedFoodItems = await onFoodItemsReload();
-          console.log('[MealEditMode] Food items reloaded:', updatedFoodItems.length, 'items');
-          console.log('[MealEditMode] Food items:', updatedFoodItems);
 
           // Force state update with new array reference
           setFoodItems([...updatedFoodItems]);
@@ -234,10 +229,6 @@ export function MealEditMode({
             { calories: 0, protein: 0, fat: 0, carbs: 0 }
           );
           setTotals({...newTotals});
-          console.log('[MealEditMode] Updated totals:', newTotals);
-          console.log('[MealEditMode] State update completed');
-        } else {
-          console.warn('[MealEditMode] onFoodItemsReload is not provided');
         }
       } catch (error) {
         console.error('Failed to upload photo:', error);
