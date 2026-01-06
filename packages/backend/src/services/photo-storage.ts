@@ -106,4 +106,29 @@ export class PhotoStorageService {
       contentType: object.httpMetadata?.contentType || 'image/jpeg',
     };
   }
+
+  /**
+   * Upload photo directly to permanent storage.
+   * Used for multi-photo meals.
+   */
+  async uploadPhoto(photoKey: string, file: File | ArrayBuffer): Promise<void> {
+    const data = file instanceof File ? await file.arrayBuffer() : file;
+    const mimeType = file instanceof File ? file.type : 'image/jpeg';
+
+    await this.r2.put(photoKey, data, {
+      httpMetadata: {
+        contentType: mimeType,
+      },
+    });
+  }
+
+  /**
+   * Get presigned URL for photo (1 hour expiry).
+   * Note: R2 doesn't support presigned URLs in Workers, so we use Worker endpoint.
+   */
+  async getPresignedUrl(photoKey: string): Promise<string> {
+    // In production with custom domain: return actual R2 URL
+    // For now: return Worker endpoint that serves the photo
+    return `/api/photos/${encodeURIComponent(photoKey)}`;
+  }
 }

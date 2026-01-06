@@ -96,12 +96,16 @@ export function MealList({
                   <div className="flex gap-3">
                     {/* Photo thumbnail - clickable to detail */}
                     {meal.photoKey && (
-                      <Link to={`/meals/${meal.id}`} className="flex-shrink-0">
+                      <Link to={`/meals/${meal.id}`} className="flex-shrink-0 relative">
                         <img
                           src={getPhotoUrl(meal.photoKey) || undefined}
                           alt={meal.content}
                           className="h-16 w-16 rounded-lg object-cover hover:opacity-80 transition-opacity"
                         />
+                        {/* Photo count badge - will show actual count in future iteration */}
+                        <div className="absolute -bottom-1 -right-1 flex items-center justify-center rounded-full bg-blue-500 px-1.5 py-0.5 text-xs text-white shadow-sm">
+                          <span>📷</span>
+                        </div>
                       </Link>
                     )}
                     <div className="flex flex-1 items-start justify-between">

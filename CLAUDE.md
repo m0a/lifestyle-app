@@ -148,9 +148,10 @@ pnpm dev:backend
 4. `stack` と `componentStack` で原因箇所を特定
 
 ## Recent Changes
+- 016-multiple-meal-photos: Added TypeScript 5.x (strict mode) + React 18+, Hono, Drizzle ORM, Zod, TanStack Query, Tailwind CSS, Vercel AI SDK (@ai-sdk/google)
 - 015-request-id-tracing: Added TypeScript 5.x (strict mode)
 - 014-ai-usage-tracking: Added TypeScript 5.x (strict mode) + React 18+, Hono, Drizzle ORM, Zod, TanStack Query, Tailwind CSS, Vercel AI SDK
-- 013-nutrient-summary: Added TypeScript 5.x (strict mode) + React 18+, Hono, Drizzle ORM, Zod, TanStack Query, Tailwind CSS
 
 ## Active Technologies
-- Cloudflare D1 (SQLite) via Drizzle ORM - logs are ephemeral (not persisted to DB), sent to Cloudflare Workers Logs (015-request-id-tracing)
+- TypeScript 5.x (strict mode) + React 18+, Hono, Drizzle ORM, Zod, TanStack Query, Tailwind CSS, Vercel AI SDK (@ai-sdk/google) (016-multiple-meal-photos)
+- Cloudflare D1 (SQLite) for metadata, R2 for photo files (016-multiple-meal-photos)

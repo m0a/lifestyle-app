@@ -2,9 +2,11 @@ import { useState, useCallback, useEffect } from 'react';
 import { AnalysisResult } from './AnalysisResult';
 import { MealChat } from './MealChat';
 import { PhotoCapture } from './PhotoCapture';
+import { PhotoUploadButton } from './PhotoUploadButton';
 import { mealAnalysisApi, getPhotoUrl, api } from '../../lib/api';
 import { useToast } from '../ui/Toast';
 import { validateNotFuture, toDateTimeLocal, getCurrentDateTimeLocal } from '../../lib/dateValidation';
+import { useMealPhotos } from '../../hooks/useMealPhotos';
 import type { FoodItem, NutritionTotals, MealRecord, MealType } from '@lifestyle-app/shared';
 
 interface MealEditModeProps {
@@ -42,6 +44,19 @@ export function MealEditMode({
   // Meal type editing state
   const [mealType, setMealType] = useState<MealType>(meal.mealType);
   const [isMealTypeSaving, setIsMealTypeSaving] = useState(false);
+
+  // Multiple photos support (User Story 1)
+  const {
+    photos,
+    totals: photoTotals,
+    isLoading: isPhotosLoading,
+    upload,
+    remove: removePhoto,
+    isUploading,
+    isDeleting,
+    uploadError,
+    deleteError,
+  } = useMealPhotos(meal.id);
 
   // Notify parent of dirty state changes (T040)
   useEffect(() => {
@@ -228,6 +243,49 @@ export function MealEditMode({
     [meal.id, mealType, toast]
   );
 
+  // Handler for multiple photo upload (T028)
+  const handlePhotoUpload = useCallback(
+    async (file: File) => {
+      try {
+        upload(file);
+        setIsDirty(true);
+        toast.success('写真をアップロードしました');
+      } catch (error) {
+        console.error('Failed to upload photo:', error);
+        toast.error('写真のアップロードに失敗しました');
+      }
+    },
+    [upload, toast]
+  );
+
+  // Handler for photo deletion (T029)
+  const handlePhotoRemove = useCallback(
+    async (photoId: string) => {
+      const confirmed = window.confirm('本当にこの写真を削除しますか？');
+      if (!confirmed) return;
+
+      try {
+        removePhoto(photoId);
+        setIsDirty(true);
+        toast.success('写真を削除しました');
+      } catch (error) {
+        console.error('Failed to delete photo:', error);
+        toast.error('写真の削除に失敗しました');
+      }
+    },
+    [removePhoto, toast]
+  );
+
+  // Show upload/delete errors
+  useEffect(() => {
+    if (uploadError) {
+      toast.error(uploadError.message);
+    }
+    if (deleteError) {
+      toast.error(deleteError.message);
+    }
+  }, [uploadError, deleteError, toast]);
+
   return (
     <div className="flex flex-col gap-4">
       {/* Edit mode header */}
@@ -303,51 +361,119 @@ export function MealEditMode({
         </div>
       </div>
 
-      {/* Photo section (T038) */}
+      {/* Multiple Photos section (T027-T030) */}
       <div className="rounded-lg border bg-white p-4">
-        <h3 className="mb-3 font-semibold text-gray-900">写真</h3>
-        {showPhotoCapture ? (
-          <PhotoCapture
-            onCapture={handlePhotoCapture}
-            onCancel={() => setShowPhotoCapture(false)}
-          />
-        ) : currentPhotoUrl ? (
-          <div className="space-y-3">
-            <div className="overflow-hidden rounded-lg">
-              <img
-                src={currentPhotoUrl}
-                alt="食事の写真"
-                className="w-full object-cover"
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="font-semibold text-gray-900">写真</h3>
+          {photoTotals && (
+            <div className="text-sm text-gray-600">
+              <span className="font-medium">{photoTotals.photoCount}枚</span>
+              {photoTotals.analyzedPhotoCount < photoTotals.photoCount && (
+                <span className="ml-2 text-yellow-600">
+                  (分析中: {photoTotals.photoCount - photoTotals.analyzedPhotoCount}枚)
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Photo grid (T027) */}
+        {isPhotosLoading ? (
+          <div className="py-8 text-center text-gray-500">読み込み中...</div>
+        ) : photos.length > 0 ? (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {photos.map((photo) => (
+                <div key={photo.id} className="group relative">
+                  <img
+                    src={photo.photoUrl}
+                    alt="食事の写真"
+                    className="aspect-square w-full rounded-lg object-cover"
+                  />
+                  {/* Analysis status badge */}
+                  <div className="absolute left-2 top-2 rounded bg-black bg-opacity-60 px-2 py-0.5 text-xs text-white">
+                    {photo.analysisStatus === 'complete' && '✓ 分析済'}
+                    {photo.analysisStatus === 'analyzing' && '⏳ 分析中'}
+                    {photo.analysisStatus === 'pending' && '⏳ 待機中'}
+                    {photo.analysisStatus === 'failed' && '⚠ 失敗'}
+                  </div>
+                  {/* Delete button (T029) */}
+                  <button
+                    onClick={() => handlePhotoRemove(photo.id)}
+                    disabled={isDeleting || photos.length === 1}
+                    className="absolute right-2 top-2 rounded-full bg-red-500 p-1.5 text-white opacity-0 shadow-lg transition-opacity hover:bg-red-600 group-hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-50"
+                    title={photos.length === 1 ? '最後の写真は削除できません' : '写真を削除'}
+                  >
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                  {/* Nutrition info tooltip on hover */}
+                  {photo.analysisStatus === 'complete' && (
+                    <div className="absolute bottom-2 left-2 right-2 rounded bg-black bg-opacity-75 p-2 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">
+                      <div className="flex justify-between">
+                        <span>{photo.calories} kcal</span>
+                        <span>P:{photo.protein}g F:{photo.fat}g C:{photo.carbs}g</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Photo totals display (T030) */}
+            {photoTotals && photoTotals.analyzedPhotoCount > 0 && (
+              <div className="rounded-lg bg-blue-50 p-3">
+                <h4 className="mb-2 text-sm font-semibold text-blue-900">写真の栄養合計</h4>
+                <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
+                  <div>
+                    <span className="text-gray-600">カロリー:</span>
+                    <span className="ml-1 font-medium text-blue-900">
+                      {photoTotals.calories.toLocaleString()} kcal
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">タンパク質:</span>
+                    <span className="ml-1 font-medium text-blue-900">{photoTotals.protein}g</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">脂質:</span>
+                    <span className="ml-1 font-medium text-blue-900">{photoTotals.fat}g</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">炭水化物:</span>
+                    <span className="ml-1 font-medium text-blue-900">{photoTotals.carbs}g</span>
+                  </div>
+                </div>
+                <p className="mt-2 text-xs text-blue-700">
+                  {photoTotals.analyzedPhotoCount}枚の写真から自動計算
+                </p>
+              </div>
+            )}
+
+            {/* Add photo button (T028) */}
+            {photos.length < 10 && (
+              <PhotoUploadButton
+                onUpload={handlePhotoUpload}
+                disabled={isUploading}
+                variant="secondary"
               />
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setShowPhotoCapture(true)}
-                disabled={isPhotoLoading}
-                className="flex-1 rounded-lg border border-blue-300 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 disabled:opacity-50"
-              >
-                写真を変更
-              </button>
-              <button
-                onClick={handlePhotoDelete}
-                disabled={isPhotoLoading}
-                className="flex-1 rounded-lg border border-red-300 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
-              >
-                写真を削除
-              </button>
-            </div>
+            )}
+            {photos.length >= 10 && (
+              <p className="text-center text-sm text-gray-500">
+                写真は最大10枚まで追加できます
+              </p>
+            )}
           </div>
         ) : (
-          <button
-            onClick={() => setShowPhotoCapture(true)}
-            disabled={isPhotoLoading}
-            className="w-full rounded-lg border-2 border-dashed border-gray-300 py-6 text-center text-gray-500 hover:border-blue-400 hover:text-blue-600 disabled:opacity-50"
-          >
-            + 写真を追加
-          </button>
-        )}
-        {isPhotoLoading && (
-          <div className="mt-2 text-center text-sm text-gray-500">処理中...</div>
+          <div className="space-y-3">
+            <p className="py-4 text-center text-gray-500">まだ写真がありません</p>
+            <PhotoUploadButton
+              onUpload={handlePhotoUpload}
+              disabled={isUploading}
+              variant="primary"
+            />
+          </div>
         )}
       </div>
 

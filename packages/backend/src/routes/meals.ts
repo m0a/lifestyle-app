@@ -1,13 +1,19 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
+import { nanoid } from 'nanoid';
 import { createMealSchema, updateMealSchema, dateRangeSchema, mealTypeSchema, mealDatesQuerySchema } from '@lifestyle-app/shared';
 import { MealService } from '../services/meal';
+import { MealPhotoService } from '../services/meal-photo.service';
+import { PhotoStorageService } from '../services/photo-storage';
 import { authMiddleware } from '../middleware/auth';
+import { eq, and } from 'drizzle-orm';
+import { mealRecords } from '../db/schema';
 import type { Database } from '../db';
 
 type Bindings = {
   DB: D1Database;
+  PHOTOS: R2Bucket;
 };
 
 type Variables = {
@@ -118,4 +124,127 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
     await mealService.delete(id, user.id);
 
     return c.json({ message: 'Deleted' });
+  })
+  // Photo management endpoints
+  .get('/:id/photos', async (c) => {
+    const mealId = c.req.param('id');
+    const db = c.get('db');
+    const user = c.get('user');
+
+    // Verify meal belongs to user
+    const meal = await db.query.mealRecords.findFirst({
+      where: and(eq(mealRecords.id, mealId), eq(mealRecords.userId, user.id)),
+    });
+
+    if (!meal) {
+      return c.json({ message: 'Meal not found' }, 404);
+    }
+
+    const photoService = new MealPhotoService(db);
+    const photoStorage = new PhotoStorageService(c.env.PHOTOS);
+
+    const photos = await photoService.getMealPhotos(mealId);
+    const totals = photoService.calculateTotals(photos);
+
+    // Generate presigned URLs
+    const photosWithUrls = await Promise.all(
+      photos.map(async (photo) => ({
+        ...photo,
+        photoUrl: await photoStorage.getPresignedUrl(photo.photoKey),
+      }))
+    );
+
+    return c.json({ photos: photosWithUrls, totals });
+  })
+  .post('/:id/photos', async (c) => {
+    const mealId = c.req.param('id');
+    const db = c.get('db');
+    const user = c.get('user');
+
+    // Verify meal belongs to user
+    const meal = await db.query.mealRecords.findFirst({
+      where: and(eq(mealRecords.id, mealId), eq(mealRecords.userId, user.id)),
+    });
+
+    if (!meal) {
+      return c.json({ message: 'Meal not found' }, 404);
+    }
+
+    // Parse form data
+    const formData = await c.req.formData();
+    const photoFile = formData.get('photo') as File;
+
+    if (!photoFile || !(photoFile instanceof File)) {
+      return c.json({ message: 'Photo file required' }, 400);
+    }
+
+    if (photoFile.size > 10 * 1024 * 1024) {
+      return c.json({ message: 'Max 10MB file size', code: 'FILE_TOO_LARGE' }, 413);
+    }
+
+    const photoService = new MealPhotoService(db);
+    const photoStorage = new PhotoStorageService(c.env.PHOTOS);
+
+    try {
+      // Upload to R2
+      const photoId = nanoid();
+      const photoKey = `photos/${user.id}/${mealId}/${photoId}.jpg`;
+      await photoStorage.uploadPhoto(photoKey, photoFile);
+
+      // Create DB record
+      const photo = await photoService.addPhoto({
+        mealId,
+        photoKey,
+      });
+
+      // Generate presigned URL
+      const photoUrl = await photoStorage.getPresignedUrl(photoKey);
+
+      return c.json({ photo: { ...photo, photoUrl } }, 201);
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('Maximum 10 photos')) {
+        return c.json({ message: error.message, code: 'PHOTO_LIMIT_EXCEEDED' }, 400);
+      }
+      throw error;
+    }
+  })
+  .delete('/:id/photos/:photoId', async (c) => {
+    const mealId = c.req.param('id');
+    const photoId = c.req.param('photoId');
+    const db = c.get('db');
+    const user = c.get('user');
+
+    // Verify meal belongs to user
+    const meal = await db.query.mealRecords.findFirst({
+      where: and(eq(mealRecords.id, mealId), eq(mealRecords.userId, user.id)),
+    });
+
+    if (!meal) {
+      return c.json({ message: 'Meal not found' }, 404);
+    }
+
+    const photoService = new MealPhotoService(db);
+    const photoStorage = new PhotoStorageService(c.env.PHOTOS);
+
+    try {
+      const { photoKey } = await photoService.deletePhoto(photoId);
+
+      // Delete from R2
+      await photoStorage.deletePhoto(photoKey);
+
+      // Recalculate totals
+      const remainingPhotos = await photoService.getMealPhotos(mealId);
+      const updatedTotals = photoService.calculateTotals(remainingPhotos);
+
+      return c.json({
+        success: true,
+        remainingPhotos: remainingPhotos.length,
+        updatedTotals,
+      });
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('at least one')) {
+        return c.json({ message: error.message, code: 'LAST_PHOTO' }, 400);
+      }
+      throw error;
+    }
   });
