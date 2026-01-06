@@ -120,14 +120,8 @@ Preview環境は別のD1データベース（`health-tracker-preview-db`）を�
    - Lint & Type Check
    - Unit & Integration Tests
    - Build
+   - **Run migrations on production DB** ← マイグレーション自動実行
    - **Deploy to Production** ← タグpush時のみ実行
-
-4. **本番環境でマイグレーション実行**（必要な場合）:
-   ```bash
-   # Cloudflare Dashboard → Workers & Pages → lifestyle-app-backend → Settings → Variables
-   # で DB_ID を確認してから:
-   pnpm db:migrate
-   ```
 
 ### デプロイ確認
 
