@@ -24,12 +24,19 @@ interface MealDetailResponse {
   meal: MealRecord;
 }
 
+interface MealPhoto {
+  id: string;
+  photoKey: string;
+  photoUrl: string;
+}
+
 export default function MealDetailPage() {
   const { mealId } = useParams<{ mealId: string }>();
   const navigate = useNavigate();
   const [meal, setMeal] = useState<MealRecord | null>(null);
   const [foodItems, setFoodItems] = useState<FoodItem[]>([]);
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
+  const [photos, setPhotos] = useState<MealPhoto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -49,6 +56,14 @@ export default function MealDetailPage() {
         // Load meal record
         const mealResponse = await api.get<MealDetailResponse>(`/api/meals/${mealId}`);
         setMeal(mealResponse.meal);
+
+        // Load photos
+        try {
+          const photosResponse = await api.get<{ photos: MealPhoto[] }>(`/api/meals/${mealId}/photos`);
+          setPhotos(photosResponse.photos);
+        } catch {
+          setPhotos([]);
+        }
 
         // Load food items if this is an AI-analyzed meal
         if (mealResponse.meal.analysisSource === 'ai') {
@@ -84,6 +99,14 @@ export default function MealDetailPage() {
     try {
       const mealResponse = await api.get<MealDetailResponse>(`/api/meals/${mealId}`);
       setMeal(mealResponse.meal);
+
+      // Reload photos
+      try {
+        const photosResponse = await api.get<{ photos: MealPhoto[] }>(`/api/meals/${mealId}/photos`);
+        setPhotos(photosResponse.photos);
+      } catch {
+        setPhotos([]);
+      }
 
       if (mealResponse.meal.analysisSource === 'ai') {
         const { foodItems: items } = await mealAnalysisApi.getFoodItems(mealId);
@@ -139,7 +162,7 @@ export default function MealDetailPage() {
     );
   }
 
-  const photoUrl = getPhotoUrl(meal.photoKey);
+  const firstPhoto = photos.length > 0 ? photos[0] : null;
 
   // Edit mode view
   if (isEditing) {
@@ -196,10 +219,10 @@ export default function MealDetailPage() {
       </div>
 
       {/* Photo */}
-      {photoUrl && (
+      {firstPhoto && (
         <div className="mb-4 overflow-hidden rounded-lg">
           <img
-            src={photoUrl}
+            src={firstPhoto.photoUrl}
             alt={meal.content}
             className="w-full object-cover"
           />
