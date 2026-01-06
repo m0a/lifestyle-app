@@ -232,11 +232,16 @@ mealChat.post(
     let newRecordedAt: string | undefined;
     let newMealType: 'breakfast' | 'lunch' | 'dinner' | 'snack' | undefined;
 
+    console.log('[Chat Apply] Received changes:', JSON.stringify(changes, null, 2));
+    console.log('[Chat Apply] Meal ID:', mealId);
+
     // Apply each change (discriminated union - each action has specific required fields)
     for (const change of changes) {
+      console.log('[Chat Apply] Processing change:', JSON.stringify(change, null, 2));
       switch (change.action) {
         case 'add':
           // For 'add', foodItem is required by schema
+          console.log('[Chat Apply] Adding food item:', change.foodItem.name);
           await db.insert(mealFoodItems).values({
             id: uuidv4(),
             mealId,
@@ -251,9 +256,11 @@ mealChat.post(
           break;
         case 'remove':
           // For 'remove', foodItemId is required by schema
-          await db.delete(mealFoodItems).where(
+          console.log('[Chat Apply] Removing food item ID:', change.foodItemId);
+          const deleteResult = await db.delete(mealFoodItems).where(
             and(eq(mealFoodItems.id, change.foodItemId), eq(mealFoodItems.mealId, mealId))
           );
+          console.log('[Chat Apply] Delete result:', deleteResult);
           break;
         case 'update': {
           // For 'update', foodItemId and foodItem are required by schema
