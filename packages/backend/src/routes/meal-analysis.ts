@@ -1,7 +1,6 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { v4 as uuidv4 } from 'uuid';
-import { nanoid } from 'nanoid';
 import { eq, and } from 'drizzle-orm';
 import { authMiddleware } from '../middleware/auth';
 import { mealRecords, mealFoodItems } from '../db/schema';
