@@ -347,12 +347,12 @@ export function MealEditMode({
       <div className="rounded-lg border bg-white p-4">
         <div className="mb-3 flex items-center justify-between">
           <h3 className="font-semibold text-gray-900">写真</h3>
-          {photoTotals && (
+          {photos.length > 0 && (
             <div className="text-sm text-gray-600">
-              <span className="font-medium">{photoTotals.photoCount}枚</span>
-              {photoTotals.analyzedPhotoCount < photoTotals.photoCount && (
+              <span className="font-medium">{photos.length}枚</span>
+              {photos.filter(p => p.analysisStatus === 'complete').length < photos.length && (
                 <span className="ml-2 text-yellow-600">
-                  (分析中: {photoTotals.photoCount - photoTotals.analyzedPhotoCount}枚)
+                  (分析中: {photos.length - photos.filter(p => p.analysisStatus === 'complete').length}枚)
                 </span>
               )}
             </div>
@@ -403,10 +403,10 @@ export function MealEditMode({
               ))}
             </div>
 
-            {/* Photo totals display (T030) */}
-            {photoTotals && photoTotals.analyzedPhotoCount > 0 && (
+            {/* Photo totals display (T030) - Now shows total from all food items */}
+            {photoTotals && photos.filter(p => p.analysisStatus === 'complete').length > 0 && (
               <div className="rounded-lg bg-blue-50 p-3">
-                <h4 className="mb-2 text-sm font-semibold text-blue-900">写真の栄養合計</h4>
+                <h4 className="mb-2 text-sm font-semibold text-blue-900">栄養合計</h4>
                 <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
                   <div>
                     <span className="text-gray-600">カロリー:</span>
@@ -428,7 +428,7 @@ export function MealEditMode({
                   </div>
                 </div>
                 <p className="mt-2 text-xs text-blue-700">
-                  {photoTotals.analyzedPhotoCount}枚の写真から自動計算
+                  全食材の合計 ({photos.filter(p => p.analysisStatus === 'complete').length}枚の写真から分析)
                 </p>
               </div>
             )}
