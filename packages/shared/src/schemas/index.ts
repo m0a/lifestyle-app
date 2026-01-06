@@ -33,12 +33,16 @@ const datetimeSchema = z.string().transform((val, ctx) => {
 export const mealTypeSchema = z.enum(['breakfast', 'lunch', 'dinner', 'snack']);
 export type MealType = z.infer<typeof mealTypeSchema>;
 
+// Helper to preprocess empty strings to undefined for optional number fields
+const optionalNumber = (schema: z.ZodNumber) =>
+  z.preprocess((val) => (val === '' || val === null ? undefined : val), schema.optional());
+
 // User schemas
 export const registerSchema = z.object({
   email: z.string().email('有効なメールアドレスを入力してください'),
   password: z.string().min(8, 'パスワードは8文字以上必要です').max(100),
-  goalWeight: z.number().min(20).max(300).nullable().optional(),
-  goalCalories: z.number().int().min(500).max(10000).nullable().optional(),
+  goalWeight: optionalNumber(z.number().min(20).max(300)),
+  goalCalories: optionalNumber(z.number().int().min(500).max(10000)),
 });
 
 export const loginSchema = z.object({
