@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { mealAnalysisApi } from '../../lib/api';
 import { useToast } from '../ui/Toast';
 import { toDateTimeLocal } from '../../lib/dateValidation';
@@ -31,6 +32,7 @@ interface DisplayMessage {
 
 export function MealChat({ mealId, currentFoodItems: _currentFoodItems, onUpdate }: MealChatProps) {
   const toast = useToast();
+  const queryClient = useQueryClient();
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -207,6 +209,9 @@ export function MealChat({ mealId, currentFoodItems: _currentFoodItems, onUpdate
         error?: string;
       };
 
+      // Invalidate queries immediately to show the uploaded photo
+      queryClient.invalidateQueries({ queryKey: ['meals', mealId, 'photos'] });
+
       // Add acknowledgment message to chat
       if (result.ackMessageId) {
         const ackMsgId = result.ackMessageId;
@@ -236,9 +241,10 @@ export function MealChat({ mealId, currentFoodItems: _currentFoodItems, onUpdate
             },
           ]);
 
-          // Update parent component with new totals
-          // Note: We don't have the full food items list here, so we'll reload on the parent
-          // For now, just show success message
+          // Invalidate queries to refresh photos and meal data
+          queryClient.invalidateQueries({ queryKey: ['meals', mealId, 'photos'] });
+          queryClient.invalidateQueries({ queryKey: ['meals'] });
+
           toast.success('写真を追加し、AI分析が完了しました');
         }, 2000);
       }
@@ -256,7 +262,7 @@ export function MealChat({ mealId, currentFoodItems: _currentFoodItems, onUpdate
         fileInputRef.current.value = '';
       }
     }
-  }, [mealId, toast]);
+  }, [mealId, toast, queryClient]);
 
   return (
     <div className="rounded-lg border">
