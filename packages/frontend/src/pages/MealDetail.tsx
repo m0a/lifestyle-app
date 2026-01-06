@@ -118,13 +118,15 @@ export default function MealDetailPage() {
   }, [mealId]);
 
   const reloadFoodItems = useCallback(async () => {
-    if (!mealId) return;
+    if (!mealId) return [];
 
     try {
       const { foodItems: items } = await mealAnalysisApi.getFoodItems(mealId);
       setFoodItems(items);
+      return items;
     } catch (err) {
       console.error('Failed to reload food items:', err);
+      return [];
     }
   }, [mealId]);
 

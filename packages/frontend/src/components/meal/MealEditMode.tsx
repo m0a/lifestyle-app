@@ -15,7 +15,7 @@ interface MealEditModeProps {
   onSave: () => void;
   onCancel: () => void;
   onDirtyChange?: (isDirty: boolean) => void;
-  onFoodItemsReload?: () => Promise<void>;
+  onFoodItemsReload?: () => Promise<FoodItem[]>;
 }
 
 export function MealEditMode({
@@ -210,7 +210,20 @@ export function MealEditMode({
 
         // Reload food items after photo analysis completes
         if (onFoodItemsReload) {
-          await onFoodItemsReload();
+          const updatedFoodItems = await onFoodItemsReload();
+          setFoodItems(updatedFoodItems);
+
+          // Recalculate totals from updated food items
+          const newTotals = updatedFoodItems.reduce(
+            (acc, item) => ({
+              calories: acc.calories + item.calories,
+              protein: acc.protein + item.protein,
+              fat: acc.fat + item.fat,
+              carbs: acc.carbs + item.carbs,
+            }),
+            { calories: 0, protein: 0, fat: 0, carbs: 0 }
+          );
+          setTotals(newTotals);
         }
       } catch (error) {
         console.error('Failed to upload photo:', error);
