@@ -37,8 +37,8 @@ export type MealType = z.infer<typeof mealTypeSchema>;
 export const registerSchema = z.object({
   email: z.string().email('有効なメールアドレスを入力してください'),
   password: z.string().min(8, 'パスワードは8文字以上必要です').max(100),
-  goalWeight: z.number().min(20).max(300).optional(),
-  goalCalories: z.number().int().min(500).max(10000).optional(),
+  goalWeight: z.number().min(20).max(300).nullable().optional(),
+  goalCalories: z.number().int().min(500).max(10000).nullable().optional(),
 });
 
 export const loginSchema = z.object({
