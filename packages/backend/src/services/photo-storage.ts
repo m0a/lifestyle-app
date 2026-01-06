@@ -89,7 +89,7 @@ export class PhotoStorageService {
     // 1. Use a public R2 bucket with custom domain
     // 2. Create a Worker endpoint to serve photos
     // For now, we return a placeholder that can be handled by a route
-    return `/api/photos/${encodeURIComponent(key)}`;
+    return `/api/meals/photos/${encodeURIComponent(key)}`;
   }
 
   /**
@@ -129,6 +129,6 @@ export class PhotoStorageService {
   async getPresignedUrl(photoKey: string): Promise<string> {
     // In production with custom domain: return actual R2 URL
     // For now: return Worker endpoint that serves the photo
-    return `/api/photos/${encodeURIComponent(photoKey)}`;
+    return `/api/meals/photos/${encodeURIComponent(photoKey)}`;
   }
 }
