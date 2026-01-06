@@ -143,7 +143,7 @@ function FoodItemCard({ item, onEdit, onDelete, editable }: FoodItemCardProps) {
           </span>
         </div>
         <div className="mt-1 text-sm text-gray-500">
-          {item.calories}kcal | P{item.protein}g F{item.fat}g C{item.carbs}g
+          {item.calories}kcal | P{item.protein.toFixed(1)}g F{item.fat.toFixed(1)}g C{item.carbs.toFixed(1)}g
         </div>
       </div>
       {editable && (

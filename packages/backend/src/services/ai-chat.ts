@@ -29,13 +29,32 @@ const CHAT_SYSTEM_PROMPT = `あなたは食事記録のアシスタントです�
 - **すべての変更は [CHANGE: {...}] 形式で統一してください**
 - 使用可能なアクション:
   - 食材追加: [CHANGE: {"action": "add", "food": {"name": "食材名", "portion": "medium", "calories": 100, "protein": 5.0, "fat": 2.0, "carbs": 10.0}}]
-  - 食材削除: [CHANGE: {"action": "remove", "foodItemId": "uuid-of-food-to-remove"}]
+  - **食材削除**: [CHANGE: {"action": "remove", "foodItemId": "uuid-of-food-to-remove"}]
   - 食材更新: [CHANGE: {"action": "update", "foodItemId": "uuid-of-food", "food": {"portion": "small", "calories": 80}}]
   - **日時変更**: [CHANGE: {"action": "set_datetime", "recordedAt": "2026-01-02T12:00:00"}]
   - **食事タイプ変更**: [CHANGE: {"action": "set_meal_type", "mealType": "breakfast"}]
 - **重要**: portionは必ず "small", "medium", "large" のいずれかを使用してください
 - caloriesは整数で指定してください
 - 日本語で応答してください
+
+## 食材の削除（重要）
+ユーザーが「〇〇を削除して」「〇〇を取り消して」などの削除を要求したら:
+1. **現在の食事リストから該当する食材のIDを必ず確認**
+2. **removeアクションを使用**（必ずfoodItemIdを指定）
+
+### 削除の具体例
+現在の食事リスト:
+- ご飯 (medium): 250kcal, P4g, F0.5g, C55g [id: abc-123]
+- 納豆 (medium): 100kcal, P8g, F5g, C6g [id: def-456]
+- 味噌汁 (medium): 50kcal, P3g, F1g, C5g [id: ghi-789]
+
+ユーザー: 「納豆を削除して」
+→ 応答: 納豆を削除しました。
+[CHANGE: {"action": "remove", "foodItemId": "def-456"}]
+
+ユーザー: 「味噌汁を取り消して」
+→ 応答: 味噌汁を削除しました。
+[CHANGE: {"action": "remove", "foodItemId": "ghi-789"}]
 
 ## 日付・時刻の変更（重要）
 ユーザーが「昨日」「一昨日」「今朝」「昨晩」「〜に変更して」などの日時変更を要求したら:
@@ -114,6 +133,8 @@ export class AIChatService {
     const modelId = getModelId(this.config);
 
     const mealContext = this.formatMealContext(currentMeal);
+    console.log('[AI Chat] Current meal context for AI:\n', mealContext);
+    console.log('[AI Chat] User message:', userMessage);
     const now = currentDateTime ? new Date(currentDateTime) : new Date();
     const currentDateStr = now.toISOString();
 
@@ -242,6 +263,7 @@ export class AIChatService {
 
       try {
         const parsed = JSON.parse(jsonStr);
+        console.log('[AI Chat] Parsed change:', JSON.stringify(parsed, null, 2));
 
         if (markerType === 'date_change' && parsed.recordedAt) {
           // Validate that it's a valid date
@@ -275,6 +297,7 @@ export class AIChatService {
               },
             });
           } else if (parsed.action === 'remove' && parsed.foodItemId) {
+            console.log('[AI Chat] ✓ Remove action detected - foodItemId:', parsed.foodItemId);
             changes.push({
               action: 'remove',
               foodItemId: parsed.foodItemId,
