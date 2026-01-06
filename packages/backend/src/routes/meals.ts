@@ -11,8 +11,9 @@ import { AIUsageService } from '../services/ai-usage';
 import { getAIConfigFromEnv } from '../lib/ai-provider';
 import { authMiddleware } from '../middleware/auth';
 import { eq, and } from 'drizzle-orm';
-import { mealRecords } from '../db/schema';
+import { mealRecords, mealFoodItems } from '../db/schema';
 import type { Database } from '../db';
+import { schema } from '../db';
 
 type Bindings = {
   DB: D1Database;
@@ -217,6 +218,23 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
           // Update photo with analysis results
           await photoService.updateAnalysisResult(photo.id, analysisResult.result.totals);
 
+          // Automatically create food item from photo analysis
+          const photoCount = await photoService.getMealPhotos(mealId);
+          const foodItemName = photoCount.length === 1 ? '写真から分析' : `写真${photoCount.length}から分析`;
+
+          await db.insert(schema.mealFoodItems).values({
+            id: nanoid(),
+            mealId,
+            photoId: photo.id,
+            name: foodItemName,
+            portion: 'medium',
+            calories: analysisResult.result.totals.calories,
+            protein: analysisResult.result.totals.protein,
+            fat: analysisResult.result.totals.fat,
+            carbs: analysisResult.result.totals.carbs,
+            createdAt: new Date().toISOString(),
+          });
+
           // Record AI usage
           if (analysisResult.usage) {
             await aiUsageService.recordUsage(user.id, 'image_analysis', analysisResult.usage);
@@ -247,6 +265,25 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
             if (analysisResult.success) {
               await photoService.updateAnalysisResult(pendingPhoto.id, analysisResult.result.totals);
+
+              // Automatically create food item from pending photo analysis
+              const currentPhotos = await photoService.getMealPhotos(mealId);
+              const photoIndex = currentPhotos.findIndex((p) => p.id === pendingPhoto.id) + 1;
+              const foodItemName = photoIndex === 1 ? '写真から分析' : `写真${photoIndex}から分析`;
+
+              await db.insert(schema.mealFoodItems).values({
+                id: nanoid(),
+                mealId,
+                photoId: pendingPhoto.id,
+                name: foodItemName,
+                portion: 'medium',
+                calories: analysisResult.result.totals.calories,
+                protein: analysisResult.result.totals.protein,
+                fat: analysisResult.result.totals.fat,
+                carbs: analysisResult.result.totals.carbs,
+                createdAt: new Date().toISOString(),
+              });
+
               if (analysisResult.usage) {
                 await aiUsageService.recordUsage(user.id, 'image_analysis', analysisResult.usage);
               }
