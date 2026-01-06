@@ -6,6 +6,9 @@ import { createMealSchema, updateMealSchema, dateRangeSchema, mealTypeSchema, me
 import { MealService } from '../services/meal';
 import { MealPhotoService } from '../services/meal-photo.service';
 import { PhotoStorageService } from '../services/photo-storage';
+import { AIAnalysisService } from '../services/ai-analysis';
+import { AIUsageService } from '../services/ai-usage';
+import { getAIConfigFromEnv } from '../lib/ai-provider';
 import { authMiddleware } from '../middleware/auth';
 import { eq, and } from 'drizzle-orm';
 import { mealRecords } from '../db/schema';
@@ -14,6 +17,9 @@ import type { Database } from '../db';
 type Bindings = {
   DB: D1Database;
   PHOTOS: R2Bucket;
+  GOOGLE_GENERATIVE_AI_API_KEY?: string;
+  AI_PROVIDER?: string;
+  AI_MODEL?: string;
 };
 
 type Variables = {
@@ -196,6 +202,33 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
         mealId,
         photoKey,
       });
+
+      // Analyze photo with AI
+      const aiConfig = getAIConfigFromEnv(c.env);
+      const aiService = new AIAnalysisService(aiConfig);
+      const photoData = await photoFile.arrayBuffer();
+
+      try {
+        const analysisResult = await aiService.analyzeMealPhoto(photoData, photoFile.type);
+
+        if (analysisResult.success) {
+          // Update photo with analysis results
+          await photoService.updateAnalysisResult(photo.id, analysisResult.result.totals);
+
+          // Record AI usage
+          if (analysisResult.usage) {
+            const aiUsageService = new AIUsageService(db);
+            await aiUsageService.recordUsage(user.id, 'image_analysis', analysisResult.usage);
+          }
+        } else {
+          // Mark analysis as failed
+          await photoService.markAnalysisFailed(photo.id);
+        }
+      } catch (analysisError) {
+        // Log error but don't fail the upload
+        console.error('Photo analysis failed:', analysisError);
+        await photoService.markAnalysisFailed(photo.id);
+      }
 
       // Generate presigned URL
       const photoUrl = await photoStorage.getPresignedUrl(photoKey);

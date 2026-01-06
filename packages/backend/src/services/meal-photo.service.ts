@@ -65,6 +65,43 @@ export class MealPhotoService {
     return { photoKey: photo.photoKey };
   }
 
+  async updateAnalysisResult(
+    photoId: string,
+    result: {
+      calories: number;
+      protein: number;
+      fat: number;
+      carbs: number;
+    }
+  ): Promise<MealPhoto> {
+    const [updated] = await this.db
+      .update(mealPhotos)
+      .set({
+        analysisStatus: 'complete',
+        calories: result.calories,
+        protein: result.protein,
+        fat: result.fat,
+        carbs: result.carbs,
+      })
+      .where(eq(mealPhotos.id, photoId))
+      .returning();
+
+    if (!updated) {
+      throw new Error('Failed to update photo analysis');
+    }
+
+    return updated;
+  }
+
+  async markAnalysisFailed(photoId: string): Promise<void> {
+    await this.db
+      .update(mealPhotos)
+      .set({
+        analysisStatus: 'failed',
+      })
+      .where(eq(mealPhotos.id, photoId));
+  }
+
   calculateTotals(photos: MealPhoto[]) {
     const analyzed = photos.filter((p) => p.analysisStatus === 'complete');
 
