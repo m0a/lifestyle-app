@@ -1,10 +1,12 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { v4 as uuidv4 } from 'uuid';
+import { nanoid } from 'nanoid';
 import { eq, and } from 'drizzle-orm';
 import { authMiddleware } from '../middleware/auth';
 import { mealRecords, mealFoodItems } from '../db/schema';
 import { PhotoStorageService } from '../services/photo-storage';
+import { MealPhotoService } from '../services/meal-photo.service';
 import { AIAnalysisService } from '../services/ai-analysis';
 import { AIUsageService } from '../services/ai-usage';
 import { getAIConfigFromEnv } from '../lib/ai-provider';
@@ -137,6 +139,16 @@ mealAnalysis.post('/analyze', async (c) => {
         createdAt: now,
       });
     }
+
+    // Add photo to meal_photos table
+    const photoService = new MealPhotoService(db);
+    const mealPhoto = await photoService.addPhoto({
+      mealId,
+      photoKey: tempPhotoKey,
+    });
+
+    // Update photo with analysis results
+    await photoService.updateAnalysisResult(mealPhoto.id, analysisResult.result.totals);
 
     // Record AI usage
     if (analysisResult.usage) {
