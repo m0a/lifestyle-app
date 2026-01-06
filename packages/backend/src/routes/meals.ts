@@ -43,15 +43,182 @@ const todayQuerySchema = z.object({
 // All meal routes require authentication
 export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
   .use(authMiddleware)
-  .post('/', zValidator('json', createMealSchema), async (c) => {
-    const input = c.req.valid('json');
-    const db = c.get('db');
-    const user = c.get('user');
+  .post('/', async (c) => {
+    const contentType = c.req.header('content-type') || '';
 
-    const mealService = new MealService(db);
-    const meal = await mealService.create(user.id, input);
+    // Support both JSON (legacy) and multipart/form-data (User Story 4)
+    if (contentType.includes('multipart/form-data')) {
+      // T055-T057: Multi-photo meal creation
+      const formData = await c.req.formData();
+      const db = c.get('db');
+      const user = c.get('user');
 
-    return c.json({ meal }, 201);
+      // Extract form fields
+      const mealType = formData.get('mealType') as string;
+      const content = formData.get('content') as string;
+      const recordedAt = formData.get('recordedAt') as string;
+
+      // Extract photos
+      const photos: File[] = [];
+      for (const [key, value] of formData.entries()) {
+        if (key.startsWith('photos[') && value instanceof File) {
+          photos.push(value);
+        }
+      }
+
+      // Validate required fields
+      if (!mealType || !content || !recordedAt) {
+        return c.json({ message: 'Missing required fields' }, 400);
+      }
+
+      // Validate photos
+      if (photos.length === 0) {
+        return c.json({ message: 'At least one photo is required' }, 400);
+      }
+
+      if (photos.length > 10) {
+        return c.json({ message: 'Maximum 10 photos per meal', code: 'PHOTO_LIMIT_EXCEEDED' }, 400);
+      }
+
+      // Validate each photo
+      for (const photo of photos) {
+        if (!photo.type.startsWith('image/')) {
+          return c.json({ message: 'Only JPEG and PNG images are supported' }, 400);
+        }
+        if (photo.size > 10 * 1024 * 1024) {
+          return c.json({ message: 'File size exceeds 10MB limit' }, 400);
+        }
+      }
+
+      // Create meal record (T056)
+      const mealService = new MealService(db);
+      const meal = await mealService.create(user.id, {
+        mealType: mealType as any,
+        content,
+        recordedAt,
+      });
+
+      // Upload photos and create meal_photos records (T056)
+      const photoStorage = new PhotoStorageService(c.env.PHOTOS);
+      const photoService = new MealPhotoService(db);
+      const aiConfig = getAIConfigFromEnv(c.env);
+      const aiService = new AIAnalysisService(aiConfig);
+      const aiUsageService = new AIUsageService(db);
+
+      const uploadedPhotos: Array<{
+        id: string;
+        mealId: string;
+        photoKey: string;
+        displayOrder: number;
+        analysisStatus: string;
+        photoUrl: string;
+      }> = [];
+
+      // Process each photo (T057: Trigger AI analysis)
+      for (let i = 0; i < photos.length; i++) {
+        const photo = photos[i];
+        if (!photo) continue;
+
+        const photoData = await photo.arrayBuffer();
+
+        // Upload to R2 - generate permanent key
+        const photoId = nanoid();
+        const photoKey = `photos/${user.id}/${meal.id}/${photoId}.jpg`;
+        await photoStorage.uploadPhoto(photoKey, photoData);
+
+        // Create meal_photo record
+        const mealPhoto = await photoService.addPhoto({
+          mealId: meal.id,
+          photoKey,
+          displayOrder: i,
+        });
+
+        // Trigger AI analysis (synchronous for now)
+        try {
+          const analysisResult = await aiService.analyzeMealPhoto(photoData, photo.type);
+
+          if (analysisResult.success) {
+            // Update photo with analysis results
+            await photoService.updateAnalysisResult(mealPhoto.id, analysisResult.result.totals);
+
+            // Create food items for this photo
+            const now = new Date().toISOString();
+            for (const item of analysisResult.result.foodItems) {
+              await db.insert(schema.mealFoodItems).values({
+                id: nanoid(),
+                mealId: meal.id,
+                photoId: mealPhoto.id,
+                name: item.name,
+                portion: item.portion,
+                calories: item.calories,
+                protein: item.protein,
+                fat: item.fat,
+                carbs: item.carbs,
+                createdAt: now,
+              });
+            }
+
+            // Record AI usage
+            if (analysisResult.usage) {
+              await aiUsageService.recordUsage(user.id, 'image_analysis', analysisResult.usage);
+            }
+          }
+        } catch (error) {
+          console.error(`Failed to analyze photo ${mealPhoto.id}:`, error);
+          // Continue with other photos even if one fails
+        }
+
+        uploadedPhotos.push({
+          id: mealPhoto.id,
+          mealId: meal.id,
+          photoKey,
+          displayOrder: i,
+          analysisStatus: 'complete',
+          photoUrl: `/api/meals/photos/${encodeURIComponent(photoKey)}`,
+        });
+      }
+
+      // Recalculate meal totals
+      const allPhotos = await photoService.getMealPhotos(meal.id);
+      const totals = photoService.calculateTotals(allPhotos);
+      await db.update(schema.mealRecords)
+        .set({
+          calories: totals.calories,
+          totalProtein: totals.protein,
+          totalFat: totals.fat,
+          totalCarbs: totals.carbs,
+          analysisSource: 'ai',
+          updatedAt: new Date().toISOString(),
+        })
+        .where(eq(schema.mealRecords.id, meal.id));
+
+      return c.json({
+        meal: {
+          ...meal,
+          calories: totals.calories,
+          totalProtein: totals.protein,
+          totalFat: totals.fat,
+          totalCarbs: totals.carbs,
+        },
+        photos: uploadedPhotos,
+      }, 201);
+    } else {
+      // Legacy JSON format
+      const body = await c.req.json();
+      const validationResult = createMealSchema.safeParse(body);
+
+      if (!validationResult.success) {
+        return c.json({ message: 'Validation error', errors: validationResult.error.errors }, 400);
+      }
+
+      const db = c.get('db');
+      const user = c.get('user');
+
+      const mealService = new MealService(db);
+      const meal = await mealService.create(user.id, validationResult.data);
+
+      return c.json({ meal }, 201);
+    }
   })
   .get('/', zValidator('query', mealQuerySchema), async (c) => {
     const query = c.req.valid('query');

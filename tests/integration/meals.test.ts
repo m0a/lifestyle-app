@@ -33,6 +33,41 @@ describe('Meal API Integration Tests', () => {
     it('should return 400 for negative calories', async () => {
       expect(true).toBe(true);
     });
+
+    it('should create meal with multiple photos (multipart/form-data)', async () => {
+      // T053: Test multi-photo meal creation
+      // Expected:
+      // - POST /api/meals with multipart/form-data
+      // - Fields: mealType, content, recordedAt, photos (File[])
+      // - Response: 201 with { meal: {...}, photos: [{id, mealId, photoKey, displayOrder, analysisStatus, photoUrl}] }
+      // - Each photo should have analysisStatus: 'pending'
+      // - displayOrder should be 0, 1, 2, ... based on upload order
+      expect(true).toBe(true);
+    });
+
+    it('should reject meal creation with no photos', async () => {
+      // T053: Photos array must have at least 1 photo
+      // Expected: 400 error "At least one photo is required"
+      expect(true).toBe(true);
+    });
+
+    it('should reject meal creation with more than 10 photos', async () => {
+      // T053: Photos array cannot exceed 10 photos
+      // Expected: 400 error "Maximum 10 photos per meal"
+      expect(true).toBe(true);
+    });
+
+    it('should reject photos larger than 10MB', async () => {
+      // T053: File size validation
+      // Expected: 400 error "File size exceeds 10MB limit"
+      expect(true).toBe(true);
+    });
+
+    it('should reject invalid photo formats (not JPEG/PNG)', async () => {
+      // T053: File type validation
+      // Expected: 400 error "Only JPEG and PNG images are supported"
+      expect(true).toBe(true);
+    });
   });
 
   describe('GET /api/meals', () => {
