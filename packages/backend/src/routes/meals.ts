@@ -149,37 +149,13 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
     const photoService = new MealPhotoService(db);
     const photoStorage = new PhotoStorageService(c.env.PHOTOS);
 
-    // Get photos from meal_photos table
+    // Get all photos from meal_photos table
     const photos = await photoService.getMealPhotos(mealId);
-
-    // Include legacy photo from meal_records.photo_key if not yet migrated
-    const allPhotos = [...photos];
-    if (meal.photoKey) {
-      // Check if legacy photo already migrated to meal_photos
-      const legacyExists = photos.some((p) => p.photoKey === meal.photoKey);
-      if (!legacyExists) {
-        // Add legacy photo as first photo with analysis_status based on meal data
-        const legacyStatus = meal.analysisSource === 'ai' ? 'complete' : 'pending';
-        allPhotos.unshift({
-          id: `legacy-${mealId}`,
-          mealId,
-          photoKey: meal.photoKey,
-          displayOrder: -1, // Display first
-          analysisStatus: legacyStatus,
-          calories: legacyStatus === 'complete' ? meal.calories : null,
-          protein: legacyStatus === 'complete' ? meal.totalProtein : null,
-          fat: legacyStatus === 'complete' ? meal.totalFat : null,
-          carbs: legacyStatus === 'complete' ? meal.totalCarbs : null,
-          createdAt: meal.createdAt,
-        });
-      }
-    }
-
-    const totals = photoService.calculateTotals(allPhotos);
+    const totals = photoService.calculateTotals(photos);
 
     // Generate presigned URLs
     const photosWithUrls = await Promise.all(
-      allPhotos.map(async (photo) => ({
+      photos.map(async (photo) => ({
         ...photo,
         photoUrl: await photoStorage.getPresignedUrl(photo.photoKey),
       }))
