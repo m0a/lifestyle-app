@@ -152,7 +152,18 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
     // Get all photos from meal_photos table
     const photos = await photoService.getMealPhotos(mealId);
-    const totals = photoService.calculateTotals(photos);
+
+    // Calculate totals from food items, not photos
+    const foodItems = await db.query.mealFoodItems.findMany({
+      where: eq(schema.mealFoodItems.mealId, mealId),
+    });
+
+    const totals = {
+      calories: foodItems.reduce((sum, item) => sum + item.calories, 0),
+      protein: foodItems.reduce((sum, item) => sum + item.protein, 0),
+      fat: foodItems.reduce((sum, item) => sum + item.fat, 0),
+      carbs: foodItems.reduce((sum, item) => sum + item.carbs, 0),
+    };
 
     // Generate presigned URLs
     const photosWithUrls = await Promise.all(
@@ -302,6 +313,29 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
         }
       }
 
+      // Update meal totals and content from all food items
+      const allFoodItems = await db.query.mealFoodItems.findMany({
+        where: eq(schema.mealFoodItems.mealId, mealId),
+      });
+
+      const totalCalories = allFoodItems.reduce((sum, item) => sum + item.calories, 0);
+      const totalProtein = allFoodItems.reduce((sum, item) => sum + item.protein, 0);
+      const totalFat = allFoodItems.reduce((sum, item) => sum + item.fat, 0);
+      const totalCarbs = allFoodItems.reduce((sum, item) => sum + item.carbs, 0);
+      const contentNames = allFoodItems.map(item => item.name).join('、');
+
+      await db.update(mealRecords)
+        .set({
+          content: contentNames,
+          calories: totalCalories,
+          totalProtein,
+          totalFat,
+          totalCarbs,
+        })
+        .where(eq(mealRecords.id, mealId));
+
+      console.log(`[Photo Upload] Updated meal totals: ${totalCalories} kcal, content: ${contentNames}`);
+
       // Generate presigned URL
       const photoUrl = await photoStorage.getPresignedUrl(photoKey);
 
@@ -332,14 +366,44 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
     const photoStorage = new PhotoStorageService(c.env.PHOTOS);
 
     try {
+      // Delete food items associated with this photo
+      await db.delete(schema.mealFoodItems)
+        .where(eq(schema.mealFoodItems.photoId, photoId));
+
       const { photoKey } = await photoService.deletePhoto(photoId);
 
       // Delete from R2
       await photoStorage.deletePhoto(photoKey);
 
-      // Recalculate totals
+      // Recalculate totals from remaining food items
+      const remainingFoodItems = await db.query.mealFoodItems.findMany({
+        where: eq(schema.mealFoodItems.mealId, mealId),
+      });
+
+      const totalCalories = remainingFoodItems.reduce((sum, item) => sum + item.calories, 0);
+      const totalProtein = remainingFoodItems.reduce((sum, item) => sum + item.protein, 0);
+      const totalFat = remainingFoodItems.reduce((sum, item) => sum + item.fat, 0);
+      const totalCarbs = remainingFoodItems.reduce((sum, item) => sum + item.carbs, 0);
+      const contentNames = remainingFoodItems.map(item => item.name).join('、');
+
+      await db.update(mealRecords)
+        .set({
+          content: contentNames,
+          calories: totalCalories,
+          totalProtein,
+          totalFat,
+          totalCarbs,
+        })
+        .where(eq(mealRecords.id, mealId));
+
+      const updatedTotals = {
+        calories: totalCalories,
+        protein: totalProtein,
+        fat: totalFat,
+        carbs: totalCarbs,
+      };
+
       const remainingPhotos = await photoService.getMealPhotos(mealId);
-      const updatedTotals = photoService.calculateTotals(remainingPhotos);
 
       return c.json({
         success: true,

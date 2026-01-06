@@ -16,6 +16,7 @@ interface MealEditModeProps {
   onCancel: () => void;
   onDirtyChange?: (isDirty: boolean) => void;
   onFoodItemsReload?: () => Promise<FoodItem[]>;
+  onMealReload?: () => Promise<void>;
 }
 
 export function MealEditMode({
@@ -26,6 +27,7 @@ export function MealEditMode({
   onCancel,
   onDirtyChange,
   onFoodItemsReload,
+  onMealReload,
 }: MealEditModeProps) {
   const toast = useToast();
   const [foodItems, setFoodItems] = useState<FoodItem[]>(initialFoodItems);
@@ -58,6 +60,13 @@ export function MealEditMode({
   useEffect(() => {
     onDirtyChange?.(isDirty);
   }, [isDirty, onDirtyChange]);
+
+  // Update totals when photoTotals change (after photo upload/delete)
+  useEffect(() => {
+    if (photoTotals) {
+      setTotals(photoTotals);
+    }
+  }, [photoTotals]);
 
   const handleUpdateItem = useCallback(
     async (itemId: string, updates: Partial<FoodItem>) => {
@@ -208,8 +217,8 @@ export function MealEditMode({
         setIsDirty(true);
         toast.success('写真をアップロードしました');
 
-        // Reload food items after photo analysis completes
-        if (onFoodItemsReload) {
+        // Reload food items and meal data after photo analysis completes
+        if (onFoodItemsReload && onMealReload) {
           // Wait to ensure backend processing is complete
           await new Promise(resolve => setTimeout(resolve, 1000));
 
@@ -218,24 +227,17 @@ export function MealEditMode({
           // Force state update with new array reference
           setFoodItems([...updatedFoodItems]);
 
-          // Recalculate totals from updated food items
-          const newTotals = updatedFoodItems.reduce(
-            (acc, item) => ({
-              calories: acc.calories + item.calories,
-              protein: acc.protein + item.protein,
-              fat: acc.fat + item.fat,
-              carbs: acc.carbs + item.carbs,
-            }),
-            { calories: 0, protein: 0, fat: 0, carbs: 0 }
-          );
-          setTotals({...newTotals});
+          // Reload meal data to get updated title and totals
+          await onMealReload();
+
+          // Note: totals will be updated automatically via photoTotals useEffect
         }
       } catch (error) {
         console.error('Failed to upload photo:', error);
         toast.error('写真のアップロードに失敗しました');
       }
     },
-    [uploadAsync, toast, onFoodItemsReload]
+    [uploadAsync, toast, onFoodItemsReload, onMealReload]
   );
 
   // Handler for photo deletion (T029)
