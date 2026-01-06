@@ -254,7 +254,7 @@ mealChat.post(
             createdAt: now,
           });
           break;
-        case 'remove':
+        case 'remove': {
           // For 'remove', foodItemId is required by schema
           console.log('[Chat Apply] Removing food item ID:', change.foodItemId);
           const deleteResult = await db.delete(mealFoodItems).where(
@@ -262,6 +262,7 @@ mealChat.post(
           );
           console.log('[Chat Apply] Delete result:', deleteResult);
           break;
+        }
         case 'update': {
           // For 'update', foodItemId and foodItem are required by schema
           // foodItem is partial - only update fields that are defined
