@@ -93,11 +93,51 @@ tests/
 
 ## Deployment
 
-- **Production**: Deploy on `v*` tag push
-- **Main Preview**: Auto-deploy on main branch push
-- **PR Preview**: Auto-deploy on PR, cleanup on close
+### 環境
 
-Preview uses separate D1 database (`health-tracker-preview-db`).
+- **Production**: 本番環境（`v*`タグpush時のみデプロイ）
+- **Main Preview**: mainブランチのプレビュー環境（main pushで自動デプロイ）
+- **PR Preview**: PR別のプレビュー環境（PR作成で自動デプロイ、クローズで削除）
+
+Preview環境は別のD1データベース（`health-tracker-preview-db`）を使用。
+
+### 本番デプロイ手順
+
+1. **mainブランチにマージ**:
+   ```bash
+   gh pr merge <PR番号> --squash --admin
+   ```
+
+2. **バージョンタグを作成・push**:
+   ```bash
+   git checkout main
+   git pull origin main
+   git tag v1.2.3
+   git push origin v1.2.3
+   ```
+
+3. **自動デプロイ開始**: GitHub ActionsがCI実行
+   - Lint & Type Check
+   - Unit & Integration Tests
+   - Build
+   - **Deploy to Production** ← タグpush時のみ実行
+
+4. **本番環境でマイグレーション実行**（必要な場合）:
+   ```bash
+   # Cloudflare Dashboard → Workers & Pages → lifestyle-app-backend → Settings → Variables
+   # で DB_ID を確認してから:
+   pnpm db:migrate
+   ```
+
+### デプロイ確認
+
+```bash
+# CI状態確認
+gh run list --branch main --limit 3
+
+# 本番URL
+https://lifestyle-app.abe00makoto.workers.dev
+```
 
 ### Preview Test Account
 
