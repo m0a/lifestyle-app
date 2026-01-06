@@ -92,13 +92,7 @@ export function Register() {
                 目標体重（kg、任意）
               </label>
               <input
-                {...register('goalWeight', {
-                  setValueAs: (v) => {
-                    if (v === '' || v == null) return undefined;
-                    const parsed = parseFloat(v);
-                    return isNaN(parsed) ? undefined : parsed;
-                  },
-                })}
+                {...register('goalWeight')}
                 type="number"
                 id="goalWeight"
                 step="0.1"
@@ -116,13 +110,7 @@ export function Register() {
                 1日の目標カロリー（kcal、任意）
               </label>
               <input
-                {...register('goalCalories', {
-                  setValueAs: (v) => {
-                    if (v === '' || v == null) return undefined;
-                    const parsed = parseInt(v, 10);
-                    return isNaN(parsed) ? undefined : parsed;
-                  },
-                })}
+                {...register('goalCalories')}
                 type="number"
                 id="goalCalories"
                 step="50"
