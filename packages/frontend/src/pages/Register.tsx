@@ -93,7 +93,11 @@ export function Register() {
               </label>
               <input
                 {...register('goalWeight', {
-                  setValueAs: (v) => (v === '' ? undefined : parseFloat(v)),
+                  setValueAs: (v) => {
+                    if (v === '' || v == null) return undefined;
+                    const parsed = parseFloat(v);
+                    return isNaN(parsed) ? undefined : parsed;
+                  },
                 })}
                 type="number"
                 id="goalWeight"
@@ -113,7 +117,11 @@ export function Register() {
               </label>
               <input
                 {...register('goalCalories', {
-                  setValueAs: (v) => (v === '' ? undefined : parseInt(v, 10)),
+                  setValueAs: (v) => {
+                    if (v === '' || v == null) return undefined;
+                    const parsed = parseInt(v, 10);
+                    return isNaN(parsed) ? undefined : parsed;
+                  },
                 })}
                 type="number"
                 id="goalCalories"
