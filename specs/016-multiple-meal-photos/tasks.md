@@ -94,20 +94,20 @@ Web app monorepo structure:
 
 ### Tests for User Story 2 (TDD - Write FIRST, ensure FAIL)
 
-- [ ] T031 [P] [US2] Integration test for POST /api/meal-chat/:mealId/add-photo in packages/backend/tests/integration/meal-chat-photos.test.ts
-- [ ] T032 [P] [US2] E2E test for chat photo upload flow in packages/frontend/tests/e2e/meal-chat-photo.spec.ts
+- [X] T031 [P] [US2] Integration test for POST /api/meal-chat/:mealId/add-photo in packages/backend/tests/integration/meal-chat-photos.test.ts
+- [X] T032 [P] [US2] E2E test for chat photo upload flow in packages/frontend/tests/e2e/meal-chat-photo.spec.ts
 
 ### Implementation for User Story 2
 
-- [ ] T033 [US2] Add POST /api/meal-chat/:mealId/add-photo endpoint in packages/backend/src/routes/meal-chat.ts
-- [ ] T034 [US2] Add photo upload handling with chat message creation in packages/backend/src/routes/meal-chat.ts
-- [ ] T035 [US2] Trigger AI analysis in background when photo added via chat in packages/backend/src/routes/meal-chat.ts
-- [ ] T036 [US2] Send AI acknowledgment message ("Analyzing photo...") in packages/backend/src/routes/meal-chat.ts
-- [ ] T037 [P] [US2] Add "Add Photo" button to MealChat component in packages/frontend/src/components/meal/MealChat.tsx
-- [ ] T038 [US2] Implement photo upload with progress indicator in chat UI in packages/frontend/src/components/meal/MealChat.tsx
-- [ ] T039 [US2] Display AI response with updated nutrition after analysis in packages/frontend/src/components/meal/MealChat.tsx
-- [ ] T040 [US2] Handle background upload (allow typing while uploading) in packages/frontend/src/components/meal/MealChat.tsx
-- [ ] T041 [US2] Show photo thumbnails in chat message thread in packages/frontend/src/components/meal/MealChat.tsx
+- [X] T033 [US2] Add POST /api/meal-chat/:mealId/add-photo endpoint in packages/backend/src/routes/meal-chat.ts
+- [X] T034 [US2] Add photo upload handling with chat message creation in packages/backend/src/routes/meal-chat.ts
+- [X] T035 [US2] Trigger AI analysis in background when photo added via chat in packages/backend/src/routes/meal-chat.ts
+- [X] T036 [US2] Send AI acknowledgment message ("Analyzing photo...") in packages/backend/src/routes/meal-chat.ts
+- [X] T037 [P] [US2] Add "Add Photo" button to MealChat component in packages/frontend/src/components/meal/MealChat.tsx
+- [X] T038 [US2] Implement photo upload with progress indicator in chat UI in packages/frontend/src/components/meal/MealChat.tsx
+- [X] T039 [US2] Display AI response with updated nutrition after analysis in packages/frontend/src/components/meal/MealChat.tsx
+- [X] T040 [US2] Handle background upload (allow typing while uploading) in packages/frontend/src/components/meal/MealChat.tsx
+- [X] T041 [US2] Show photo thumbnails in chat message thread in packages/frontend/src/components/meal/MealChat.tsx
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently - chat photo upload flows seamlessly
 
@@ -121,20 +121,20 @@ Web app monorepo structure:
 
 ### Tests for User Story 3 (TDD - Write FIRST, ensure FAIL)
 
-- [ ] T042 [P] [US3] Unit test for PhotoCarousel component in packages/frontend/src/components/meal/PhotoCarousel.test.tsx
-- [ ] T043 [P] [US3] E2E test for carousel swipe interaction in packages/frontend/tests/e2e/meal-history-carousel.spec.ts
-- [ ] T044 [P] [US3] E2E test for vertical scroll not triggering carousel in packages/frontend/tests/e2e/meal-history-carousel.spec.ts
+- [X] T042 [P] [US3] Unit test for PhotoCarousel component in packages/frontend/src/components/meal/PhotoCarousel.test.tsx
+- [X] T043 [P] [US3] E2E test for carousel swipe interaction in packages/frontend/tests/e2e/meal-history-carousel.spec.ts
+- [X] T044 [P] [US3] E2E test for vertical scroll not triggering carousel in packages/frontend/tests/e2e/meal-history-carousel.spec.ts
 
 ### Implementation for User Story 3
 
-- [ ] T045 [P] [US3] Create PhotoCarousel component with scroll-snap CSS in packages/frontend/src/components/meal/PhotoCarousel.tsx
-- [ ] T046 [US3] Add scroll position tracking and indicator dots to PhotoCarousel in packages/frontend/src/components/meal/PhotoCarousel.tsx
-- [ ] T047 [US3] Add touch-action: pan-x to carousel container in packages/frontend/src/components/meal/PhotoCarousel.tsx
-- [ ] T048 [US3] Handle single-photo case (no carousel) in PhotoCarousel in packages/frontend/src/components/meal/PhotoCarousel.tsx
-- [ ] T049 [US3] Integrate PhotoCarousel into MealList component in packages/frontend/src/components/meal/MealList.tsx
-- [ ] T050 [US3] Ensure parent scroll container has touch-action: pan-y in packages/frontend/src/components/meal/MealList.tsx
-- [ ] T051 [US3] Add lazy loading for carousel images in packages/frontend/src/components/meal/PhotoCarousel.tsx
-- [ ] T052 [US3] Add loading placeholders for photos in packages/frontend/src/components/meal/PhotoCarousel.tsx
+- [X] T045 [P] [US3] Create PhotoCarousel component with scroll-snap CSS in packages/frontend/src/components/meal/PhotoCarousel.tsx
+- [X] T046 [US3] Add scroll position tracking and indicator dots to PhotoCarousel in packages/frontend/src/components/meal/PhotoCarousel.tsx
+- [X] T047 [US3] Add touch-action: pan-x to carousel container in packages/frontend/src/components/meal/PhotoCarousel.tsx
+- [X] T048 [US3] Handle single-photo case (no carousel) in PhotoCarousel in packages/frontend/src/components/meal/PhotoCarousel.tsx
+- [X] T049 [US3] Integrate PhotoCarousel into MealList component in packages/frontend/src/components/meal/MealList.tsx
+- [X] T050 [US3] Ensure parent scroll container has touch-action: pan-y in packages/frontend/src/components/meal/MealList.tsx
+- [X] T051 [US3] Add lazy loading for carousel images in packages/frontend/src/components/meal/PhotoCarousel.tsx
+- [X] T052 [US3] Add loading placeholders for photos in packages/frontend/src/components/meal/PhotoCarousel.tsx
 
 **Checkpoint**: All three user stories should now be independently functional - history list has smooth carousels
 

@@ -105,10 +105,11 @@ export class MealService {
       filtered = filtered.slice(0, options.limit);
     }
 
-    // Get photo counts and first photo keys for all filtered meals
+    // Get photo counts, first photo keys, and photos array for all filtered meals
     const mealIds = filtered.map((m) => m.id);
     const photoCounts = new Map<string, number>();
     const firstPhotoKeys = new Map<string, string>();
+    const photosArrays = new Map<string, Array<{ id: string; photoKey: string; photoUrl: string }>>();
 
     if (mealIds.length > 0) {
       // Query all photos
@@ -128,15 +129,23 @@ export class MealService {
         }
       }
 
-      // Count photos and get first photo key per meal
+      // Count photos, get first photo key, and create photos array per meal
       for (const [mealId, photos] of photosByMeal.entries()) {
         photoCounts.set(mealId, photos.length);
-        // Sort by displayOrder and get first photo
+        // Sort by displayOrder
         const sortedPhotos = photos.sort((a, b) => a.displayOrder - b.displayOrder);
         const firstPhoto = sortedPhotos[0];
         if (firstPhoto) {
           firstPhotoKeys.set(mealId, firstPhoto.photoKey);
         }
+
+        // Create photos array with URLs
+        const photosWithUrls = sortedPhotos.map((photo) => ({
+          id: photo.id,
+          photoKey: photo.photoKey,
+          photoUrl: `/api/meals/photos/${encodeURIComponent(photo.photoKey)}`,
+        }));
+        photosArrays.set(mealId, photosWithUrls);
       }
     }
 
@@ -145,6 +154,7 @@ export class MealService {
       ...record,
       photoCount: photoCounts.get(record.id) || 0,
       firstPhotoKey: firstPhotoKeys.get(record.id) || null,
+      photos: photosArrays.get(record.id) || [],
     }));
   }
 

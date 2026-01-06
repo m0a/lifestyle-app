@@ -13,10 +13,16 @@ interface PhotoCarouselProps {
 
 export function PhotoCarousel({ photos, onPhotoClick }: PhotoCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
   const carouselRef = useRef<HTMLDivElement>(null);
 
   // Single photo - no carousel UI needed
   const isSinglePhoto = photos.length === 1;
+
+  // Track image load status
+  const handleImageLoad = (photoId: string) => {
+    setLoadedImages((prev) => new Set(prev).add(photoId));
+  };
 
   // Handle scroll to update current index
   useEffect(() => {
@@ -55,24 +61,46 @@ export function PhotoCarousel({ photos, onPhotoClick }: PhotoCarouselProps) {
             className={`relative flex-shrink-0 w-full ${!isSinglePhoto ? 'snap-center' : ''}`}
             onClick={() => onPhotoClick?.(photo, index)}
           >
-            {/* Loading placeholder for analyzing photos */}
-            {photo.analysisStatus === 'analyzing' && (
-              <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
-                  <p className="text-sm text-gray-600">AI分析中...</p>
+            {/* Container with background for loading state */}
+            <div className="relative w-full h-48 bg-gray-100 rounded-lg overflow-hidden">
+              {/* Loading placeholder - shows until image loads */}
+              {!loadedImages.has(photo.id) && (
+                <div className="absolute inset-0 flex items-center justify-center bg-gray-100 animate-pulse">
+                  <svg
+                    className="w-12 h-12 text-gray-300"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Photo image */}
-            <img
-              src={photo.photoUrl}
-              alt={`食事の写真 ${index + 1}`}
-              className="w-full h-48 object-cover rounded-lg"
-              loading="lazy"
-              data-testid={`carousel-photo-${index}`}
-            />
+              {/* AI analysis overlay - shows on top of image while analyzing */}
+              {photo.analysisStatus === 'analyzing' && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
+                    <p className="text-sm text-white">AI分析中...</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Photo image */}
+              <img
+                src={photo.photoUrl}
+                alt={`食事の写真 ${index + 1}`}
+                className="w-full h-full object-cover"
+                loading="lazy"
+                onLoad={() => handleImageLoad(photo.id)}
+                data-testid={`carousel-photo-${index}`}
+              />
+            </div>
           </div>
         ))}
       </div>
