@@ -97,7 +97,9 @@ export function MealList({
                   <div className="flex flex-col gap-3">
                     {/* Photo carousel */}
                     {meal.photos && meal.photos.length > 0 && (
-                      <PhotoCarousel photos={meal.photos} />
+                      <Link to={`/meals/${meal.id}`}>
+                        <PhotoCarousel photos={meal.photos} />
+                      </Link>
                     )}
                     <div className="flex items-start justify-between">
                       <Link to={`/meals/${meal.id}`} className="flex-1 hover:opacity-80 transition-opacity">
