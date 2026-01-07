@@ -339,6 +339,35 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-4">
+      {/* Upload progress overlay - Block all interactions during upload */}
+      {uploadProgress && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-lg">
+            <div className="space-y-4">
+              <h3 className="text-center text-lg font-medium text-gray-900">
+                写真をアップロード中...
+              </h3>
+              <div className="space-y-2">
+                <div className="text-center text-sm text-gray-600">
+                  {uploadProgress.current}/{uploadProgress.total} 枚完了
+                </div>
+                <div className="h-3 w-full overflow-hidden rounded-full bg-gray-200">
+                  <div
+                    className="h-full bg-blue-600 transition-all duration-300"
+                    style={{
+                      width: `${(uploadProgress.current / uploadProgress.total) * 100}%`,
+                    }}
+                  />
+                </div>
+              </div>
+              <p className="text-center text-xs text-gray-500">
+                アップロード中は他の操作ができません
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Photo capture modal (T024-T025) */}
       {showPhotoCapture && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -500,23 +529,6 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
 
                   {dateError && (
                     <p className="text-sm text-red-600">{dateError}</p>
-                  )}
-
-                  {/* Progress bar during upload */}
-                  {uploadProgress && (
-                    <div className="space-y-2">
-                      <div className="text-center text-sm text-gray-600">
-                        アップロード中: {uploadProgress.current}/{uploadProgress.total}
-                      </div>
-                      <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
-                        <div
-                          className="h-full bg-blue-600 transition-all duration-300"
-                          style={{
-                            width: `${(uploadProgress.current / uploadProgress.total) * 100}%`,
-                          }}
-                        />
-                      </div>
-                    </div>
                   )}
 
                   {/* Save button */}
