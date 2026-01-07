@@ -351,8 +351,8 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
         </div>
       )}
 
-      {/* Input State: idle or error */}
-      {(inputState === 'idle' || inputState === 'error') && (
+      {/* Input State: idle, error, or saving with multi-photo mode */}
+      {(inputState === 'idle' || inputState === 'error' || (inputState === 'saving' && multiPhotoMode)) && (
         <div className="space-y-3">
           {/* Mode toggle (T058) */}
           {!multiPhotoMode && (
@@ -407,7 +407,8 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
                     photoPreviewUrls.forEach(url => URL.revokeObjectURL(url));
                     setPhotoPreviewUrls([]);
                   }}
-                  className="text-sm text-gray-600 hover:text-gray-800"
+                  disabled={uploadProgress !== null}
+                  className="text-sm text-gray-600 hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   キャンセル
                 </button>
@@ -426,7 +427,8 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
                       {/* Remove button (T060) */}
                       <button
                         onClick={() => handleRemovePhoto(index)}
-                        className="absolute right-1 top-1 rounded-full bg-red-500 p-1.5 text-white hover:bg-red-600"
+                        disabled={uploadProgress !== null}
+                        className="absolute right-1 top-1 rounded-full bg-red-500 p-1.5 text-white hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
                         title="削除"
                       >
                         ✕
@@ -440,7 +442,7 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
               )}
 
               {/* Add photo button (T058) */}
-              {photos.length < 10 && (
+              {photos.length < 10 && !uploadProgress && (
                 <label className="block">
                   <input
                     type="file"
@@ -470,7 +472,8 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
                     <select
                       value={mealType}
                       onChange={(e) => setMealType(e.target.value as MealType)}
-                      className="rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      disabled={uploadProgress !== null}
+                      className="rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <option value="breakfast">朝食</option>
                       <option value="lunch">昼食</option>
@@ -490,7 +493,8 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
                         setRecordedAt(newDateTime);
                         setDateTimeSource('now');
                       }}
-                      className="rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      disabled={uploadProgress !== null}
+                      className="rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
                     />
                   </div>
 
