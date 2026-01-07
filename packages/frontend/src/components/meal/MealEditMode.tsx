@@ -365,7 +365,7 @@ export function MealEditMode({
         ) : photos.length > 0 ? (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              {photos.map((photo, index) => (
+              {photos.map((photo) => (
                 <div key={photo.id} className="group relative">
                   <img
                     src={photo.photoUrl}
