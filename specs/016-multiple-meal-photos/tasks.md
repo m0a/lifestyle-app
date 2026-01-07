@@ -167,24 +167,28 @@ Web app monorepo structure:
 
 ## Phase 7: User Story 5 - View and Manage Photo Gallery (Priority: P5)
 
+**Status**: ✅ COMPLETED (Feature deemed unnecessary - removed in PR #36)
+
 **Goal**: Users can view photos in full-screen gallery and delete individual photos
+
+**Decision**: PhotoGallery機能は既存のMealEditModeで写真削除が可能なため、機能重複と判断。詳細ページへの遷移の方が自然なUXフローとして、フルスクリーンギャラリーは不要と結論。
 
 **Independent Test**: Create meal with 3 photos, tap photo to open gallery, swipe between photos, delete one photo, verify remaining photos and updated totals
 
 ### Tests for User Story 5 (TDD - Write FIRST, ensure FAIL)
 
-- [ ] T062 [P] [US5] Unit test for PhotoGallery component in packages/frontend/src/components/meal/PhotoGallery.test.tsx
-- [ ] T063 [P] [US5] E2E test for full-screen gallery navigation in packages/frontend/tests/e2e/photo-gallery.spec.ts
-- [ ] T064 [P] [US5] E2E test for photo deletion from gallery in packages/frontend/tests/e2e/photo-gallery.spec.ts
+- [X] T062 [P] [US5] Unit test for PhotoGallery component in packages/frontend/src/components/meal/PhotoGallery.test.tsx
+- [X] T063 [P] [US5] E2E test for full-screen gallery navigation in packages/frontend/tests/e2e/photo-gallery.spec.ts
+- [X] T064 [P] [US5] E2E test for photo deletion from gallery in packages/frontend/tests/e2e/photo-gallery.spec.ts
 
 ### Implementation for User Story 5
 
-- [ ] T065 [P] [US5] Create PhotoGallery modal component in packages/frontend/src/components/meal/PhotoGallery.tsx
-- [ ] T066 [US5] Add full-screen photo display with swipe navigation in packages/frontend/src/components/meal/PhotoGallery.tsx
-- [ ] T067 [US5] Add delete button with confirmation dialog in packages/frontend/src/components/meal/PhotoGallery.tsx
-- [ ] T068 [US5] Prevent deletion of last photo with warning in packages/frontend/src/components/meal/PhotoGallery.tsx
-- [ ] T069 [US5] Integrate PhotoGallery with PhotoCarousel (open on photo tap) in packages/frontend/src/components/meal/PhotoCarousel.tsx
-- [ ] T070 [US5] Integrate PhotoGallery with MealEditMode (open from photo grid) in packages/frontend/src/components/meal/MealEditMode.tsx
+- [X] T065 [P] [US5] Create PhotoGallery modal component in packages/frontend/src/components/meal/PhotoGallery.tsx
+- [X] T066 [US5] Add full-screen photo display with swipe navigation in packages/frontend/src/components/meal/PhotoGallery.tsx
+- [X] T067 [US5] Add delete button with confirmation dialog in packages/frontend/src/components/meal/PhotoGallery.tsx
+- [X] T068 [US5] Prevent deletion of last photo with warning in packages/frontend/src/components/meal/PhotoGallery.tsx
+- [X] T069 [US5] Integrate PhotoGallery with PhotoCarousel (open on photo tap) in packages/frontend/src/components/meal/PhotoCarousel.tsx
+- [X] T070 [US5] Integrate PhotoGallery with MealEditMode (open from photo grid) in packages/frontend/src/components/meal/MealEditMode.tsx
 
 **Checkpoint**: All five user stories complete - full multi-photo functionality delivered
 
