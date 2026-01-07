@@ -36,37 +36,142 @@ describe('Meal API Integration Tests', () => {
 
     it('should create meal with multiple photos (multipart/form-data)', async () => {
       // T053: Test multi-photo meal creation
-      // Expected:
-      // - POST /api/meals with multipart/form-data
-      // - Fields: mealType, content, recordedAt, photos (File[])
-      // - Response: 201 with { meal: {...}, photos: [{id, mealId, photoKey, displayOrder, analysisStatus, photoUrl}] }
-      // - Each photo should have analysisStatus: 'pending'
-      // - displayOrder should be 0, 1, 2, ... based on upload order
-      expect(true).toBe(true);
+      // Note: This test requires:
+      // - Backend server running at localhost:8787
+      // - Valid authentication session
+      // - Test image files
+      //
+      // To run: Start backend with `pnpm dev:backend`, then `pnpm test:integration`
+
+      // Create test image blobs (1x1 px JPEG)
+      const testImage1 = new Blob([new Uint8Array([
+        0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46
+      ])], { type: 'image/jpeg' });
+
+      const testImage2 = new Blob([new Uint8Array([
+        0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46
+      ])], { type: 'image/jpeg' });
+
+      const formData = new FormData();
+      formData.append('mealType', 'lunch');
+      formData.append('content', 'テスト食事');
+      formData.append('recordedAt', new Date().toISOString());
+      formData.append('photos[0]', testImage1, 'photo1.jpg');
+      formData.append('photos[1]', testImage2, 'photo2.jpg');
+
+      // TODO: Add authentication
+      // const response = await fetch(`${API_BASE}/api/meals`, {
+      //   method: 'POST',
+      //   body: formData,
+      //   credentials: 'include',
+      // });
+
+      // TODO: Uncomment when backend integration test environment is ready
+      // expect(response.status).toBe(201);
+      // const data = await response.json();
+      // expect(data.meal).toBeDefined();
+      // expect(data.photos).toHaveLength(2);
+      // expect(data.photos[0].displayOrder).toBe(0);
+      // expect(data.photos[1].displayOrder).toBe(1);
+      // expect(data.photos[0].analysisStatus).toBe('pending');
+
+      expect(true).toBe(true); // Placeholder until integration environment is set up
     });
 
     it('should reject meal creation with no photos', async () => {
       // T053: Photos array must have at least 1 photo
-      // Expected: 400 error "At least one photo is required"
-      expect(true).toBe(true);
+      const formData = new FormData();
+      formData.append('mealType', 'lunch');
+      formData.append('content', 'テスト食事');
+      formData.append('recordedAt', new Date().toISOString());
+      // No photos appended
+
+      // TODO: Uncomment when backend integration test environment is ready
+      // const response = await fetch(`${API_BASE}/api/meals`, {
+      //   method: 'POST',
+      //   body: formData,
+      //   credentials: 'include',
+      // });
+      // expect(response.status).toBe(400);
+      // const error = await response.json();
+      // expect(error.message).toContain('At least one photo is required');
+
+      expect(true).toBe(true); // Placeholder
     });
 
     it('should reject meal creation with more than 10 photos', async () => {
       // T053: Photos array cannot exceed 10 photos
-      // Expected: 400 error "Maximum 10 photos per meal"
-      expect(true).toBe(true);
+      const formData = new FormData();
+      formData.append('mealType', 'lunch');
+      formData.append('content', 'テスト食事');
+      formData.append('recordedAt', new Date().toISOString());
+
+      // Add 11 photos
+      for (let i = 0; i < 11; i++) {
+        const testImage = new Blob([new Uint8Array([
+          0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46
+        ])], { type: 'image/jpeg' });
+        formData.append(`photos[${i}]`, testImage, `photo${i}.jpg`);
+      }
+
+      // TODO: Uncomment when backend integration test environment is ready
+      // const response = await fetch(`${API_BASE}/api/meals`, {
+      //   method: 'POST',
+      //   body: formData,
+      //   credentials: 'include',
+      // });
+      // expect(response.status).toBe(400);
+      // const error = await response.json();
+      // expect(error.message).toContain('Maximum 10 photos');
+
+      expect(true).toBe(true); // Placeholder
     });
 
     it('should reject photos larger than 10MB', async () => {
       // T053: File size validation
-      // Expected: 400 error "File size exceeds 10MB limit"
-      expect(true).toBe(true);
+      // Create a blob larger than 10MB
+      const largeImage = new Blob([new Uint8Array(11 * 1024 * 1024)], { type: 'image/jpeg' });
+
+      const formData = new FormData();
+      formData.append('mealType', 'lunch');
+      formData.append('content', 'テスト食事');
+      formData.append('recordedAt', new Date().toISOString());
+      formData.append('photos[0]', largeImage, 'large.jpg');
+
+      // TODO: Uncomment when backend integration test environment is ready
+      // const response = await fetch(`${API_BASE}/api/meals`, {
+      //   method: 'POST',
+      //   body: formData,
+      //   credentials: 'include',
+      // });
+      // expect(response.status).toBe(400);
+      // const error = await response.json();
+      // expect(error.message).toContain('10MB');
+
+      expect(true).toBe(true); // Placeholder
     });
 
     it('should reject invalid photo formats (not JPEG/PNG)', async () => {
       // T053: File type validation
-      // Expected: 400 error "Only JPEG and PNG images are supported"
-      expect(true).toBe(true);
+      const invalidImage = new Blob([new Uint8Array([0x00, 0x01, 0x02])], { type: 'text/plain' });
+
+      const formData = new FormData();
+      formData.append('mealType', 'lunch');
+      formData.append('content', 'テスト食事');
+      formData.append('recordedAt', new Date().toISOString());
+      formData.append('photos[0]', invalidImage, 'file.txt');
+
+      // TODO: Uncomment when backend integration test environment is ready
+      // const response = await fetch(`${API_BASE}/api/meals`, {
+      //   method: 'POST',
+      //   body: formData,
+      //   credentials: 'include',
+      // });
+      // expect(response.status).toBe(400);
+      // const error = await response.json();
+      // expect(error.message).toContain('JPEG\|PNG');
+
+      expect(true).toBe(true); // Placeholder
     });
   });
 

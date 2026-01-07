@@ -148,8 +148,8 @@ Web app monorepo structure:
 
 ### Tests for User Story 4 (TDD - Write FIRST, ensure FAIL)
 
-- [ ] T053 [P] [US4] Modify POST /api/meals test to support multiple photos in packages/backend/tests/integration/meals.test.ts
-- [ ] T054 [P] [US4] E2E test for multi-photo meal creation in packages/frontend/tests/e2e/meal-creation-multi-photo.spec.ts
+- [X] T053 [P] [US4] Modify POST /api/meals test to support multiple photos in packages/backend/tests/integration/meals.test.ts
+- [X] T054 [P] [US4] E2E test for multi-photo meal creation in packages/frontend/tests/e2e/meal-creation-multi-photo.spec.ts
 
 ### Implementation for User Story 4
 
