@@ -2,7 +2,6 @@ import { useState, useCallback, useEffect } from 'react';
 import { AnalysisResult } from './AnalysisResult';
 import { MealChat } from './MealChat';
 import { PhotoUploadButton } from './PhotoUploadButton';
-import { PhotoGallery } from './PhotoGallery';
 import { mealAnalysisApi, api } from '../../lib/api';
 import { useToast } from '../ui/Toast';
 import { validateNotFuture, toDateTimeLocal, getCurrentDateTimeLocal } from '../../lib/dateValidation';
@@ -43,9 +42,6 @@ export function MealEditMode({
   // Meal type editing state
   const [mealType, setMealType] = useState<MealType>(meal.mealType);
   const [isMealTypeSaving, setIsMealTypeSaving] = useState(false);
-  // Gallery state
-  const [galleryOpen, setGalleryOpen] = useState(false);
-  const [galleryIndex, setGalleryIndex] = useState(0);
 
   // Multiple photos support (User Story 1)
   const {
@@ -262,30 +258,6 @@ export function MealEditMode({
     [removePhoto, toast]
   );
 
-  // Handler for opening gallery (T070)
-  const handlePhotoClick = useCallback((index: number) => {
-    setGalleryIndex(index);
-    setGalleryOpen(true);
-  }, []);
-
-  // Handler for gallery deletion (T070)
-  const handleGalleryDelete = useCallback(
-    async (photoId: string) => {
-      try {
-        removePhoto(photoId);
-        setIsDirty(true);
-        toast.success('写真を削除しました');
-        // Close gallery after deletion
-        setGalleryOpen(false);
-      } catch (error) {
-        console.error('Failed to delete photo:', error);
-        toast.error('写真の削除に失敗しました');
-        throw error; // Re-throw to show error in gallery
-      }
-    },
-    [removePhoto, toast]
-  );
-
   // Show upload/delete errors
   useEffect(() => {
     if (uploadError) {
@@ -398,8 +370,7 @@ export function MealEditMode({
                   <img
                     src={photo.photoUrl}
                     alt="食事の写真"
-                    className="aspect-square w-full rounded-lg object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                    onClick={() => handlePhotoClick(index)}
+                    className="aspect-square w-full rounded-lg object-cover"
                   />
                   {/* Analysis status badge */}
                   <div className="absolute left-2 top-2 rounded bg-black bg-opacity-60 px-2 py-0.5 text-xs text-white">
@@ -513,17 +484,6 @@ export function MealEditMode({
           {isSaving ? '保存中...' : '保存して終了'}
         </button>
       </div>
-
-      {/* Photo Gallery Modal (T070) */}
-      {photos.length > 0 && (
-        <PhotoGallery
-          photos={photos}
-          initialIndex={galleryIndex}
-          isOpen={galleryOpen}
-          onClose={() => setGalleryOpen(false)}
-          onDelete={handleGalleryDelete}
-        />
-      )}
     </div>
   );
 }

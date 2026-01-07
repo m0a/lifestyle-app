@@ -3,48 +3,23 @@ import { Link } from 'react-router-dom';
 import type { MealRecord } from '@lifestyle-app/shared';
 import { MEAL_TYPE_LABELS } from '@lifestyle-app/shared';
 import { PhotoCarousel } from './PhotoCarousel';
-import { PhotoGallery } from './PhotoGallery';
 
 interface MealListProps {
   meals: MealRecord[];
   onDelete: (id: string) => void;
-  onPhotoDelete?: (mealId: string, photoId: string) => Promise<void>;
   isDeleting?: boolean;
 }
 
 export function MealList({
   meals,
   onDelete,
-  onPhotoDelete,
   isDeleting,
 }: MealListProps) {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-  const [galleryState, setGalleryState] = useState<{
-    isOpen: boolean;
-    mealId: string | null;
-    photoIndex: number;
-  }>({ isOpen: false, mealId: null, photoIndex: 0 });
 
   const handleDelete = (id: string) => {
     onDelete(id);
     setDeleteConfirmId(null);
-  };
-
-  const handlePhotoClick = (mealId: string, photoIndex: number) => {
-    setGalleryState({ isOpen: true, mealId, photoIndex });
-  };
-
-  const handleGalleryClose = () => {
-    setGalleryState({ isOpen: false, mealId: null, photoIndex: 0 });
-  };
-
-  const handlePhotoDelete = async (photoId: string) => {
-    if (!galleryState.mealId || !onPhotoDelete) return;
-
-    await onPhotoDelete(galleryState.mealId, photoId);
-
-    // Close gallery after deletion (photos will be refetched)
-    handleGalleryClose();
   };
 
   const getMealTypeColor = (mealType: string) => {
@@ -87,13 +62,8 @@ export function MealList({
     {} as Record<string, MealRecord[]>
   );
 
-  // Get current meal's photos for gallery
-  const currentMeal = meals.find((m) => m.id === galleryState.mealId);
-  const galleryPhotos = currentMeal?.photos ?? [];
-
   return (
-    <>
-      <div className="space-y-6" style={{ touchAction: 'pan-y' }}>
+    <div className="space-y-6" style={{ touchAction: 'pan-y' }}>
       {Object.entries(groupedMeals).map(([date, dateMeals]) => (
         <div key={date}>
           <h3 className="mb-3 text-sm font-medium text-gray-500">{date}</h3>
@@ -127,10 +97,7 @@ export function MealList({
                   <div className="flex flex-col gap-3">
                     {/* Photo carousel */}
                     {meal.photos && meal.photos.length > 0 && (
-                      <PhotoCarousel
-                        photos={meal.photos}
-                        onPhotoClick={(_, index) => handlePhotoClick(meal.id, index)}
-                      />
+                      <PhotoCarousel photos={meal.photos} />
                     )}
                     <div className="flex items-start justify-between">
                       <Link to={`/meals/${meal.id}`} className="flex-1 hover:opacity-80 transition-opacity">
@@ -202,18 +169,6 @@ export function MealList({
           </div>
         </div>
       ))}
-      </div>
-
-      {/* Photo Gallery Modal */}
-      {galleryPhotos.length > 0 && (
-        <PhotoGallery
-          photos={galleryPhotos}
-          initialIndex={galleryState.photoIndex}
-          isOpen={galleryState.isOpen}
-          onClose={handleGalleryClose}
-          onDelete={handlePhotoDelete}
-        />
-      )}
-    </>
+    </div>
   );
 }
