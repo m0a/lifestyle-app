@@ -152,6 +152,7 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
             await photoService.updateAnalysisResult(mealPhoto.id, analysisResult.result.totals);
 
             // Create food items for this photo
+            console.log(`[Multi-Photo Upload] Creating ${analysisResult.result.foodItems.length} food items for photo ${mealPhoto.id}`);
             const now = new Date().toISOString();
             for (const item of analysisResult.result.foodItems) {
               await db.insert(schema.mealFoodItems).values({
@@ -175,9 +176,11 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
             if (analysisResult.usage) {
               await aiUsageService.recordUsage(user.id, 'image_analysis', analysisResult.usage);
             }
+          } else {
+            console.error(`[Multi-Photo Upload] AI analysis failed for photo ${mealPhoto.id}`);
           }
         } catch (error) {
-          console.error(`Failed to analyze photo ${mealPhoto.id}:`, error);
+          console.error(`[Multi-Photo Upload] Failed to analyze photo ${mealPhoto.id}:`, error);
           // Continue with other photos even if one fails
         }
 
