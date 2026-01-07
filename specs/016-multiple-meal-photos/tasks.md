@@ -153,13 +153,13 @@ Web app monorepo structure:
 
 ### Implementation for User Story 4
 
-- [ ] T055 [US4] Modify POST /api/meals endpoint to accept photos array in packages/backend/src/routes/meals.ts
-- [ ] T056 [US4] Create meal_photos records for all uploaded photos in packages/backend/src/routes/meals.ts
-- [ ] T057 [US4] Trigger AI analysis for all photos in batch in packages/backend/src/routes/meals.ts
-- [ ] T058 [P] [US4] Add "Add Another Photo" button to SmartMealInput in packages/frontend/src/components/meal/SmartMealInput.tsx
-- [ ] T059 [US4] Display photo preview list before saving in packages/frontend/src/components/meal/SmartMealInput.tsx
-- [ ] T060 [US4] Allow removing photos from preview list in packages/frontend/src/components/meal/SmartMealInput.tsx
-- [ ] T061 [US4] Handle multiple file uploads in single request in packages/frontend/src/components/meal/SmartMealInput.tsx
+- [X] T055 [US4] Modify POST /api/meals endpoint to accept photos array in packages/backend/src/routes/meals.ts
+- [X] T056 [US4] Create meal_photos records for all uploaded photos in packages/backend/src/routes/meals.ts
+- [X] T057 [US4] Trigger AI analysis for all photos in batch in packages/backend/src/routes/meals.ts
+- [X] T058 [P] [US4] Add "Add Another Photo" button to SmartMealInput in packages/frontend/src/components/meal/SmartMealInput.tsx
+- [X] T059 [US4] Display photo preview list before saving in packages/frontend/src/components/meal/SmartMealInput.tsx
+- [X] T060 [US4] Allow removing photos from preview list in packages/frontend/src/components/meal/SmartMealInput.tsx
+- [X] T061 [US4] Handle multiple file uploads in single request in packages/frontend/src/components/meal/SmartMealInput.tsx
 
 **Checkpoint**: User Story 4 complete - users can add multiple photos at meal creation time
 
