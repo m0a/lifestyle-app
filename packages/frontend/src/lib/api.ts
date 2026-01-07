@@ -359,4 +359,65 @@ export const mealAnalysisApi = {
 
     return response.json();
   },
+
+  // Add photo to existing meal (POST /api/meals/:id/photos)
+  async addPhotoToMeal(
+    mealId: string,
+    photo: File
+  ): Promise<{ photo: { id: string; photoUrl: string }; meal: { calories: number; totalProtein: number; totalFat: number; totalCarbs: number } }> {
+    const formData = new FormData();
+    formData.append('photo', photo);
+
+    const response = await fetch(`${API_BASE_URL}/api/meals/${mealId}/photos`, {
+      method: 'POST',
+      body: formData,
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const error = await response.json() as { message?: string };
+      throw new ApiRequestError(error.message || 'Failed to add photo', response.status);
+    }
+
+    return response.json();
+  },
+
+  // Create meal with single photo (for first photo in multi-photo mode)
+  async createMealWithPhoto(data: {
+    mealType: MealType;
+    content: string;
+    recordedAt: string;
+    photo: File;
+  }): Promise<{
+    meal: {
+      id: string;
+      calories: number;
+      totalProtein: number;
+      totalFat: number;
+      totalCarbs: number;
+    };
+    photos: Array<{
+      id: string;
+      photoUrl: string;
+    }>;
+  }> {
+    const formData = new FormData();
+    formData.append('mealType', data.mealType);
+    formData.append('content', data.content);
+    formData.append('recordedAt', data.recordedAt);
+    formData.append('photos[0]', data.photo);
+
+    const response = await fetch(`${API_BASE_URL}/api/meals`, {
+      method: 'POST',
+      body: formData,
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const error = await response.json() as { message?: string };
+      throw new ApiRequestError(error.message || 'Failed to create meal', response.status);
+    }
+
+    return response.json();
+  },
 };

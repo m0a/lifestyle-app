@@ -41,6 +41,7 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
   const [multiPhotoMode, setMultiPhotoMode] = useState(false);
   const [photos, setPhotos] = useState<File[]>([]);
   const [photoPreviewUrls, setPhotoPreviewUrls] = useState<string[]>([]);
+  const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number } | null>(null);
 
   // Date/time state (011-meal-datetime)
   const [recordedAt, setRecordedAt] = useState<string>(new Date().toISOString());
@@ -271,7 +272,7 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
     setPhotoPreviewUrls(prev => prev.filter((_, i) => i !== index));
   }, [photoPreviewUrls]);
 
-  // Save meal with multiple photos (T061)
+  // Save meal with multiple photos (T061) - Upload one by one
   const handleSaveMultiPhoto = useCallback(async () => {
     if (photos.length === 0) {
       setError('少なくとも1枚の写真を選択してください');
@@ -286,29 +287,55 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
     }
 
     setInputState('saving');
+    setUploadProgress({ current: 0, total: photos.length });
+    setError(null);
+
     try {
-      await mealAnalysisApi.createMealWithPhotos({
+      // 1. Create meal with first photo
+      const firstPhoto = photos[0];
+      if (!firstPhoto) {
+        throw new Error('写真が選択されていません');
+      }
+
+      const firstResult = await mealAnalysisApi.createMealWithPhoto({
         mealType,
         content: '写真から記録',
         recordedAt,
-        photos,
+        photo: firstPhoto,
       });
+
+      setUploadProgress({ current: 1, total: photos.length });
+
+      // 2. Add remaining photos one by one
+      for (let i = 1; i < photos.length; i++) {
+        const photo = photos[i];
+        if (!photo) continue;
+        await mealAnalysisApi.addPhotoToMeal(firstResult.meal.id, photo);
+        setUploadProgress({ current: i + 1, total: photos.length });
+      }
 
       // Reset state
       setMultiPhotoMode(false);
       setPhotos([]);
       photoPreviewUrls.forEach(url => URL.revokeObjectURL(url));
       setPhotoPreviewUrls([]);
+      setUploadProgress(null);
       setRecordedAt(new Date().toISOString());
       setDateTimeSource('now');
       setDateError(null);
       setInputState('idle');
       onRefresh?.();
     } catch (err) {
-      setError(err instanceof Error ? err.message : '保存に失敗しました');
+      const currentPhoto = uploadProgress ? uploadProgress.current + 1 : 1;
+      setError(
+        err instanceof Error
+          ? `写真${currentPhoto}/${photos.length}のアップロードに失敗しました: ${err.message}`
+          : `写真${currentPhoto}/${photos.length}のアップロードに失敗しました`
+      );
+      setUploadProgress(null);
       setInputState('idle');
     }
-  }, [photos, photoPreviewUrls, mealType, recordedAt, onRefresh]);
+  }, [photos, photoPreviewUrls, mealType, recordedAt, onRefresh, uploadProgress]);
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-4">
@@ -471,13 +498,30 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
                     <p className="text-sm text-red-600">{dateError}</p>
                   )}
 
+                  {/* Progress bar during upload */}
+                  {uploadProgress && (
+                    <div className="space-y-2">
+                      <div className="text-center text-sm text-gray-600">
+                        アップロード中: {uploadProgress.current}/{uploadProgress.total}
+                      </div>
+                      <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
+                        <div
+                          className="h-full bg-blue-600 transition-all duration-300"
+                          style={{
+                            width: `${(uploadProgress.current / uploadProgress.total) * 100}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
                   {/* Save button */}
                   <button
                     onClick={handleSaveMultiPhoto}
-                    disabled={photos.length === 0}
+                    disabled={photos.length === 0 || uploadProgress !== null}
                     className="w-full rounded-lg bg-blue-500 px-6 py-3 font-medium text-white hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    保存して分析（{photos.length}枚の写真）
+                    {uploadProgress ? 'アップロード中...' : `保存して分析（${photos.length}枚の写真）`}
                   </button>
                 </div>
               )}
