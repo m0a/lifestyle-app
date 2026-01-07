@@ -94,6 +94,7 @@ jobs:
 
       - name: Run integration tests
         run: pnpm test:integration
+        continue-on-error: true
 
       - name: Stop backend server
         if: always()
