@@ -236,6 +236,49 @@ export const mealAnalysisApi = {
     return api.post(`/api/meals/${mealId}/save`, { mealType, recordedAt });
   },
 
+  // Create meal with multiple photos (T061)
+  async createMealWithPhotos(data: {
+    mealType: MealType;
+    content: string;
+    recordedAt: string;
+    photos: File[];
+  }): Promise<{
+    meal: {
+      id: string;
+      calories: number;
+      totalProtein: number;
+      totalFat: number;
+      totalCarbs: number;
+    };
+    photos: Array<{
+      id: string;
+      photoUrl: string;
+    }>;
+  }> {
+    const formData = new FormData();
+    formData.append('mealType', data.mealType);
+    formData.append('content', data.content);
+    formData.append('recordedAt', data.recordedAt);
+
+    // Append each photo with array notation
+    data.photos.forEach((photo, index) => {
+      formData.append(`photos[${index}]`, photo);
+    });
+
+    const response = await fetch(`${API_BASE_URL}/api/meals`, {
+      method: 'POST',
+      body: formData,
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const error = await response.json() as { message?: string };
+      throw new ApiRequestError(error.message || 'Failed to create meal', response.status);
+    }
+
+    return response.json();
+  },
+
   // Get chat history
   async getChatHistory(mealId: string): Promise<{ messages: ChatMessage[] }> {
     return api.get(`/api/meals/${mealId}/chat`);
