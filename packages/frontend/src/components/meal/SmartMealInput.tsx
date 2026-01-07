@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import type {
   FoodItem,
   NutritionTotals,
@@ -47,6 +47,21 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
   const [recordedAt, setRecordedAt] = useState<string>(new Date().toISOString());
   const [dateTimeSource, setDateTimeSource] = useState<DateTimeSource>('now');
   const [dateError, setDateError] = useState<string | null>(null);
+
+  // Disable body scroll during upload
+  useEffect(() => {
+    if (uploadProgress) {
+      // Save original overflow value
+      const originalOverflow = document.body.style.overflow;
+      // Disable scroll
+      document.body.style.overflow = 'hidden';
+
+      // Restore on cleanup
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [uploadProgress]);
 
   // Submit text for analysis (T012)
   const handleSubmit = useCallback(async () => {
