@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { api, mealAnalysisApi } from '../lib/api';
 import { MealEditMode } from '../components/meal/MealEditMode';
+import { PhotoCarousel } from '../components/meal/PhotoCarousel';
 import type { MealRecord, FoodItem, ChatMessage, NutritionTotals } from '@lifestyle-app/shared';
 import { MEAL_TYPE_LABELS } from '@lifestyle-app/shared';
 
@@ -186,8 +187,6 @@ export default function MealDetailPage() {
     );
   }
 
-  const firstPhoto = photos.length > 0 ? photos[0] : null;
-
   // Edit mode view
   if (isEditing) {
     return (
@@ -244,14 +243,10 @@ export default function MealDetailPage() {
         </div>
       </div>
 
-      {/* Photo */}
-      {firstPhoto && (
-        <div className="mb-4 overflow-hidden rounded-lg">
-          <img
-            src={firstPhoto.photoUrl}
-            alt={meal.content}
-            className="w-full object-cover"
-          />
+      {/* Photo Carousel */}
+      {photos.length > 0 && (
+        <div className="mb-4">
+          <PhotoCarousel photos={photos} />
         </div>
       )}
 

@@ -1,94 +1,16 @@
 import { useRef, useState, useCallback } from 'react';
 import { logError } from '../../lib/errorLogger';
+import { resizeImage } from '../../lib/imageResize';
 
 interface PhotoCaptureProps {
   onCapture: (photo: Blob) => void;
   onCancel?: () => void;
-  maxSize?: number; // Max dimension in pixels, default 1024
 }
 
-export function PhotoCapture({ onCapture, onCancel, maxSize = 1024 }: PhotoCaptureProps) {
+export function PhotoCapture({ onCapture, onCancel }: PhotoCaptureProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Resize image using Canvas API with memory management
-  const resizeImage = useCallback(async (file: Blob, maxDimension: number): Promise<Blob> => {
-    return new Promise((resolve, reject) => {
-      const objectUrl = URL.createObjectURL(file);
-      const img = new Image();
-
-      const cleanup = () => {
-        URL.revokeObjectURL(objectUrl);
-      };
-
-      img.onload = () => {
-        try {
-          const scale = Math.min(1, maxDimension / Math.max(img.width, img.height));
-          const width = Math.round(img.width * scale);
-          const height = Math.round(img.height * scale);
-
-          // Use OffscreenCanvas if available for better performance on mobile
-          let canvas: HTMLCanvasElement | OffscreenCanvas;
-          let ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null;
-
-          if (typeof OffscreenCanvas !== 'undefined') {
-            canvas = new OffscreenCanvas(width, height);
-            ctx = canvas.getContext('2d');
-          } else {
-            canvas = document.createElement('canvas');
-            canvas.width = width;
-            canvas.height = height;
-            ctx = canvas.getContext('2d');
-          }
-
-          if (!ctx) {
-            cleanup();
-            reject(new Error('Canvas context not available'));
-            return;
-          }
-
-          ctx.drawImage(img, 0, 0, width, height);
-
-          // Convert to blob
-          if (canvas instanceof OffscreenCanvas) {
-            canvas.convertToBlob({ type: 'image/jpeg', quality: 0.8 })
-              .then((blob) => {
-                cleanup();
-                resolve(blob);
-              })
-              .catch((err) => {
-                cleanup();
-                reject(err);
-              });
-          } else {
-            canvas.toBlob(
-              (blob) => {
-                cleanup();
-                if (blob) {
-                  resolve(blob);
-                } else {
-                  reject(new Error('Failed to create blob'));
-                }
-              },
-              'image/jpeg',
-              0.8
-            );
-          }
-        } catch (err) {
-          cleanup();
-          reject(err);
-        }
-      };
-
-      img.onerror = () => {
-        cleanup();
-        reject(new Error('Failed to load image'));
-      };
-
-      img.src = objectUrl;
-    });
-  }, []);
 
   // Handle file selection
   const handleFileSelect = useCallback(
@@ -105,8 +27,11 @@ export function PhotoCapture({ onCapture, onCancel, maxSize = 1024 }: PhotoCaptu
       setError(null);
 
       try {
-        const resized = await resizeImage(file, maxSize);
-        onCapture(resized);
+        // Resize image using shared utility (max 1920x1920, quality 0.85)
+        const resizedFile = await resizeImage(file);
+        // Convert File to Blob for onCapture
+        const blob = new Blob([resizedFile], { type: resizedFile.type });
+        onCapture(blob);
       } catch (err) {
         setError('画像の処理に失敗しました');
         const error = err instanceof Error ? err : new Error(String(err));
@@ -115,7 +40,7 @@ export function PhotoCapture({ onCapture, onCancel, maxSize = 1024 }: PhotoCaptu
         setIsProcessing(false);
       }
     },
-    [maxSize, onCapture, resizeImage]
+    [onCapture]
   );
 
   return (
