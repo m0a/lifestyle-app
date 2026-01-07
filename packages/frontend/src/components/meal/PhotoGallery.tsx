@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 interface Photo {
   id: string;
   photoUrl: string;
-  analysisStatus?: string;
+  analysisStatus?: string | null;
 }
 
 interface PhotoGalleryProps {
@@ -89,6 +89,7 @@ export function PhotoGallery({
     setIsDeleting(true);
     try {
       const photoToDelete = photos[currentIndex];
+      if (!photoToDelete) return;
       await onDelete(photoToDelete.id);
 
       // Move to previous photo if deleting the last one
@@ -107,11 +108,13 @@ export function PhotoGallery({
 
   // Touch handlers for swipe gestures
   const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX;
+    const touch = e.touches[0];
+    if (touch) touchStartX.current = touch.clientX;
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    touchEndX.current = e.touches[0].clientX;
+    const touch = e.touches[0];
+    if (touch) touchEndX.current = touch.clientX;
   };
 
   const handleTouchEnd = () => {
@@ -139,6 +142,8 @@ export function PhotoGallery({
 
   const currentPhoto = photos[currentIndex];
   const isLastPhoto = photos.length === 1;
+
+  if (!currentPhoto) return null;
 
   return (
     <div
