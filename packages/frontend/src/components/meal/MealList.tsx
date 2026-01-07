@@ -72,6 +72,7 @@ export function MealList({
               <div
                 key={meal.id}
                 className="rounded-lg border border-gray-200 bg-white p-4"
+                data-testid="meal-item"
               >
                 {deleteConfirmId === meal.id ? (
                   <div className="flex items-center justify-between">
