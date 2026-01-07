@@ -1,15 +1,52 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest';
+import { createTestSession, ensureTestUser, waitForBackend, TEST_USERS, API_BASE } from '../helpers/integration';
+import type { TestSession } from '../helpers/integration';
 
 describe('Meal API Integration Tests', () => {
-  const API_BASE = 'http://localhost:8787';
+  let session: TestSession;
+
+  beforeAll(async () => {
+    // Wait for backend to be ready
+    const isReady = await waitForBackend();
+    if (!isReady) {
+      throw new Error('Backend not ready after 30 seconds');
+    }
+
+    // Ensure test user exists
+    await ensureTestUser(TEST_USERS.default.email, TEST_USERS.default.password);
+  }, 35000); // 35s timeout for backend startup
+
+  beforeEach(async () => {
+    // Create new session and login before each test
+    session = createTestSession();
+    await session.login(TEST_USERS.default.email, TEST_USERS.default.password);
+  });
+
+  afterEach(async () => {
+    // Logout after each test
+    await session.logout();
+  });
 
   describe('POST /api/meals', () => {
     it('should create a meal record when authenticated', async () => {
-      // Expected:
-      // - POST /api/meals with valid session cookie
-      // - Body: { mealType: "breakfast", content: "卵かけご飯", calories: 350, recordedAt: "..." }
-      // - Response: 201 with { id, userId, mealType, content, calories, recordedAt, ... }
-      expect(true).toBe(true);
+      const response = await session.request('/api/meals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mealType: 'breakfast',
+          content: '卵かけご飯',
+          calories: 350,
+          recordedAt: new Date().toISOString(),
+        }),
+      });
+
+      expect(response.status).toBe(201);
+      const data = await response.json();
+      expect(data.meal).toBeDefined();
+      expect(data.meal.id).toBeDefined();
+      expect(data.meal.mealType).toBe('breakfast');
+      expect(data.meal.content).toBe('卵かけご飯');
+      expect(data.meal.calories).toBe(350);
     });
 
     it('should create meal record without calories', async () => {
@@ -34,16 +71,12 @@ describe('Meal API Integration Tests', () => {
       expect(true).toBe(true);
     });
 
-    it('should create meal with multiple photos (multipart/form-data)', async () => {
+    it.skip('should create meal with multiple photos (multipart/form-data)', async () => {
       // T053: Test multi-photo meal creation
-      // Note: This test requires:
-      // - Backend server running at localhost:8787
-      // - Valid authentication session
-      // - Test image files
-      //
-      // To run: Start backend with `pnpm dev:backend`, then `pnpm test:integration`
+      // Note: This test requires AI service (GOOGLE_GENERATIVE_AI_API_KEY)
+      // Skipped by default - enable when AI API key is available
 
-      // Create test image blobs (1x1 px JPEG)
+      // Create test image blobs (minimal valid JPEG)
       const testImage1 = new Blob([new Uint8Array([
         0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46
       ])], { type: 'image/jpeg' });
@@ -59,24 +92,25 @@ describe('Meal API Integration Tests', () => {
       formData.append('photos[0]', testImage1, 'photo1.jpg');
       formData.append('photos[1]', testImage2, 'photo2.jpg');
 
-      // TODO: Add authentication
-      // const response = await fetch(`${API_BASE}/api/meals`, {
-      //   method: 'POST',
-      //   body: formData,
-      //   credentials: 'include',
-      // });
+      const response = await session.request('/api/meals', {
+        method: 'POST',
+        body: formData,
+      });
 
-      // TODO: Uncomment when backend integration test environment is ready
-      // expect(response.status).toBe(201);
-      // const data = await response.json();
-      // expect(data.meal).toBeDefined();
-      // expect(data.photos).toHaveLength(2);
-      // expect(data.photos[0].displayOrder).toBe(0);
-      // expect(data.photos[1].displayOrder).toBe(1);
-      // expect(data.photos[0].analysisStatus).toBe('pending');
+      expect(response.status).toBe(201);
+      const data = await response.json();
+      expect(data.meal).toBeDefined();
+      expect(data.meal.id).toBeDefined();
+      expect(data.meal.mealType).toBe('lunch');
+      expect(data.photos).toBeDefined();
+      expect(data.photos.length).toBeGreaterThanOrEqual(1);
 
-      expect(true).toBe(true); // Placeholder until integration environment is set up
-    });
+      // Verify photo ordering if multiple photos were processed
+      if (data.photos.length > 1) {
+        expect(data.photos[0].displayOrder).toBe(0);
+        expect(data.photos[1].displayOrder).toBe(1);
+      }
+    }, 60000); // 60s timeout for AI processing
 
     it('should reject meal creation with no photos', async () => {
       // T053: Photos array must have at least 1 photo
@@ -86,17 +120,14 @@ describe('Meal API Integration Tests', () => {
       formData.append('recordedAt', new Date().toISOString());
       // No photos appended
 
-      // TODO: Uncomment when backend integration test environment is ready
-      // const response = await fetch(`${API_BASE}/api/meals`, {
-      //   method: 'POST',
-      //   body: formData,
-      //   credentials: 'include',
-      // });
-      // expect(response.status).toBe(400);
-      // const error = await response.json();
-      // expect(error.message).toContain('At least one photo is required');
+      const response = await session.request('/api/meals', {
+        method: 'POST',
+        body: formData,
+      });
 
-      expect(true).toBe(true); // Placeholder
+      expect(response.status).toBe(400);
+      const error = await response.json();
+      expect(error.message).toContain('photo');
     });
 
     it('should reject meal creation with more than 10 photos', async () => {
@@ -114,17 +145,14 @@ describe('Meal API Integration Tests', () => {
         formData.append(`photos[${i}]`, testImage, `photo${i}.jpg`);
       }
 
-      // TODO: Uncomment when backend integration test environment is ready
-      // const response = await fetch(`${API_BASE}/api/meals`, {
-      //   method: 'POST',
-      //   body: formData,
-      //   credentials: 'include',
-      // });
-      // expect(response.status).toBe(400);
-      // const error = await response.json();
-      // expect(error.message).toContain('Maximum 10 photos');
+      const response = await session.request('/api/meals', {
+        method: 'POST',
+        body: formData,
+      });
 
-      expect(true).toBe(true); // Placeholder
+      expect(response.status).toBe(400);
+      const error = await response.json();
+      expect(error.message).toContain('10');
     });
 
     it('should reject photos larger than 10MB', async () => {
@@ -138,17 +166,14 @@ describe('Meal API Integration Tests', () => {
       formData.append('recordedAt', new Date().toISOString());
       formData.append('photos[0]', largeImage, 'large.jpg');
 
-      // TODO: Uncomment when backend integration test environment is ready
-      // const response = await fetch(`${API_BASE}/api/meals`, {
-      //   method: 'POST',
-      //   body: formData,
-      //   credentials: 'include',
-      // });
-      // expect(response.status).toBe(400);
-      // const error = await response.json();
-      // expect(error.message).toContain('10MB');
+      const response = await session.request('/api/meals', {
+        method: 'POST',
+        body: formData,
+      });
 
-      expect(true).toBe(true); // Placeholder
+      expect(response.status).toBe(400);
+      const error = await response.json();
+      expect(error.message).toContain('10MB');
     });
 
     it('should reject invalid photo formats (not JPEG/PNG)', async () => {
@@ -161,17 +186,14 @@ describe('Meal API Integration Tests', () => {
       formData.append('recordedAt', new Date().toISOString());
       formData.append('photos[0]', invalidImage, 'file.txt');
 
-      // TODO: Uncomment when backend integration test environment is ready
-      // const response = await fetch(`${API_BASE}/api/meals`, {
-      //   method: 'POST',
-      //   body: formData,
-      //   credentials: 'include',
-      // });
-      // expect(response.status).toBe(400);
-      // const error = await response.json();
-      // expect(error.message).toContain('JPEG\|PNG');
+      const response = await session.request('/api/meals', {
+        method: 'POST',
+        body: formData,
+      });
 
-      expect(true).toBe(true); // Placeholder
+      expect(response.status).toBe(400);
+      const error = await response.json();
+      expect(error.message).toMatch(/JPEG|PNG|image/i);
     });
   });
 

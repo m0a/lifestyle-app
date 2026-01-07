@@ -352,7 +352,7 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
           : `写真${currentPhoto}/${photos.length}のアップロードに失敗しました`
       );
       setUploadProgress(null);
-      setInputState('idle');
+      setInputState('error');
     }
   }, [photos, photoPreviewUrls, mealType, recordedAt, onRefresh, uploadProgress]);
 
@@ -466,7 +466,7 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
               {photos.length > 0 && (
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                   {photoPreviewUrls.map((url, index) => (
-                    <div key={index} className="relative aspect-square">
+                    <div key={index} className="relative aspect-square" data-testid="photo-preview">
                       <img
                         src={url}
                         alt={`写真 ${index + 1}`}
@@ -478,6 +478,7 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
                         disabled={uploadProgress !== null}
                         className="absolute right-1 top-1 rounded-full bg-red-500 p-1.5 text-white hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
                         title="削除"
+                        data-testid="remove-photo-button"
                       >
                         ✕
                       </button>
