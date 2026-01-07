@@ -1,5 +1,6 @@
 import { useRef, useState, useCallback } from 'react';
 import { logError } from '../../lib/errorLogger';
+import { resizeImage } from '../../lib/imageResize';
 
 interface PhotoUploadButtonProps {
   onUpload: (file: File) => void;
@@ -42,7 +43,9 @@ export function PhotoUploadButton({
       setError(null);
 
       try {
-        onUpload(file);
+        // Resize image before uploading
+        const resizedFile = await resizeImage(file);
+        onUpload(resizedFile);
       } catch (err) {
         setError('アップロードに失敗しました');
         const error = err instanceof Error ? err : new Error(String(err));

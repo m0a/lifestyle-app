@@ -8,6 +8,7 @@ import type {
 } from '@lifestyle-app/shared';
 import { MEAL_TYPE_LABELS } from '@lifestyle-app/shared';
 import { mealAnalysisApi, getPhotoUrl } from '../../lib/api';
+import { resizeImages } from '../../lib/imageResize';
 import { AnalysisResult } from './AnalysisResult';
 import { PhotoCapture } from './PhotoCapture';
 import { MealChat } from './MealChat';
@@ -244,7 +245,7 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
   }, []);
 
   // Multi-photo handlers (T058-T061)
-  const handleAddPhotos = useCallback((newFiles: FileList | null) => {
+  const handleAddPhotos = useCallback(async (newFiles: FileList | null) => {
     if (!newFiles) return;
 
     const filesArray = Array.from(newFiles);
@@ -268,10 +269,13 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
       return;
     }
 
-    // Create preview URLs
-    const newPreviewUrls = validFiles.map(file => URL.createObjectURL(file));
+    // Resize images before adding to state
+    const resizedFiles = await resizeImages(validFiles);
 
-    setPhotos(prev => [...prev, ...validFiles]);
+    // Create preview URLs from resized images
+    const newPreviewUrls = resizedFiles.map(file => URL.createObjectURL(file));
+
+    setPhotos(prev => [...prev, ...resizedFiles]);
     setPhotoPreviewUrls(prev => [...prev, ...newPreviewUrls]);
     setError(null);
   }, [photos.length]);
