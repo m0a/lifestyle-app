@@ -121,6 +121,9 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
         photoUrl: string;
       }> = [];
 
+      // Collect all food names for generating meal content
+      const allFoodNames: string[] = [];
+
       // Process each photo (T057: Trigger AI analysis)
       for (let i = 0; i < photos.length; i++) {
         const photo = photos[i];
@@ -163,6 +166,9 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
                 carbs: item.carbs,
                 createdAt: now,
               });
+
+              // Collect food name for content generation
+              allFoodNames.push(item.name);
             }
 
             // Record AI usage
@@ -185,11 +191,17 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
         });
       }
 
-      // Recalculate meal totals
+      // Generate meal content from AI-detected food items
+      const generatedContent = allFoodNames.length > 0
+        ? allFoodNames.join(', ')
+        : content; // Fallback to user-provided content if no items detected
+
+      // Recalculate meal totals and update content
       const allPhotos = await photoService.getMealPhotos(meal.id);
       const totals = photoService.calculateTotals(allPhotos);
       await db.update(schema.mealRecords)
         .set({
+          content: generatedContent,
           calories: totals.calories,
           totalProtein: totals.protein,
           totalFat: totals.fat,

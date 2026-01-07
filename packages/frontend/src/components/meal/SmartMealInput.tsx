@@ -289,7 +289,7 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
     try {
       await mealAnalysisApi.createMealWithPhotos({
         mealType,
-        content: `${photos.length}枚の写真から記録`,
+        content: '写真から記録',
         recordedAt,
         photos,
       });
