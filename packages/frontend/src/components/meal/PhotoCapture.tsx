@@ -18,8 +18,17 @@ export function PhotoCapture({ onCapture, onCancel }: PhotoCaptureProps) {
       const file = event.target.files?.[0];
       if (!file) return;
 
-      if (!file.type.startsWith('image/')) {
-        setError('画像ファイルを選択してください');
+      // T076: Validate file type (JPEG/PNG only)
+      const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png'];
+      if (!ALLOWED_TYPES.includes(file.type.toLowerCase())) {
+        setError('JPEG または PNG 形式の画像を選択してください');
+        return;
+      }
+
+      // T075: Validate file size (10MB limit)
+      const MAX_SIZE = 10 * 1024 * 1024;
+      if (file.size > MAX_SIZE) {
+        setError('ファイルサイズは10MB以下にしてください');
         return;
       }
 
@@ -51,14 +60,14 @@ export function PhotoCapture({ onCapture, onCancel }: PhotoCaptureProps) {
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/*"
+        accept="image/jpeg,image/jpg,image/png"
         onChange={handleFileSelect}
         className="hidden"
       />
       {/* Native camera input for mobile - more reliable than getUserMedia */}
       <input
         type="file"
-        accept="image/*"
+        accept="image/jpeg,image/jpg,image/png"
         capture="environment"
         onChange={handleFileSelect}
         className="hidden"

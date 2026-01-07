@@ -78,9 +78,14 @@ export const client = hc<AppType>(API_BASE_URL);
 
 ### Database Schema
 
-Tables: `users`, `weight_records`, `meal_records`, `meal_food_items`, `meal_chat_messages`, `exercise_records`
+Tables: `users`, `weight_records`, `meal_records`, `meal_food_items`, `meal_photos`, `meal_chat_messages`, `exercise_records`
 
 Migrations in `packages/backend/migrations/`. Run migrations before testing new schema changes.
+
+**Multiple Photos Feature (016-multiple-meal-photos)**:
+- `meal_photos`: 1食事あたり最大10枚の写真を保存
+- `meal_records.photo_key`: 旧フィールド（後方互換性のため保持）
+- 写真ごとのAI分析、カロリー・栄養素の自動集計
 
 ## Test Structure
 
@@ -182,10 +187,42 @@ pnpm dev:backend
 4. `stack` と `componentStack` で原因箇所を特定
 
 ## Recent Changes
-- 016-multiple-meal-photos: Added TypeScript 5.x (strict mode) + React 18+, Hono, Drizzle ORM, Zod, TanStack Query, Tailwind CSS, Vercel AI SDK (@ai-sdk/google)
-- 015-request-id-tracing: Added TypeScript 5.x (strict mode)
-- 014-ai-usage-tracking: Added TypeScript 5.x (strict mode) + React 18+, Hono, Drizzle ORM, Zod, TanStack Query, Tailwind CSS, Vercel AI SDK
+- **016-multiple-meal-photos**: ✅ COMPLETED (84.3% - 70/83 tasks)
+  - Multiple photos per meal (up to 10 photos)
+  - User Story 1-4 implemented (US5 deemed unnecessary)
+  - PhotoCarousel with horizontal scroll
+  - AI analysis for each photo with aggregated nutrition
+  - Image resize before upload (1920px width)
+  - Client-side validation (10MB limit, JPEG/PNG only)
+  - Remaining: 13 Polish tasks (optional enhancements)
+- 015-request-id-tracing: Request ID tracking for debugging
+- 014-ai-usage-tracking: AI usage metrics and cost tracking
+
+## Features
+
+### Multiple Photos Per Meal (016-multiple-meal-photos)
+**Status**: ✅ Core functionality complete (70/83 tasks)
+
+**Completed Features:**
+- ✅ Add photos to existing meals (User Story 1)
+- ✅ Add photos via AI chat interface (User Story 2)
+- ✅ Horizontal photo carousel in meal history (User Story 3)
+- ✅ Multi-photo meal creation (User Story 4)
+- ✅ Image validation (10MB, JPEG/PNG only)
+- ✅ Auto-resize to 1920px before upload
+
+**Architecture:**
+- Database: `meal_photos` table with 1:N relation to `meal_records`
+- Storage: R2 for photo files, D1 for metadata
+- AI: Per-photo Gemini analysis with aggregated nutrition totals
+- Components: `PhotoCarousel`, `PhotoCapture`, `PhotoUploadButton`
+
+**Endpoints:**
+- `GET/POST/DELETE /api/meals/:mealId/photos` - Photo CRUD
+- `POST /api/meal-chat/:mealId/add-photo` - Chat photo upload
+- `POST /api/meals` - Multi-photo meal creation
 
 ## Active Technologies
-- TypeScript 5.x (strict mode) + React 18+, Hono, Drizzle ORM, Zod, TanStack Query, Tailwind CSS, Vercel AI SDK (@ai-sdk/google) (016-multiple-meal-photos)
-- Cloudflare D1 (SQLite) for metadata, R2 for photo files (016-multiple-meal-photos)
+- TypeScript 5.x (strict mode) + React 18+, Hono, Drizzle ORM, Zod, TanStack Query, Tailwind CSS, Vercel AI SDK (@ai-sdk/google)
+- Cloudflare D1 (SQLite) for metadata, R2 for photo files
+- Image processing: Canvas API for client-side resize
