@@ -49,6 +49,19 @@ export function Meal() {
     await mealAnalysisApi.saveMealAnalysis(mealId, mealType, recordedAt);
   }, []);
 
+  // Delete photo from meal
+  const handlePhotoDelete = useCallback(async (mealId: string, photoId: string) => {
+    const res = await api.meals[':id'].photos[':photoId'].$delete({
+      param: { id: mealId, photoId },
+    });
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ message: 'Failed to delete photo' }));
+      throw new Error((error as { message?: string }).message || 'Failed to delete photo');
+    }
+    // Refresh meals list to show updated data
+    refresh();
+  }, [refresh]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -130,6 +143,7 @@ export function Meal() {
           <MealList
             meals={meals as MealRecord[]}
             onDelete={remove}
+            onPhotoDelete={handlePhotoDelete}
             isDeleting={isDeleting}
           />
         )}
