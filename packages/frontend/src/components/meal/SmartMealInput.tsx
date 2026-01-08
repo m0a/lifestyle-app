@@ -11,6 +11,7 @@ import { mealAnalysisApi, getPhotoUrl } from '../../lib/api';
 import { resizeImages } from '../../lib/imageResize';
 import { AnalysisResult } from './AnalysisResult';
 import { PhotoCapture } from './PhotoCapture';
+import { PhotoUploadErrorBoundary } from './PhotoUploadErrorBoundary';
 import { MealChat } from './MealChat';
 import { validateNotFuture, toDateTimeLocal, getCurrentDateTimeLocal } from '../../lib/dateValidation';
 
@@ -391,10 +392,12 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
       {showPhotoCapture && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md rounded-lg bg-white p-4">
-            <PhotoCapture
-              onCapture={handlePhotoCapture}
-              onCancel={() => setShowPhotoCapture(false)}
-            />
+            <PhotoUploadErrorBoundary>
+              <PhotoCapture
+                onCapture={handlePhotoCapture}
+                onCancel={() => setShowPhotoCapture(false)}
+              />
+            </PhotoUploadErrorBoundary>
           </div>
         </div>
       )}

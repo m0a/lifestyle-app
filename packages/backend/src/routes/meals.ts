@@ -605,4 +605,212 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
       }
       throw error;
     }
+  })
+  // T071: Photo reorder endpoint
+  .patch('/:id/photos/reorder', async (c) => {
+    const mealId = c.req.param('id');
+    const db = c.get('db');
+    const user = c.get('user');
+
+    // Verify meal belongs to user
+    const meal = await db.query.mealRecords.findFirst({
+      where: and(eq(mealRecords.id, mealId), eq(mealRecords.userId, user.id)),
+    });
+
+    if (!meal) {
+      return c.json({ message: 'Meal not found' }, 404);
+    }
+
+    // Expected body: { photoIds: string[] } - array of photo IDs in new order
+    const body = await c.req.json();
+    const { photoIds } = body;
+
+    if (!Array.isArray(photoIds) || photoIds.length === 0) {
+      return c.json({ message: 'photoIds must be a non-empty array' }, 400);
+    }
+
+    const photoService = new MealPhotoService(db);
+
+    // Update display_order for each photo
+    for (let i = 0; i < photoIds.length; i++) {
+      await db.update(schema.mealPhotos)
+        .set({ displayOrder: i })
+        .where(and(
+          eq(schema.mealPhotos.id, photoIds[i]),
+          eq(schema.mealPhotos.mealId, mealId)
+        ));
+    }
+
+    const updatedPhotos = await photoService.getMealPhotos(mealId);
+
+    return c.json({
+      success: true,
+      photos: updatedPhotos,
+    });
+  })
+  // T072: Retry photo analysis endpoint
+  .post('/:id/photos/:photoId/analyze', async (c) => {
+    const mealId = c.req.param('id');
+    const photoId = c.req.param('photoId');
+    const db = c.get('db');
+    const user = c.get('user');
+
+    // Verify meal belongs to user
+    const meal = await db.query.mealRecords.findFirst({
+      where: and(eq(mealRecords.id, mealId), eq(mealRecords.userId, user.id)),
+    });
+
+    if (!meal) {
+      return c.json({ message: 'Meal not found' }, 404);
+    }
+
+    // Get photo
+    const photo = await db.query.mealPhotos.findFirst({
+      where: and(
+        eq(schema.mealPhotos.id, photoId),
+        eq(schema.mealPhotos.mealId, mealId)
+      ),
+    });
+
+    if (!photo) {
+      return c.json({ message: 'Photo not found' }, 404);
+    }
+
+    // Update status to analyzing
+    await db.update(schema.mealPhotos)
+      .set({ analysisStatus: 'analyzing' })
+      .where(eq(schema.mealPhotos.id, photoId));
+
+    // Trigger background analysis (similar to photo upload flow)
+    const photoStorage = new PhotoStorageService(c.env.PHOTOS);
+    const photoService = new MealPhotoService(db);
+    const aiConfig = getAIConfigFromEnv(c.env);
+    const aiService = new AIAnalysisService(aiConfig);
+
+    // Start analysis in background (fire and forget)
+    c.executionCtx.waitUntil((async () => {
+      try {
+        // Get photo data from R2
+        const photoData = await photoStorage.getPhotoForAnalysis(photo.photoKey);
+
+        if (!photoData) {
+          throw new Error('Failed to retrieve photo from storage');
+        }
+
+        const analysisResult = await aiService.analyzeMealPhoto(photoData.data, photoData.mimeType);
+
+        if (analysisResult.success) {
+          // Delete old food items for this photo
+          await db.delete(schema.mealFoodItems)
+            .where(eq(schema.mealFoodItems.photoId, photoId));
+
+          // Update photo with analysis results
+          await photoService.updateAnalysisResult(photoId, analysisResult.result.totals);
+
+          // Insert new food items
+          for (const item of analysisResult.result.foodItems) {
+            await db.insert(schema.mealFoodItems).values({
+              id: nanoid(),
+              mealId: mealId,
+              photoId: photoId,
+              name: item.name,
+              portion: item.portion,
+              calories: item.calories,
+              protein: item.protein,
+              fat: item.fat,
+              carbs: item.carbs,
+              createdAt: new Date().toISOString(),
+            });
+          }
+
+          // Update photo status
+          await db.update(schema.mealPhotos)
+            .set({ analysisStatus: 'complete' })
+            .where(eq(schema.mealPhotos.id, photoId));
+
+          // Recalculate meal totals
+          const allFoodItems = await db.query.mealFoodItems.findMany({
+            where: eq(schema.mealFoodItems.mealId, mealId),
+          });
+
+          const totalCalories = allFoodItems.reduce((sum, item) => sum + item.calories, 0);
+          const totalProtein = allFoodItems.reduce((sum, item) => sum + item.protein, 0);
+          const totalFat = allFoodItems.reduce((sum, item) => sum + item.fat, 0);
+          const totalCarbs = allFoodItems.reduce((sum, item) => sum + item.carbs, 0);
+          const contentNames = allFoodItems.map(item => item.name).join('、');
+
+          await db.update(mealRecords)
+            .set({
+              content: contentNames,
+              calories: totalCalories,
+              totalProtein,
+              totalFat,
+              totalCarbs,
+            })
+            .where(eq(mealRecords.id, mealId));
+        } else {
+          // Analysis failed
+          await db.update(schema.mealPhotos)
+            .set({ analysisStatus: 'failed' })
+            .where(eq(schema.mealPhotos.id, photoId));
+        }
+      } catch (error) {
+        // Update photo status to failed
+        await db.update(schema.mealPhotos)
+          .set({ analysisStatus: 'failed' })
+          .where(eq(schema.mealPhotos.id, photoId));
+      }
+    })());
+
+    return c.json({
+      success: true,
+      message: 'Analysis started',
+      photoId,
+      status: 'analyzing',
+    });
+  })
+  // T073: Photo analysis status polling endpoint
+  .get('/:id/photos/:photoId/status', async (c) => {
+    const mealId = c.req.param('id');
+    const photoId = c.req.param('photoId');
+    const db = c.get('db');
+    const user = c.get('user');
+
+    // Verify meal belongs to user
+    const meal = await db.query.mealRecords.findFirst({
+      where: and(eq(mealRecords.id, mealId), eq(mealRecords.userId, user.id)),
+    });
+
+    if (!meal) {
+      return c.json({ message: 'Meal not found' }, 404);
+    }
+
+    // Get photo with food items
+    const photo = await db.query.mealPhotos.findFirst({
+      where: and(
+        eq(schema.mealPhotos.id, photoId),
+        eq(schema.mealPhotos.mealId, mealId)
+      ),
+    });
+
+    if (!photo) {
+      return c.json({ message: 'Photo not found' }, 404);
+    }
+
+    // Get associated food items
+    const foodItems = await db.query.mealFoodItems.findMany({
+      where: eq(schema.mealFoodItems.photoId, photoId),
+    });
+
+    return c.json({
+      photoId: photo.id,
+      status: photo.analysisStatus,
+      foodItems: foodItems.map(item => ({
+        name: item.name,
+        calories: item.calories,
+        protein: item.protein,
+        fat: item.fat,
+        carbs: item.carbs,
+      })),
+    });
   });

@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { AnalysisResult } from './AnalysisResult';
 import { MealChat } from './MealChat';
 import { PhotoUploadButton } from './PhotoUploadButton';
+import { PhotoUploadErrorBoundary } from './PhotoUploadErrorBoundary';
 import { mealAnalysisApi, api } from '../../lib/api';
 import { useToast } from '../ui/Toast';
 import { validateNotFuture, toDateTimeLocal, getCurrentDateTimeLocal } from '../../lib/dateValidation';
@@ -435,11 +436,13 @@ export function MealEditMode({
 
             {/* Add photo button (T028) */}
             {photos.length < 10 && (
-              <PhotoUploadButton
-                onUpload={handlePhotoUpload}
-                disabled={isUploading}
-                variant="secondary"
-              />
+              <PhotoUploadErrorBoundary>
+                <PhotoUploadButton
+                  onUpload={handlePhotoUpload}
+                  disabled={isUploading}
+                  variant="secondary"
+                />
+              </PhotoUploadErrorBoundary>
             )}
             {photos.length >= 10 && (
               <p className="text-center text-sm text-gray-500">
@@ -450,11 +453,13 @@ export function MealEditMode({
         ) : (
           <div className="space-y-3">
             <p className="py-4 text-center text-gray-500">まだ写真がありません</p>
-            <PhotoUploadButton
-              onUpload={handlePhotoUpload}
-              disabled={isUploading}
-              variant="primary"
-            />
+            <PhotoUploadErrorBoundary>
+              <PhotoUploadButton
+                onUpload={handlePhotoUpload}
+                disabled={isUploading}
+                variant="primary"
+              />
+            </PhotoUploadErrorBoundary>
           </div>
         )}
       </div>
