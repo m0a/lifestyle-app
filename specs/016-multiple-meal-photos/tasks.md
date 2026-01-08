@@ -206,10 +206,10 @@ Web app monorepo structure:
 - [X] T076 [P] Add photo format validation (JPEG/PNG only) client-side in packages/frontend/src/components/meal/PhotoUploadButton.tsx
 - [ ] T077 [P] Implement offline photo queue sync logic in packages/frontend/src/services/photo-queue.ts
 - [X] T078 [P] Add error boundary for photo upload failures in packages/frontend/src/components/meal/
-- [ ] T079 [P] Optimize image loading with responsive sizes in packages/frontend/src/components/meal/PhotoCarousel.tsx
+- [X] T079 [P] Optimize image loading with responsive sizes in packages/frontend/src/components/meal/PhotoCarousel.tsx
 - [X] T080 [P] Add loading skeletons for photo carousels in packages/frontend/src/components/meal/MealList.tsx
 - [X] T081 Update quickstart.md with actual implementation details in specs/016-multiple-meal-photos/quickstart.md
-- [ ] T082 Run E2E test suite for all user stories to validate independence
+- [X] T082 Run E2E test suite for all user stories to validate independence
 - [X] T083 Update CLAUDE.md with feature completion notes
 
 ---
