@@ -463,7 +463,7 @@ export class ExerciseService {
     // Convert groups to ExerciseImportSummary
     const summaries: ExerciseImportSummary[] = [];
 
-    for (const [_key, records] of groupMap.entries()) {
+    for (const records of groupMap.values()) {
       // Sort by setNumber to ensure consistent ordering
       const sortedRecords = records.sort((a, b) => a.setNumber - b.setNumber);
       const firstRecord = sortedRecords[0];
