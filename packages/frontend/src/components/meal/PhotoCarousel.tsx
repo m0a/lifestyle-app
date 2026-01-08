@@ -91,12 +91,14 @@ export function PhotoCarousel({ photos, onPhotoClick }: PhotoCarouselProps) {
                 </div>
               )}
 
-              {/* Photo image */}
+              {/* Photo image - T079: Responsive image optimization */}
               <img
                 src={photo.photoUrl}
                 alt={`食事の写真 ${index + 1}`}
                 className="w-full h-full object-cover"
-                loading="lazy"
+                loading={index === 0 ? 'eager' : 'lazy'}
+                decoding="async"
+                fetchPriority={index === 0 ? 'high' : 'auto'}
                 onLoad={() => handleImageLoad(photo.id)}
                 data-testid={`carousel-photo-${index}`}
               />
