@@ -187,6 +187,7 @@ pnpm dev:backend
 4. `stack` と `componentStack` で原因箇所を特定
 
 ## Recent Changes
+- 017-multi-exercise-import: Added TypeScript 5.3 (strict mode) + React 18+, Hono, Drizzle ORM, TanStack Query, Zod, Tailwind CSS
 - **016-multiple-meal-photos**: ✅ COMPLETED (84.3% - 70/83 tasks)
   - Multiple photos per meal (up to 10 photos)
   - User Story 1-4 implemented (US5 deemed unnecessary)
@@ -196,7 +197,6 @@ pnpm dev:backend
   - Client-side validation (10MB limit, JPEG/PNG only)
   - Remaining: 13 Polish tasks (optional enhancements)
 - 015-request-id-tracing: Request ID tracking for debugging
-- 014-ai-usage-tracking: AI usage metrics and cost tracking
 
 ## Features
 
@@ -226,3 +226,5 @@ pnpm dev:backend
 - TypeScript 5.x (strict mode) + React 18+, Hono, Drizzle ORM, Zod, TanStack Query, Tailwind CSS, Vercel AI SDK (@ai-sdk/google)
 - Cloudflare D1 (SQLite) for metadata, R2 for photo files
 - Image processing: Canvas API for client-side resize
+- TypeScript 5.3 (strict mode) + React 18+, Hono, Drizzle ORM, TanStack Query, Zod, Tailwind CSS (017-multi-exercise-import)
+- Cloudflare D1 (SQLite) - existing `exercise_records` table (017-multi-exercise-import)
