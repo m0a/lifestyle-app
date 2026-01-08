@@ -21,6 +21,9 @@ import {
 // Training image types
 export * from './training-image';
 
+// Exercise import types
+export * from './exercise';
+
 // Infer types from schemas
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;

@@ -4,6 +4,8 @@ import type {
   CreateExerciseSetsInput,
   UpdateExerciseInput,
   ExerciseRecord,
+  ExerciseImportSummary,
+  RecentExerciseItem,
 } from '@lifestyle-app/shared';
 
 interface UseExercisesOptions {
@@ -128,4 +130,51 @@ export function useExercises(options?: UseExercisesOptions) {
     deleteError: deleteMutation.error,
     fetchLastRecord,
   };
+}
+
+// Hook for fetching exercises by specific date
+export function useExercisesByDate(date: string | null) {
+  return useQuery({
+    queryKey: ['exercises', 'by-date', date],
+    queryFn: async () => {
+      if (!date) {
+        return { exercises: [], count: 0 };
+      }
+
+      const res = await api.exercises['by-date'].$get({
+        query: { date },
+      });
+
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ message: 'Failed to fetch exercises' }));
+        throw new Error((error as { message?: string }).message || 'Failed to fetch exercises');
+      }
+
+      return res.json();
+    },
+    select: (data) => data.exercises as ExerciseImportSummary[],
+    enabled: !!date,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+}
+
+// Hook for fetching recent unique exercises
+export function useRecentExercises(limit: number = 10) {
+  return useQuery({
+    queryKey: ['exercises', 'recent', limit],
+    queryFn: async () => {
+      const res = await api.exercises.recent.$get({
+        query: { limit: limit.toString() },
+      });
+
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ message: 'Failed to fetch recent exercises' }));
+        throw new Error((error as { message?: string }).message || 'Failed to fetch recent exercises');
+      }
+
+      return res.json();
+    },
+    select: (data) => data.exercises as RecentExerciseItem[],
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
 }

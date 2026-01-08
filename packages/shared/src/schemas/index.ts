@@ -206,3 +206,6 @@ export * from './meal-analysis';
 
 // Logging schemas
 export * from './log';
+
+// Exercise import schemas
+export * from './exercise';
