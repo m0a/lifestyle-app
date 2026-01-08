@@ -75,7 +75,7 @@ jobs:
       - name: Start backend server
         run: |
           cd packages/backend
-          echo "GOOGLE_GENERATIVE_AI_API_KEY=test-key-for-ci" > .dev.vars
+          echo "GOOGLE_GENERATIVE_AI_API_KEY=${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}" > .dev.vars
           pnpm dev > backend.log 2>&1 &
           echo $! > backend.pid
         env:
@@ -155,7 +155,7 @@ jobs:
       - name: Start backend server
         run: |
           cd packages/backend
-          echo "GOOGLE_GENERATIVE_AI_API_KEY=test-key-for-ci" > .dev.vars
+          echo "GOOGLE_GENERATIVE_AI_API_KEY=${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}" > .dev.vars
           pnpm dev > backend.log 2>&1 &
           echo $! > backend.pid
         env:
