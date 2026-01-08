@@ -631,26 +631,22 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
     const photoService = new MealPhotoService(db);
 
-    try {
-      // Update display_order for each photo
-      for (let i = 0; i < photoIds.length; i++) {
-        await db.update(schema.mealPhotos)
-          .set({ displayOrder: i })
-          .where(and(
-            eq(schema.mealPhotos.id, photoIds[i]),
-            eq(schema.mealPhotos.mealId, mealId)
-          ));
-      }
-
-      const updatedPhotos = await photoService.getMealPhotos(mealId);
-
-      return c.json({
-        success: true,
-        photos: updatedPhotos,
-      });
-    } catch (error) {
-      throw error;
+    // Update display_order for each photo
+    for (let i = 0; i < photoIds.length; i++) {
+      await db.update(schema.mealPhotos)
+        .set({ displayOrder: i })
+        .where(and(
+          eq(schema.mealPhotos.id, photoIds[i]),
+          eq(schema.mealPhotos.mealId, mealId)
+        ));
     }
+
+    const updatedPhotos = await photoService.getMealPhotos(mealId);
+
+    return c.json({
+      success: true,
+      photos: updatedPhotos,
+    });
   })
   // T072: Retry photo analysis endpoint
   .post('/:id/photos/:photoId/analyze', async (c) => {
