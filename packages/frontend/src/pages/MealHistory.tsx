@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useMeals } from '../hooks/useMeals';
 import { MealList } from '../components/meal/MealList';
+import { MealListSkeleton } from '../components/meal/MealListSkeleton';
 import { MealCalendar } from '../components/meal/MealCalendar';
 import { CalorieSummary } from '../components/meal/CalorieSummary';
 import { api } from '../lib/client';
@@ -127,9 +128,7 @@ export function MealHistory() {
         </h2>
 
         {isLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-green-600 border-t-transparent" />
-          </div>
+          <MealListSkeleton />
         ) : meals.length === 0 ? (
           <div className="rounded-lg border border-gray-200 bg-gray-50 p-8 text-center">
             <p className="text-gray-500">この日の記録はありません</p>

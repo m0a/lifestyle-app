@@ -198,16 +198,16 @@ Web app monorepo structure:
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T071 [P] Add photo reorder endpoint PATCH /api/meals/:mealId/photos/reorder in packages/backend/src/routes/meals.ts
-- [ ] T072 [P] Add retry photo analysis endpoint POST /api/meals/:mealId/photos/:photoId/analyze in packages/backend/src/routes/meals.ts
-- [ ] T073 [P] Add photo analysis status polling endpoint GET /api/meals/:mealId/photos/:photoId/status in packages/backend/src/routes/meals.ts
-- [ ] T074 [P] Implement lazy migration for legacy photo_key meals in packages/backend/src/services/meal-photo.service.ts
+- [X] T071 [P] Add photo reorder endpoint PATCH /api/meals/:mealId/photos/reorder in packages/backend/src/routes/meals.ts
+- [X] T072 [P] Add retry photo analysis endpoint POST /api/meals/:mealId/photos/:photoId/analyze in packages/backend/src/routes/meals.ts
+- [X] T073 [P] Add photo analysis status polling endpoint GET /api/meals/:mealId/photos/:photoId/status in packages/backend/src/routes/meals.ts
+- [X] T074 [P] Implement lazy migration for legacy photo_key meals in packages/backend/src/services/meal-photo.service.ts
 - [X] T075 [P] Add photo size limit validation (10MB) client-side in packages/frontend/src/components/meal/PhotoUploadButton.tsx
 - [X] T076 [P] Add photo format validation (JPEG/PNG only) client-side in packages/frontend/src/components/meal/PhotoUploadButton.tsx
 - [ ] T077 [P] Implement offline photo queue sync logic in packages/frontend/src/services/photo-queue.ts
-- [ ] T078 [P] Add error boundary for photo upload failures in packages/frontend/src/components/meal/
+- [X] T078 [P] Add error boundary for photo upload failures in packages/frontend/src/components/meal/
 - [ ] T079 [P] Optimize image loading with responsive sizes in packages/frontend/src/components/meal/PhotoCarousel.tsx
-- [ ] T080 [P] Add loading skeletons for photo carousels in packages/frontend/src/components/meal/MealList.tsx
+- [X] T080 [P] Add loading skeletons for photo carousels in packages/frontend/src/components/meal/MealList.tsx
 - [X] T081 Update quickstart.md with actual implementation details in specs/016-multiple-meal-photos/quickstart.md
 - [ ] T082 Run E2E test suite for all user stories to validate independence
 - [X] T083 Update CLAUDE.md with feature completion notes
