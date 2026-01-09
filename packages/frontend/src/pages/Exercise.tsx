@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useExercises } from '../hooks/useExercises';
 import { StrengthInput } from '../components/exercise/StrengthInput';
@@ -7,8 +6,6 @@ import { ExerciseSummary } from '../components/exercise/ExerciseSummary';
 
 export function Exercise() {
   const navigate = useNavigate();
-  const [filterType, setFilterType] = useState<string>('');
-  const [allExerciseTypes, setAllExerciseTypes] = useState<string[]>([]);
 
   // Get today's date for the image generation link
   const today = new Date().toISOString().split('T')[0];
@@ -27,15 +24,7 @@ export function Exercise() {
     isDeleting,
     createError,
     fetchLastRecord,
-  } = useExercises({ exerciseType: filterType || undefined });
-
-  // Update available exercise types when exercises change (without filter)
-  useEffect(() => {
-    if (!filterType && exercises.length > 0) {
-      const types = [...new Set(exercises.map((e) => e.exerciseType))].sort();
-      setAllExerciseTypes(types);
-    }
-  }, [exercises, filterType]);
+  } = useExercises();
 
   if (isLoading) {
     return (
@@ -97,20 +86,6 @@ export function Exercise() {
               共有
             </button>
           </div>
-          {allExerciseTypes.length > 0 && (
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
-              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
-            >
-              <option value="">すべての種目</option>
-              {allExerciseTypes.map((type) => (
-                <option key={type} value={type}>
-                  {type}
-                </option>
-              ))}
-            </select>
-          )}
         </div>
         <ExerciseList
           exercises={exercises}
