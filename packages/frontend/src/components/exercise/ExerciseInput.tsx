@@ -142,22 +142,6 @@ export function ExerciseInput({ onSubmit, isLoading, error }: ExerciseInputProps
             <p className="mt-1 text-sm text-red-600">{errors.reps.message}</p>
           )}
         </div>
-
-        <div>
-          <label htmlFor="recordedAt" className="block text-sm font-medium text-gray-700">
-            記録日時
-          </label>
-          <input
-            {...register('recordedAt')}
-            type="datetime-local"
-            id="recordedAt"
-            defaultValue={new Date().toISOString().slice(0, 16)}
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
-          />
-          {errors.recordedAt && (
-            <p className="mt-1 text-sm text-red-600">{errors.recordedAt.message}</p>
-          )}
-        </div>
       </div>
 
       <div className="flex items-center gap-4">
