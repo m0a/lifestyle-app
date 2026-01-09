@@ -125,3 +125,44 @@ _This issue was automatically created by the E2E workflow._`;
               });
               console.log(`Created new issue #${issue.data.number}`);
             }
+
+      - name: Close issue on E2E success
+        if: steps.e2e_tests.outcome == 'success'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const commitSha = '${{ github.event.workflow_run.head_sha }}';
+            const commitUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/commit/${commitSha}`;
+
+            // Check if there's an open issue for E2E failures
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'e2e-failure',
+              per_page: 100
+            });
+
+            // Close all open e2e-failure issues
+            for (const issue of issues.data) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: `✅ **E2E tests passed**\n\n**Workflow Run**: ${runUrl}\n**Commit**: [${commitSha.substring(0, 7)}](${commitUrl})\n**Timestamp**: ${new Date().toISOString()}\n\nE2E tests are now passing. Closing this issue automatically.`
+              });
+
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                state: 'closed'
+              });
+
+              console.log(`Closed issue #${issue.number}`);
+            }
+
+            if (issues.data.length === 0) {
+              console.log('No open e2e-failure issues found');
+            }
