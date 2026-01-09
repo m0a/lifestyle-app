@@ -1,22 +1,20 @@
 name: E2E Tests
 
-# Trigger after PR preview deployment completes
-# NOTE: Temporarily enabled for all PRs to test Issue #48 improvements
+# Run E2E tests after CI completes on main branch
 on:
   workflow_run:
     workflows: ["CI"]
     types:
       - completed
+    branches:
+      - main
 
 jobs:
   e2e:
     name: E2E Tests
     runs-on: ubuntu-latest
-    # Only run if CI workflow succeeded and it was a PR
-    if: >
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'pull_request'
-    continue-on-error: true  # Don't block merge if E2E tests fail
+    # Only run if CI workflow succeeded
+    if: github.event.workflow_run.conclusion == 'success'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -58,15 +56,72 @@ jobs:
         run: pnpm --filter @lifestyle-app/frontend build
 
       - name: Run E2E tests
+        id: e2e_tests
         run: pnpm test:e2e
         env:
           CI: true
           NODE_ENV: test
+        continue-on-error: true
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
-        if: failure()
+        if: steps.e2e_tests.outcome == 'failure'
         with:
           name: playwright-report
           path: playwright-report/
           retention-days: 30
+
+      - name: Create issue on E2E failure
+        if: steps.e2e_tests.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const commitSha = '${{ github.event.workflow_run.head_sha }}';
+            const commitUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/commit/${commitSha}`;
+
+            // Check if there's already an open issue for E2E failures
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'e2e-failure',
+              per_page: 1
+            });
+
+            const issueBody = `## E2E Test Failure
+
+**Workflow Run**: ${runUrl}
+**Commit**: [${commitSha.substring(0, 7)}](${commitUrl})
+**Branch**: main
+**Timestamp**: ${new Date().toISOString()}
+
+### Actions Required
+1. Review the [test results](${runUrl})
+2. Check the Playwright report artifact
+3. Fix the failing tests
+4. Close this issue once resolved
+
+---
+_This issue was automatically created by the E2E workflow._`;
+
+            if (issues.data.length > 0) {
+              // Update existing issue with new comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issues.data[0].number,
+                body: `🔴 **E2E tests failed again**\n\n${issueBody}`
+              });
+              console.log(`Updated existing issue #${issues.data[0].number}`);
+            } else {
+              // Create new issue
+              const issue = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `E2E Tests Failed on main branch`,
+                body: issueBody,
+                labels: ['e2e-failure', 'bug']
+              });
+              console.log(`Created new issue #${issue.data.number}`);
+            }
