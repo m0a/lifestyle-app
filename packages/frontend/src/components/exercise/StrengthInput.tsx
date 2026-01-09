@@ -60,7 +60,6 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, c
   const [exerciseType, setExerciseType] = useState('');
   const [customExerciseName, setCustomExerciseName] = useState('');
   const [sets, setSets] = useState<SetInput[]>([{ reps: 10, weight: null }]);
-  const [recordedAt, setRecordedAt] = useState(new Date().toISOString().slice(0, 16));
   const [validationError, setValidationError] = useState<string | null>(null);
 
   const actualExerciseType = showCustomInput ? customExerciseName : exerciseType;
@@ -166,14 +165,13 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, c
         weight: s.weight,
         variation: s.variation,
       })),
-      recordedAt: recordedAt || new Date().toISOString(),
+      recordedAt: new Date().toISOString(),
     });
 
     // Reset form
     setExerciseType('');
     setCustomExerciseName('');
     setSets([{ reps: 10, weight: null }]);
-    setRecordedAt(new Date().toISOString().slice(0, 16));
     setShowCustomInput(false);
     setSuccessMessage('運動を記録しました');
     setTimeout(() => setSuccessMessage(null), 3000);
@@ -374,20 +372,6 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, c
             />
           ))}
         </div>
-      </div>
-
-      {/* Recorded At */}
-      <div>
-        <label htmlFor="recordedAt" className="block text-sm font-medium text-gray-700">
-          記録日時
-        </label>
-        <input
-          type="datetime-local"
-          id="recordedAt"
-          value={recordedAt}
-          onChange={(e) => setRecordedAt(e.target.value)}
-          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
-        />
       </div>
 
       <div className="flex items-center gap-4 flex-wrap">
