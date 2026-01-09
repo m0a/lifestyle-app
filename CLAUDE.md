@@ -27,6 +27,11 @@ pnpm test tests/unit/meal.service.test.ts
 pnpm lint             # ESLint
 pnpm typecheck        # TypeScript check all packages
 
+# Dead Code Detection
+pnpm find-deadcode       # Detect unused exports, files, and dependencies with Knip
+pnpm find-deadcode:fix   # Auto-fix unused exports (experimental)
+pnpm find-deadcode:ci    # CI mode with threshold check (threshold: 40 → 0)
+
 # Build
 pnpm build:shared     # Must build first (dependency)
 pnpm build            # Build all packages
@@ -187,8 +192,9 @@ pnpm dev:backend
 4. `stack` と `componentStack` で原因箇所を特定
 
 ## Recent Changes
+- 018-cleanup-deadcode: Added TypeScript 5.3 (strict mode)
+- 001-remove-ui-elements: Added TypeScript 5.3 (strict mode)
 - 017-multi-exercise-import: Added TypeScript 5.3 (strict mode) + React 18+, Hono, Drizzle ORM, TanStack Query, Zod, Tailwind CSS
-- **016-multiple-meal-photos**: ✅ COMPLETED (84.3% - 70/83 tasks)
   - Multiple photos per meal (up to 10 photos)
   - User Story 1-4 implemented (US5 deemed unnecessary)
   - PhotoCarousel with horizontal scroll
@@ -196,7 +202,43 @@ pnpm dev:backend
   - Image resize before upload (1920px width)
   - Client-side validation (10MB limit, JPEG/PNG only)
   - Remaining: 13 Polish tasks (optional enhancements)
-- 015-request-id-tracing: Request ID tracking for debugging
+
+## Dead Code Detection (018-cleanup-deadcode)
+
+**Tool**: Knip - 包括的なTypeScript/JavaScriptデッドコード検出ツール
+
+**Current Status**:
+- Baseline: 36 unused exports
+- Threshold: 40 (CI blocks merge if exceeded)
+- Roadmap: 40 → 30 → 20 → 10 → 0 (reduce by 10 every 2 weeks)
+
+**Usage**:
+```bash
+# Local development
+pnpm find-deadcode       # Full report with unused exports, files, dependencies
+
+# CI integration
+pnpm find-deadcode:ci    # JSON report + threshold check (40 max)
+```
+
+**What Knip Detects**:
+- Unused exports (functions, classes, types not imported elsewhere)
+- Unused files (files never imported)
+- Unused dependencies (packages in package.json but not used)
+- Duplicate exports (same export from multiple sources)
+
+**CI Integration**:
+- Runs on every pull request
+- Posts comment with unused export count
+- Blocks merge if count > 40
+- Generates artifact report (30-day retention)
+
+**Configuration**: `knip.json` at repository root
+- Workspace-specific entry points
+- Ignore patterns for test files, config files
+- Type definitions excluded from checks
+
+**For detailed usage**: See `specs/018-cleanup-deadcode/quickstart.md`
 
 ## Features
 
@@ -228,3 +270,5 @@ pnpm dev:backend
 - Image processing: Canvas API for client-side resize
 - TypeScript 5.3 (strict mode) + React 18+, Hono, Drizzle ORM, TanStack Query, Zod, Tailwind CSS (017-multi-exercise-import)
 - Cloudflare D1 (SQLite) - existing `exercise_records` table (017-multi-exercise-import)
+- Cloudflare D1 (SQLite) - 既存の`exercise_records`テーブルを使用 (001-remove-ui-elements)
+- N/A（設定ファイルのみ変更） (018-cleanup-deadcode)
