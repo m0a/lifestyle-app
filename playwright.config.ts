@@ -38,7 +38,7 @@ export default defineConfig({
     {
       command: 'pnpm dev:backend',
       url: 'http://localhost:8787/health',
-      reuseExistingServer: true, // CI: e2e.yml starts backend manually, reuse it
+      reuseExistingServer: !isCI, // Local: reuse, CI: start new
       timeout: 120000,
       env: {
         NODE_ENV: 'test',
