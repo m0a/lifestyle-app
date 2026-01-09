@@ -10,7 +10,7 @@ import { api } from '../lib/client';
 import { getTodayDateString, formatDateString } from '../lib/dateValidation';
 import type { MealRecord } from '@lifestyle-app/shared';
 
-export function MealHistory() {
+function MealHistory() {
   // Initialize with today's date
   const [selectedDate, setSelectedDate] = useState<string>(getTodayDateString());
 

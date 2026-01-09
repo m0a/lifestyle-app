@@ -18,7 +18,7 @@ const colorOptions: { value: ColorTheme; label: string; bgClass: string }[] = [
  * Training image page - displays a preview of the training record image
  * with share and save functionality
  */
-export function TrainingImagePage() {
+function TrainingImagePage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
