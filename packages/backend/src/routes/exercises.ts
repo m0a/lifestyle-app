@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
-import { createExerciseSetsSchema, updateExerciseSchema, dateRangeSchema, exerciseQuerySchema, maxRMQuerySchema } from '@lifestyle-app/shared';
+import { createExerciseSetsSchema, updateExerciseSchema, dateRangeSchema, exerciseQuerySchema, maxRMQuerySchema, exerciseImportQuerySchema, recentExercisesQuerySchema } from '@lifestyle-app/shared';
 import { ExerciseService } from '../services/exercise';
 import { authMiddleware } from '../middleware/auth';
 import type { Database } from '../db';
@@ -111,6 +111,64 @@ export const exercises = new Hono<{ Bindings: Bindings; Variables: Variables }>(
     const result = await exerciseService.getRecentSessions(user.id, { cursor, limit });
 
     return c.json(result);
+  })
+  .get('/by-date', zValidator('query', exerciseImportQuerySchema), async (c) => {
+    const query = c.req.valid('query');
+    const db = c.get('db');
+    const user = c.get('user');
+
+    // Validate date format (YYYY-MM-DD)
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(query.date)) {
+      return c.json({ message: 'Invalid date format' }, 400);
+    }
+
+    // Parse and validate date value
+    const date = new Date(query.date);
+    if (isNaN(date.getTime())) {
+      return c.json({ message: 'Invalid date format' }, 400);
+    }
+
+    // Get exercises for the specified date
+    const exerciseService = new ExerciseService(db);
+
+    // Query exercises for the full day (00:00:00 to 23:59:59)
+    const startDate = `${query.date}T00:00:00.000Z`;
+    const endDate = `${query.date}T23:59:59.999Z`;
+
+    const exercises = await exerciseService.findByUserId(user.id, {
+      startDate,
+      endDate,
+    });
+
+    // Aggregate sets by exercise type
+    const aggregated = exerciseService.aggregateExerciseSets(exercises);
+
+    return c.json({
+      exercises: aggregated,
+      count: aggregated.length,
+    });
+  })
+  .get('/recent', zValidator('query', recentExercisesQuerySchema), async (c) => {
+    const query = c.req.valid('query');
+    const db = c.get('db');
+    const user = c.get('user');
+
+    const exerciseService = new ExerciseService(db);
+
+    // Get all exercises for the user
+    const allExercises = await exerciseService.findByUserId(user.id);
+
+    // Get recent unique exercises
+    const recentExercises = exerciseService.getRecentUniqueExercises(
+      allExercises,
+      query.limit
+    );
+
+    return c.json({
+      exercises: recentExercises,
+      count: recentExercises.length,
+    });
   })
   .get('/:id', async (c) => {
     const id = c.req.param('id');

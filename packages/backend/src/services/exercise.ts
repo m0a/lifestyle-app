@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import type { Database } from '../db';
 import { schema } from '../db';
 import { AppError } from '../middleware/error';
-import type { CreateExerciseInput, UpdateExerciseInput } from '@lifestyle-app/shared';
+import type { CreateExerciseInput, UpdateExerciseInput, ExerciseImportSummary, ExerciseRecord, RecentExerciseItem } from '@lifestyle-app/shared';
 import { z } from 'zod';
 import { createExerciseSetsSchema, calculate1RM } from '@lifestyle-app/shared';
 
@@ -439,5 +439,196 @@ export class ExerciseService {
       sessions: formattedSessions,
       nextCursor: hasMore ? sessions[sessions.length - 1]?.date : null,
     };
+  }
+
+  /**
+   * Aggregate exercise sets by exercise type for import selection
+   * Groups sets from the same exercise session and formats display strings
+   * @param exercises - Array of exercise records from the same date
+   * @returns Array of aggregated exercise summaries
+   */
+  aggregateExerciseSets(exercises: ExerciseRecord[]): ExerciseImportSummary[] {
+    // Group by exerciseType and recordedAt (to handle multiple exercise sessions on same day)
+    const groupMap = new Map<string, ExerciseRecord[]>();
+
+    for (const exercise of exercises) {
+      // Use exerciseType + recordedAt as key to group exercises from same session
+      const key = `${exercise.exerciseType}::${exercise.recordedAt}`;
+      if (!groupMap.has(key)) {
+        groupMap.set(key, []);
+      }
+      groupMap.get(key)!.push(exercise);
+    }
+
+    // Convert groups to ExerciseImportSummary
+    const summaries: ExerciseImportSummary[] = [];
+
+    for (const records of groupMap.values()) {
+      // Sort by setNumber to ensure consistent ordering
+      const sortedRecords = records.sort((a, b) => a.setNumber - b.setNumber);
+      const firstRecord = sortedRecords[0];
+      if (!firstRecord) continue;
+
+      const totalSets = sortedRecords.length;
+
+      // Format displaySets string (e.g., "3セット × 12回 @ 50kg")
+      const displaySets = this.formatDisplaySets(sortedRecords);
+
+      // Extract timestamp (HH:mm) from recordedAt
+      const timestamp = this.formatTimestamp(firstRecord.recordedAt);
+
+      summaries.push({
+        id: firstRecord.id,
+        exerciseType: firstRecord.exerciseType,
+        muscleGroup: firstRecord.muscleGroup,
+        totalSets,
+        displaySets,
+        timestamp,
+        recordedAt: firstRecord.recordedAt,
+      });
+    }
+
+    // Sort by recordedAt descending (most recent first)
+    return summaries.sort((a, b) => b.recordedAt.localeCompare(a.recordedAt));
+  }
+
+  /**
+   * Format display string for exercise sets
+   * @param records - Sorted array of exercise records from same session
+   * @returns Formatted string like "3セット × 12回 @ 50kg"
+   */
+  private formatDisplaySets(records: ExerciseRecord[]): string {
+    const totalSets = records.length;
+
+    // Get reps and weights from all sets
+    const reps = records.map(r => r.reps);
+    const weights = records.map(r => r.weight);
+
+    // Check if all reps are the same
+    const allSameReps = reps.every(r => r === reps[0]);
+    const allSameWeight = weights.every(w => w === weights[0]);
+
+    if (allSameReps && allSameWeight) {
+      // All sets identical: "3セット × 12回 @ 50kg" or "3セット × 12回" (bodyweight)
+      const weight = weights[0];
+      if (weight === null) {
+        return `${totalSets}セット × ${reps[0]}回`;
+      }
+      return `${totalSets}セット × ${reps[0]}回 @ ${weight}kg`;
+    }
+
+    // Sets vary: show range or representative values
+    const minReps = Math.min(...reps);
+    const maxReps = Math.max(...reps);
+    const nonNullWeights = weights.filter((w): w is number => w !== null);
+
+    if (nonNullWeights.length === 0) {
+      // Bodyweight exercise with varying reps
+      if (minReps === maxReps) {
+        return `${totalSets}セット × ${minReps}回`;
+      }
+      return `${totalSets}セット × ${minReps}-${maxReps}回`;
+    }
+
+    // Weighted exercise with variations
+    const minWeight = Math.min(...nonNullWeights);
+    const maxWeight = Math.max(...nonNullWeights);
+
+    if (minReps === maxReps && minWeight === maxWeight) {
+      return `${totalSets}セット × ${minReps}回 @ ${minWeight}kg`;
+    }
+
+    // Show ranges for both reps and weight
+    const repsStr = minReps === maxReps ? `${minReps}回` : `${minReps}-${maxReps}回`;
+    const weightStr = minWeight === maxWeight ? `${minWeight}kg` : `${minWeight}-${maxWeight}kg`;
+
+    return `${totalSets}セット × ${repsStr} @ ${weightStr}`;
+  }
+
+  /**
+   * Format ISO timestamp to HH:mm
+   * Extracts time directly from ISO string to avoid timezone conversion
+   * @param isoString - ISO 8601 timestamp (e.g., "2026-01-05T10:00:00.000Z")
+   * @returns Time string in HH:mm format (e.g., "10:00")
+   */
+  private formatTimestamp(isoString: string): string {
+    // Extract time portion from ISO string (YYYY-MM-DDTHH:mm:ss.sssZ)
+    const match = isoString.match(/T(\d{2}):(\d{2})/);
+    if (match) {
+      return `${match[1]}:${match[2]}`;
+    }
+    // Fallback to Date parsing if format doesn't match
+    const date = new Date(isoString);
+    const hours = date.getUTCHours().toString().padStart(2, '0');
+    const minutes = date.getUTCMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes}`;
+  }
+
+  /**
+   * Get recent unique exercises by type
+   * Returns the most recent instance of each unique exercise type
+   * @param exercises - Array of exercise records
+   * @param limit - Maximum number of unique exercises to return (default 10)
+   * @returns Array of recent exercise items
+   */
+  getRecentUniqueExercises(exercises: ExerciseRecord[], limit: number = 10): RecentExerciseItem[] {
+    // Group by exerciseType, keeping track of all records for each type
+    const byType = new Map<string, ExerciseRecord[]>();
+
+    for (const exercise of exercises) {
+      if (!byType.has(exercise.exerciseType)) {
+        byType.set(exercise.exerciseType, []);
+      }
+      byType.get(exercise.exerciseType)!.push(exercise);
+    }
+
+    // For each exercise type, find the most recent session
+    const recentExercises: RecentExerciseItem[] = [];
+
+    for (const [exerciseType, records] of byType.entries()) {
+      // Sort by recordedAt descending to get most recent first
+      const sortedRecords = records.sort((a, b) =>
+        b.recordedAt.localeCompare(a.recordedAt)
+      );
+
+      // Get the most recent record
+      const mostRecent = sortedRecords[0];
+      if (!mostRecent) continue;
+
+      // Find all records from the same session (same recordedAt)
+      const sessionRecords = sortedRecords.filter(
+        r => r.recordedAt === mostRecent.recordedAt
+      );
+
+      // Extract date and time
+      const lastPerformedDate = mostRecent.recordedAt.split('T')[0] ?? '';
+      const lastPerformedTime = this.formatTimestamp(mostRecent.recordedAt);
+
+      // Format preview string: "3セット, 50kg" or "3セット" for bodyweight
+      const totalSets = sessionRecords.length;
+      const hasWeight = sessionRecords.some(r => r.weight !== null);
+      const avgWeight = hasWeight
+        ? sessionRecords.reduce((sum, r) => sum + (r.weight || 0), 0) / sessionRecords.length
+        : null;
+
+      const preview = avgWeight !== null
+        ? `${totalSets}セット, ${Math.round(avgWeight)}kg`
+        : `${totalSets}セット`;
+
+      recentExercises.push({
+        id: mostRecent.id,
+        exerciseType,
+        muscleGroup: mostRecent.muscleGroup,
+        lastPerformedDate,
+        lastPerformedTime,
+        preview,
+      });
+    }
+
+    // Sort by most recent first
+    recentExercises.sort((a, b) => b.lastPerformedDate.localeCompare(a.lastPerformedDate));
+
+    // Apply limit
+    return recentExercises.slice(0, limit);
   }
 }

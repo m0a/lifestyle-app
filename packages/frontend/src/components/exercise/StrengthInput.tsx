@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { EXERCISE_PRESETS, MUSCLE_GROUPS, MUSCLE_GROUP_LABELS, type MuscleGroup, type ExerciseRecord } from '@lifestyle-app/shared';
 import { SetRow } from './SetRow';
 import { LastRecordBadge } from './LastRecordBadge';
@@ -29,6 +29,7 @@ interface StrengthInputProps {
   error?: Error | null;
   onFetchLastRecord?: (exerciseType: string) => Promise<ExerciseRecord | null>;
   customTypes?: ExerciseTypeWithMuscleGroup[];
+  pendingImport?: Session | null;
 }
 
 interface SessionExercise {
@@ -47,7 +48,7 @@ interface Session {
   exercises: SessionExercise[];
 }
 
-export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, customTypes = [] }: StrengthInputProps) {
+export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, customTypes = [], pendingImport }: StrengthInputProps) {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [selectedMuscleGroup, setSelectedMuscleGroup] = useState<MuscleGroup>('chest');
@@ -190,7 +191,7 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, c
       .map(item => item.exerciseType);
   }, [customTypes, selectedMuscleGroup]);
 
-  const handleSessionSelect = (session: Session) => {
+  const handleSessionSelect = useCallback((session: Session) => {
     // Take the first exercise from the session and populate the form
     const firstExercise = session.exercises[0];
     if (!firstExercise) return;
@@ -219,7 +220,14 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, c
 
     setSuccessMessage(`「${firstExercise.exerciseType}」のセット構成を取り込みました`);
     setTimeout(() => setSuccessMessage(null), 3000);
-  };
+  }, []);
+
+  // Handle external import requests
+  useEffect(() => {
+    if (pendingImport) {
+      handleSessionSelect(pendingImport);
+    }
+  }, [pendingImport, handleSessionSelect]);
 
   return (
     <form onSubmit={handleFormSubmit} className="space-y-4">

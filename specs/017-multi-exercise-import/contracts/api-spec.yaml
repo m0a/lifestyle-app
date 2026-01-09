@@ -1,0 +1,318 @@
+openapi: 3.0.3
+info:
+  title: Exercise Import API
+  version: 1.0.0
+  description: API endpoints for multi-exercise import functionality
+
+paths:
+  /api/exercises/by-date:
+    get:
+      summary: Get exercises by specific date
+      description: Retrieve all exercises for a user on a specific date, grouped and aggregated
+      tags:
+        - Exercise Import
+      parameters:
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+            example: "2026-01-05"
+          description: Date in YYYY-MM-DD format
+      responses:
+        '200':
+          description: Successfully retrieved exercises
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  exercises:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ExerciseSummary'
+                  count:
+                    type: integer
+                    example: 5
+        '400':
+          description: Invalid date format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/exercises/recent:
+    get:
+      summary: Get recent unique exercises
+      description: Retrieve the most recent N unique exercise types
+      tags:
+        - Exercise Import
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 20
+            default: 10
+          description: Number of recent exercises to return
+      responses:
+        '200':
+          description: Successfully retrieved recent exercises
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  exercises:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RecentExerciseItem'
+                  count:
+                    type: integer
+                    example: 10
+        '400':
+          description: Invalid limit parameter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/exercises/{id}/details:
+    get:
+      summary: Get full exercise details for import
+      description: Retrieve all sets/details for a specific exercise to import
+      tags:
+        - Exercise Import
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Exercise record ID
+      responses:
+        '200':
+          description: Successfully retrieved exercise details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  exercise:
+                    $ref: '#/components/schemas/ExerciseDetails'
+                  relatedSets:
+                    type: array
+                    description: All sets from the same exercise session
+                    items:
+                      $ref: '#/components/schemas/ExerciseRecord'
+        '404':
+          description: Exercise not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    ExerciseSummary:
+      type: object
+      required:
+        - id
+        - exerciseType
+        - totalSets
+        - displaySets
+        - timestamp
+        - recordedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Representative exercise record ID
+        exerciseType:
+          type: string
+          example: "ベンチプレス"
+        muscleGroup:
+          type: string
+          nullable: true
+          example: "chest"
+        totalSets:
+          type: integer
+          example: 3
+          description: Total number of sets
+        displaySets:
+          type: string
+          example: "3セット × 12回 @ 50kg"
+          description: Human-readable summary
+        timestamp:
+          type: string
+          example: "14:30"
+          description: Time portion (HH:mm)
+        recordedAt:
+          type: string
+          format: date-time
+          example: "2026-01-05T14:30:00Z"
+          description: Full ISO 8601 timestamp
+
+    RecentExerciseItem:
+      type: object
+      required:
+        - id
+        - exerciseType
+        - lastPerformedDate
+        - lastPerformedTime
+        - preview
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Most recent record ID
+        exerciseType:
+          type: string
+          example: "スクワット"
+        muscleGroup:
+          type: string
+          nullable: true
+          example: "legs"
+        lastPerformedDate:
+          type: string
+          format: date
+          example: "2026-01-07"
+        lastPerformedTime:
+          type: string
+          example: "18:45"
+        preview:
+          type: string
+          example: "3セット, 80kg"
+          description: Quick preview of exercise details
+
+    ExerciseDetails:
+      type: object
+      required:
+        - id
+        - exerciseType
+        - setNumber
+        - reps
+        - recordedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        exerciseType:
+          type: string
+          example: "デッドリフト"
+        muscleGroup:
+          type: string
+          nullable: true
+          example: "back"
+        setNumber:
+          type: integer
+          example: 1
+        reps:
+          type: integer
+          example: 10
+        weight:
+          type: number
+          format: float
+          nullable: true
+          example: 100.5
+        variation:
+          type: string
+          nullable: true
+          example: "ワイドグリップ"
+        recordedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ExerciseRecord:
+      type: object
+      required:
+        - id
+        - userId
+        - exerciseType
+        - setNumber
+        - reps
+        - recordedAt
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        exerciseType:
+          type: string
+        muscleGroup:
+          type: string
+          nullable: true
+        setNumber:
+          type: integer
+        reps:
+          type: integer
+        weight:
+          type: number
+          format: float
+          nullable: true
+        variation:
+          type: string
+          nullable: true
+        recordedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Error:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          example: "Invalid date format"
+        code:
+          type: string
+          example: "INVALID_DATE"
+
+  securitySchemes:
+    sessionAuth:
+      type: apiKey
+      in: cookie
+      name: session
+      description: Session-based authentication
+
+security:
+  - sessionAuth: []
