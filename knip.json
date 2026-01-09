@@ -1,0 +1,35 @@
+{
+  "$schema": "https://unpkg.com/knip@latest/schema.json",
+  "workspaces": {
+    ".": {
+      "entry": ["tests/**/*.test.ts", "tests/**/*.spec.ts"],
+      "project": ["tests/**/*.ts"],
+      "ignore": ["**/*.d.ts", "**/dist/**", "**/node_modules/**"]
+    },
+    "packages/shared": {
+      "entry": ["src/**/*.ts"],
+      "project": ["src/**/*.ts"]
+    },
+    "packages/backend": {
+      "entry": ["src/routes/**/*.ts", "migrations/**/*.sql"],
+      "project": ["src/**/*.ts"],
+      "ignore": ["src/**/*.test.ts"]
+    },
+    "packages/frontend": {
+      "entry": ["src/main.tsx", "src/App.tsx", "index.html"],
+      "project": ["src/**/*.{ts,tsx}"],
+      "ignore": ["src/**/*.test.tsx", "src/vite-env.d.ts"]
+    }
+  },
+  "ignore": [
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "**/vite.config.ts",
+    "**/vitest.config.ts",
+    "**/playwright.config.ts"
+  ],
+  "ignoreDependencies": [
+    "@types/*"
+  ]
+}
