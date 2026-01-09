@@ -10,6 +10,8 @@ export default defineConfig({
   workers: isCI ? 2 : undefined,
   reporter: isCI ? 'list' : 'html',
   timeout: 30000,
+  // Global setup disabled - test user is created via migration 0010_add_test_user.sql
+  // globalSetup: './tests/setup/global-setup.ts',
   use: {
     baseURL: isCI ? 'http://localhost:4173' : 'http://localhost:5173',
     trace: 'on-first-retry',
@@ -31,10 +33,23 @@ export default defineConfig({
           use: { ...devices['Pixel 5'] },
         },
       ],
-  webServer: {
-    command: isCI ? 'pnpm --filter @lifestyle-app/frontend preview' : 'pnpm dev',
-    url: isCI ? 'http://localhost:4173' : 'http://localhost:5173',
-    reuseExistingServer: !isCI,
-    timeout: 60000,
-  },
+  webServer: [
+    // Backend server (Wrangler)
+    {
+      command: 'pnpm dev:backend',
+      url: 'http://localhost:8787/health',
+      reuseExistingServer: !isCI,
+      timeout: 120000,
+      env: {
+        NODE_ENV: 'test',
+      },
+    },
+    // Frontend server (Vite)
+    {
+      command: isCI ? 'pnpm --filter @lifestyle-app/frontend preview' : 'pnpm dev',
+      url: isCI ? 'http://localhost:4173' : 'http://localhost:5173',
+      reuseExistingServer: !isCI,
+      timeout: 60000,
+    },
+  ],
 });
