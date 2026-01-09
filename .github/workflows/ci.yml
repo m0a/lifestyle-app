@@ -120,6 +120,66 @@ jobs:
           files: ./coverage/lcov.info
           fail_ci_if_error: false
 
+  deadcode-check:
+    name: Dead Code Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build shared package
+        run: pnpm --filter @lifestyle-app/shared build
+
+      - name: Run Knip with threshold check
+        run: pnpm find-deadcode:ci
+
+      - name: Comment PR with results
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            try {
+              const report = JSON.parse(fs.readFileSync('knip-report.json', 'utf8'));
+              let count = 0;
+              if (report.issues && Array.isArray(report.issues)) {
+                for (const issue of report.issues) {
+                  if (issue.exports && Array.isArray(issue.exports)) {
+                    count += issue.exports.length;
+                  }
+                }
+              }
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `## 🔍 Dead Code Analysis\n\n**Unused Exports**: ${count} (Threshold: 40)\n\n${count > 40 ? '❌ **FAILED**: Exceeds threshold' : '✅ **PASSED**: Within threshold'}\n\n_Current baseline: 36 unused exports. Roadmap: 40 → 30 → 20 → 10 → 0_`
+              });
+            } catch (error) {
+              console.error('Failed to post comment:', error);
+            }
+
+      - name: Upload Knip report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: knip-report
+          path: knip-report.json
+          retention-days: 30
+
   build:
     name: Build
     runs-on: ubuntu-latest

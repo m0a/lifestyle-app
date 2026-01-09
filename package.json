@@ -21,6 +21,9 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "pnpm -r typecheck",
+    "find-deadcode": "knip",
+    "find-deadcode:fix": "knip --fix",
+    "find-deadcode:ci": "knip --reporter json --no-exit-code > knip-report.json && node scripts/check-deadcode-threshold.js",
     "db:generate": "pnpm --filter @lifestyle-app/backend db:generate",
     "db:migrate": "pnpm --filter @lifestyle-app/backend db:migrate",
     "deploy:backend": "pnpm --filter @lifestyle-app/backend deploy",
@@ -39,6 +42,7 @@
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-react": "^7.33.2",
     "eslint-plugin-react-hooks": "^4.6.0",
+    "knip": "^5.80.2",
     "prettier": "^3.1.0",
     "typescript": "^5.3.0",
     "vitest": "^1.0.0"
