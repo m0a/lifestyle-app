@@ -5,7 +5,7 @@ import {
   getPendingCount,
   type PendingOperation,
 } from '../lib/offlineDb';
-import { apiClient } from '../lib/api';
+import { api } from '../lib/api';
 
 const MAX_RETRIES = 3;
 const SYNC_INTERVAL = 30000; // 30 seconds
@@ -116,16 +116,16 @@ class SyncService {
 
     switch (action) {
       case 'create':
-        await apiClient.post(endpoint, data);
+        await api.post(endpoint, data);
         break;
       case 'update': {
         const updateData = data as { id: string; input: unknown };
-        await apiClient.patch(`${endpoint}/${updateData.id}`, updateData.input);
+        await api.patch(`${endpoint}/${updateData.id}`, updateData.input);
         break;
       }
       case 'delete': {
         const deleteId = data as string;
-        await apiClient.delete(`${endpoint}/${deleteId}`);
+        await api.delete(`${endpoint}/${deleteId}`);
         break;
       }
     }

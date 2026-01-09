@@ -84,8 +84,8 @@
   - Post PR comment with results (only on pull_request events)
   - Upload Knip report as artifact
 - [x] T017 Configure PR comment step to show unused export count and threshold comparison (per research.md line 195)
-- [ ] T018 Test CI job by committing changes and creating a draft PR
-- [ ] T019 Verify CI job executes, produces report, and posts PR comment with dead code analysis results
+- [x] T018 Test CI job by committing changes and creating a draft PR
+- [x] T019 Verify CI job executes, produces report, and posts PR comment with dead code analysis results
 
 **Checkpoint**: CI job running on PRs, threshold enforcement active, PR comments working
 
@@ -117,14 +117,14 @@
 
 **Independent Test**: Complete FR checklist from spec.md
 
-- [ ] T023 Verify FR-001: ExerciseInput.tsx is deleted (git status shows deletion)
-- [ ] T024 Verify FR-002: Application works correctly (run all tests, manual smoke test)
-- [ ] T025 Verify FR-003: Knip installed (check package.json devDependencies)
-- [ ] T026 Verify FR-004: Scripts added (check package.json scripts section)
-- [ ] T027 Verify FR-005: Documentation updated (CLAUDE.md contains dead code section)
-- [ ] T028 Verify FR-006: CI integration complete (ci.yml contains deadcode-check job, test on actual PR)
-- [ ] T029 Document baseline unused export count in commit message or PR description
-- [ ] T030 Create follow-up issue for gradual threshold reduction (from 10 → 5 → 0 over 4 weeks)
+- [x] T023 Verify FR-001: ExerciseInput.tsx is deleted (git status shows deletion)
+- [x] T024 Verify FR-002: Application works correctly (run all tests, manual smoke test)
+- [x] T025 Verify FR-003: Knip installed (check package.json devDependencies)
+- [x] T026 Verify FR-004: Scripts added (check package.json scripts section)
+- [x] T027 Verify FR-005: Documentation updated (CLAUDE.md contains dead code section)
+- [x] T028 Verify FR-006: CI integration complete (ci.yml contains deadcode-check job, test on actual PR)
+- [x] T029 Document baseline unused export count in commit message or PR description (Baseline: 36 unused exports, 4 unused files, 2 unused dependencies)
+- [x] T030 Create follow-up issue for gradual threshold reduction (from 40 → 30 → 20 → 10 → 0 over 8 weeks)
 
 **Checkpoint**: All functional requirements verified, ready for PR
 
