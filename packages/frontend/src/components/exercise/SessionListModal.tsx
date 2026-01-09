@@ -78,24 +78,35 @@ export function SessionListModal({ isOpen, onClose, onSelect }: SessionListModal
   const handleRecentSelect = useCallback(async (exercise: RecentExerciseItem) => {
     try {
       // Fetch detailed exercise records for the recent exercise
-      const startDate = `${exercise.lastPerformedDate}T00:00:00.000Z`;
-      const endDate = `${exercise.lastPerformedDate}T23:59:59.999Z`;
+      // Use date-only format (YYYY-MM-DD) as expected by exerciseQuerySchema
+      const targetDate = exercise.lastPerformedDate;
+
+      console.log('[SessionListModal] Fetching exercise details:', {
+        startDate: targetDate,
+        endDate: targetDate,
+        exerciseType: exercise.exerciseType,
+      });
 
       const res = await api.exercises.$get({
         query: {
-          startDate,
-          endDate,
+          startDate: targetDate,
+          endDate: targetDate,
           exerciseType: exercise.exerciseType,
         },
       });
 
+      console.log('[SessionListModal] Response status:', res.status);
+
       if (!res.ok) {
-        setError('エクササイズの詳細の取得に失敗しました');
+        const errorText = await res.text();
+        console.error('[SessionListModal] API error:', errorText);
+        setError(`エクササイズの詳細の取得に失敗しました (${res.status})`);
         return;
       }
 
       const data = await res.json();
       const records = data.exercises;
+      console.log('[SessionListModal] Fetched records:', records.length);
 
       if (records.length === 0) {
         setError('マッチする記録が見つかりませんでした');
