@@ -11,6 +11,9 @@ importers:
       '@playwright/test':
         specifier: ^1.40.0
         version: 1.57.0
+      '@types/bcryptjs':
+        specifier: ^2.4.6
+        version: 2.4.6
       '@types/node':
         specifier: ^20.10.0
         version: 20.19.27
@@ -23,6 +26,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: ^1.0.0
         version: 1.6.1(vitest@1.6.1)
+      bcryptjs:
+        specifier: ^2.4.3
+        version: 2.4.3
       eslint:
         specifier: ^8.55.0
         version: 8.57.1
@@ -3795,7 +3801,6 @@ packages:
 
   /bcryptjs@2.4.3:
     resolution: {integrity: sha512-V/Hy/X9Vt7f3BbPJEi8BdVFMByHi+jNXrYkW3huaybV/kQ0KJg0Y6PkEMbn+zeT+i+SiKZ/HMqJGIIt4LZDqNQ==}
-    dev: false
 
   /binary-extensions@2.3.0:
     resolution: {integrity: sha512-Ceh+7ox5qe7LJuLHoY0feh3pHuUDHAcRUeyL2VYghZwfpkNIy/+8Ocg0a3UuSoYzavmylwuLWQOf3hl0jjMMIw==}

@@ -1,13 +1,12 @@
 import { test, expect } from '@playwright/test';
+import { ensureTestUserExists, loginAsTestUser, TEST_USERS } from '../helpers/e2e';
 
 test.describe('Offline Support', () => {
   test.beforeEach(async ({ page }) => {
-    // Login before tests
-    await page.goto('/login');
-    await page.fill('input[name="email"]', 'test@example.com');
-    await page.fill('input[name="password"]', 'password123');
-    await page.click('button[type="submit"]');
-    await page.waitForURL(/\/(dashboard|weight)/);
+    // Ensure test user exists (creates if doesn't exist)
+    await ensureTestUserExists(page);
+    // Login with test user
+    await loginAsTestUser(page);
   });
 
   test.describe('PWA Installation', () => {
