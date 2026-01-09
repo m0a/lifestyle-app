@@ -1,13 +1,12 @@
 name: E2E Tests
 
 # Trigger after PR preview deployment completes
+# NOTE: Temporarily enabled for all PRs to test Issue #48 improvements
 on:
   workflow_run:
     workflows: ["CI"]
     types:
       - completed
-    branches-ignore:
-      - main
 
 jobs:
   e2e:
