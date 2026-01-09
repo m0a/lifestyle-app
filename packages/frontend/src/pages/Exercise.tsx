@@ -4,28 +4,11 @@ import { useExercises } from '../hooks/useExercises';
 import { StrengthInput } from '../components/exercise/StrengthInput';
 import { ExerciseList } from '../components/exercise/ExerciseList';
 import { ExerciseSummary } from '../components/exercise/ExerciseSummary';
-import { ExerciseImportDialog } from '../components/exercise/ExerciseImportDialog';
-import type { ExerciseImportSummary, RecentExerciseItem } from '@lifestyle-app/shared';
-import { api } from '../lib/client';
 
 export function Exercise() {
   const navigate = useNavigate();
   const [filterType, setFilterType] = useState<string>('');
   const [allExerciseTypes, setAllExerciseTypes] = useState<string[]>([]);
-  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
-  const [pendingImport, setPendingImport] = useState<{
-    date: string;
-    exercises: Array<{
-      exerciseType: string;
-      muscleGroup: string | null;
-      sets: Array<{
-        setNumber: number;
-        reps: number;
-        weight: number | null;
-        variation: string | null;
-      }>;
-    }>;
-  } | null>(null);
 
   // Get today's date for the image generation link
   const today = new Date().toISOString().split('T')[0];
@@ -53,138 +36,6 @@ export function Exercise() {
       setAllExerciseTypes(types);
     }
   }, [exercises, filterType]);
-
-  // Clear pendingImport after it's been processed
-  useEffect(() => {
-    if (pendingImport) {
-      // Reset after a short delay to allow StrengthInput to process it
-      const timer = setTimeout(() => {
-        setPendingImport(null);
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [pendingImport]);
-
-  const handleImportExercise = async (exercise: ExerciseImportSummary) => {
-    // Fetch detailed exercise records for the selected exercise
-    // This gets all sets from the same exercise session
-    try {
-      const res = await api.exercises.$get({
-        query: {
-          startDate: exercise.recordedAt,
-          endDate: exercise.recordedAt,
-          exerciseType: exercise.exerciseType,
-        },
-      });
-
-      if (!res.ok) {
-        console.error('Failed to fetch exercise details');
-        return;
-      }
-
-      const data = await res.json();
-      const records = data.exercises;
-
-      // Filter records that match the exact timestamp
-      const matchingRecords = records.filter(
-        (r: typeof records[0]) => r.recordedAt === exercise.recordedAt
-      );
-
-      if (matchingRecords.length === 0) {
-        console.error('No matching exercise records found');
-        return;
-      }
-
-      // Sort by setNumber and prepare session data
-      const sortedRecords = matchingRecords.sort(
-        (a: typeof records[0], b: typeof records[0]) => a.setNumber - b.setNumber
-      );
-
-      // Create a session object compatible with StrengthInput's handleSessionSelect
-      const session = {
-        date: exercise.recordedAt.split('T')[0] ?? '',
-        exercises: [{
-          exerciseType: exercise.exerciseType,
-          muscleGroup: exercise.muscleGroup,
-          sets: sortedRecords.map((r: typeof records[0]) => ({
-            setNumber: r.setNumber,
-            reps: r.reps,
-            weight: r.weight,
-            variation: r.variation,
-          })),
-        }],
-      };
-
-      // Pass the session data to StrengthInput via pendingImport
-      setPendingImport(session);
-      setIsImportDialogOpen(false);
-    } catch (error) {
-      console.error('Error importing exercise:', error);
-    }
-  };
-
-  const handleRecentImport = async (exercise: RecentExerciseItem) => {
-    // Fetch detailed exercise records for the recent exercise
-    try {
-      // Query exercises for the full day
-      const startDate = `${exercise.lastPerformedDate}T00:00:00.000Z`;
-      const endDate = `${exercise.lastPerformedDate}T23:59:59.999Z`;
-
-      const res = await api.exercises.$get({
-        query: {
-          startDate,
-          endDate,
-          exerciseType: exercise.exerciseType,
-        },
-      });
-
-      if (!res.ok) {
-        console.error('Failed to fetch exercise details');
-        return;
-      }
-
-      const data = await res.json();
-      const records = data.exercises;
-
-      if (records.length === 0) {
-        console.error('No matching exercise records found');
-        return;
-      }
-
-      // Find the most recent session (by recordedAt) for this exercise type
-      const recordedAtTimes = [...new Set(records.map((r: typeof records[0]) => r.recordedAt))];
-      const latestRecordedAt = recordedAtTimes.sort().reverse()[0];
-
-      // Filter records for the latest session
-      const sessionRecords = records.filter(
-        (r: typeof records[0]) => r.recordedAt === latestRecordedAt
-      );
-
-      // Sort by setNumber and prepare session data
-      const sortedRecords = sessionRecords.sort(
-        (a: typeof records[0], b: typeof records[0]) => a.setNumber - b.setNumber
-      );
-
-      const session = {
-        date: exercise.lastPerformedDate,
-        exercises: [{
-          exerciseType: exercise.exerciseType,
-          muscleGroup: exercise.muscleGroup,
-          sets: sortedRecords.map((r: typeof records[0]) => ({
-            setNumber: r.setNumber,
-            reps: r.reps,
-            weight: r.weight,
-            variation: r.variation,
-          })),
-        }],
-      };
-
-      setPendingImport(session);
-      setIsImportDialogOpen(false);
-    } catch (error) {
-      console.error('Error importing recent exercise:', error);
-    }
-  };
 
   if (isLoading) {
     return (
@@ -228,7 +79,6 @@ export function Exercise() {
           error={createError}
           onFetchLastRecord={fetchLastRecord}
           customTypes={exerciseTypes}
-          pendingImport={pendingImport}
         />
       </div>
 
@@ -237,15 +87,6 @@ export function Exercise() {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             <h2 className="text-lg font-semibold text-gray-900">記録履歴</h2>
-            <button
-              onClick={() => setIsImportDialogOpen(true)}
-              className="flex items-center gap-1.5 bg-gray-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-gray-700 transition-colors"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              過去から取り込み
-            </button>
             <button
               onClick={() => navigate(`/exercises/image?date=${today}`)}
               className="flex items-center gap-1.5 bg-orange-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-orange-700 transition-colors"
@@ -279,14 +120,6 @@ export function Exercise() {
           isDeleting={isDeleting}
         />
       </div>
-
-      {/* Exercise Import Dialog */}
-      <ExerciseImportDialog
-        isOpen={isImportDialogOpen}
-        onClose={() => setIsImportDialogOpen(false)}
-        onSelect={handleImportExercise}
-        onSelectRecent={handleRecentImport}
-      />
     </div>
   );
 }
