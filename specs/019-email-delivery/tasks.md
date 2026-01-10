@@ -121,14 +121,14 @@
 - [X] T050 [US2] Implement POST /email/verify/resend endpoint in packages/backend/src/routes/email/verify.ts (Merged into T049)
 - [X] T051 [US2] Register email verification routes in packages/backend/src/index.ts
 - [X] T052 [US2] Add login check for email_verified status in packages/backend/src/services/auth.ts (AuthService返却値にemailVerified追加)
-- [ ] T053 [P] [US2] Create VerifyEmail page in packages/frontend/src/pages/VerifyEmail.tsx
-- [ ] T054 [P] [US2] Create ResendEmailButton component in packages/frontend/src/components/auth/ResendEmailButton.tsx
-- [ ] T055 [P] [US2] Create EmailVerificationBanner component in packages/frontend/src/components/auth/EmailVerificationBanner.tsx
-- [ ] T056 [US2] Add email verification API client methods in packages/frontend/src/services/auth.ts
-- [ ] T057 [US2] Add react-router-dom route for /verify-email in packages/frontend/src/App.tsx
-- [ ] T058 [US2] Display EmailVerificationBanner for unverified users in protected routes
-- [ ] T059 [US2] Add email verification validation and error handling
-- [ ] T060 [US2] Integrate with User Story 1 components (login flow blocks unverified users)
+- [X] T053 [P] [US2] Create VerifyEmail page in packages/frontend/src/pages/VerifyEmail.tsx
+- [X] T054 [P] [US2] Create ResendEmailButton component in packages/frontend/src/components/auth/ResendEmailButton.tsx
+- [X] T055 [P] [US2] Create EmailVerificationBanner component in packages/frontend/src/components/auth/EmailVerificationBanner.tsx
+- [X] T056 [US2] Add email verification API client methods (No implementation needed - Hono RPC auto-types)
+- [X] T057 [US2] Add react-router-dom route for /verify-email in packages/frontend/src/router.tsx
+- [X] T058 [US2] Display EmailVerificationBanner for unverified users in protected routes
+- [X] T059 [US2] Add email verification validation and error handling (Already implemented in VerifyEmail + ResendEmailButton)
+- [X] T060 [US2] Integrate with User Story 1 components (login flow blocks unverified users)
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently
 

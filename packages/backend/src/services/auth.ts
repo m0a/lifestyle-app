@@ -64,6 +64,11 @@ export class AuthService {
       throw new AppError('メールアドレスまたはパスワードが正しくありません', 401, 'INVALID_CREDENTIALS');
     }
 
+    // Check email verification
+    if (user.emailVerified === 0) {
+      throw new AppError('メールアドレスを確認してください。確認メールのリンクをクリックしてアカウントを有効化してください。', 403, 'EMAIL_NOT_VERIFIED');
+    }
+
     return {
       id: user.id,
       email: user.email,
