@@ -39,7 +39,7 @@ export const auth = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
     const user = await authService.register(input, c.env.ENVIRONMENT);
 
-    // Send verification email (await to ensure completion in Cloudflare Workers)
+    // Send verification email in background (non-blocking)
     // Skip email sending in test environment (integration tests)
     console.log('[DEBUG] Email config:', {
       environment: c.env.ENVIRONMENT,
@@ -50,20 +50,27 @@ export const auth = new Hono<{ Bindings: Bindings; Variables: Variables }>()
     });
     if (c.env.ENVIRONMENT !== 'test') {
       console.log('[DEBUG] Calling sendVerificationEmail for:', user.email);
-      const emailResult = await sendVerificationEmail(
-        c.env.DB,
-        user.id,
-        user.email,
-        c.env.RESEND_API_KEY,
-        c.env.FROM_EMAIL,
-        c.env.FRONTEND_URL
+      // Use waitUntil to send email in background without blocking response
+      c.executionCtx.waitUntil(
+        sendVerificationEmail(
+          c.env.DB,
+          user.id,
+          user.email,
+          c.env.RESEND_API_KEY,
+          c.env.FROM_EMAIL,
+          c.env.FRONTEND_URL
+        )
+          .then((result) => {
+            if (result.success) {
+              console.log('[DEBUG] Verification email sent successfully');
+            } else {
+              console.error('Failed to send verification email:', result.error);
+            }
+          })
+          .catch((error) => {
+            console.error('Unexpected error sending verification email:', error);
+          })
       );
-      if (!emailResult.success) {
-        console.error('Failed to send verification email:', emailResult.error);
-        // Continue with registration even if email fails
-      } else {
-        console.log('[DEBUG] Verification email sent successfully');
-      }
     } else {
       console.log('[DEBUG] Skipping email send in test environment');
     }
