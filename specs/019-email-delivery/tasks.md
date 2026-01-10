@@ -149,18 +149,18 @@
 
 ### Implementation for User Story 3
 
-- [ ] T065 [US3] Create database migration for email_change_requests table in packages/backend/migrations/0020_email_change_requests.sql
-- [ ] T066 [US3] Run migration locally for email_change_requests table
-- [ ] T067 [P] [US3] Create Drizzle schema for email_change_requests in packages/backend/src/db/schema/email.ts
-- [ ] T068 [P] [US3] Implement email change service in packages/backend/src/services/email/email-change.service.ts
-- [ ] T069 [US3] Implement POST /email/change/request endpoint in packages/backend/src/routes/email/change.ts
-- [ ] T070 [US3] Implement POST /email/change/confirm endpoint in packages/backend/src/routes/email/change.ts
-- [ ] T071 [US3] Implement POST /email/change/cancel endpoint in packages/backend/src/routes/email/change.ts
-- [ ] T072 [US3] Register email change routes in packages/backend/src/index.ts
-- [ ] T073 [P] [US3] Create ChangeEmail page in packages/frontend/src/pages/ChangeEmail.tsx
-- [ ] T074 [US3] Add email change API client methods in packages/frontend/src/services/auth.ts
-- [ ] T075 [US3] Add react-router-dom route for /change-email in packages/frontend/src/App.tsx
-- [ ] T076 [US3] Add email change validation and error handling (duplicate email check)
+- [X] T065 [US3] Create database migration for email_change_requests table in packages/backend/migrations/0025_email_change_requests.sql
+- [X] T066 [US3] Run migration locally for email_change_requests table
+- [X] T067 [P] [US3] Create Drizzle schema for email_change_requests in packages/backend/src/db/schema/email.ts
+- [X] T068 [P] [US3] Implement email change service in packages/backend/src/services/email/email-change.service.ts
+- [X] T069 [US3] Implement POST /email/change/request endpoint in packages/backend/src/routes/email/change.ts
+- [X] T070 [US3] Implement POST /email/change/confirm endpoint in packages/backend/src/routes/email/change.ts
+- [X] T071 [US3] Implement POST /email/change/cancel endpoint in packages/backend/src/routes/email/change.ts
+- [X] T072 [US3] Register email change routes in packages/backend/src/index.ts
+- [X] T073 [P] [US3] Create ConfirmEmailChange & CancelEmailChange pages in packages/frontend/src/pages/
+- [X] T074 [US3] Add email change API client methods (No implementation needed - Hono RPC auto-types)
+- [X] T075 [US3] Add react-router-dom routes for /change-email/confirm and /change-email/cancel in packages/frontend/src/router.tsx
+- [X] T076 [US3] Add email change validation and error handling (Already implemented in pages and service)
 
 **Checkpoint**: All user stories should now be independently functional
 
