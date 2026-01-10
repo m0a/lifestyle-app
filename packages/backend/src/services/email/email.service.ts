@@ -97,7 +97,11 @@ export async function sendEmail(
 
       console.log('[DEBUG email.service] Resend API response:', response);
 
-      // Resend SDK throws on error, so reaching here means success
+      // Check if Resend returned an error
+      if ('error' in response && response.error) {
+        throw new Error(`Resend API error: ${JSON.stringify(response.error)}`);
+      }
+
       return response;
     },
     {
