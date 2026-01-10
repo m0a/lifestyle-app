@@ -5,8 +5,9 @@
 -- Add email_verified column (default false for new users)
 ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 0;
 
+-- Mark all existing users as verified (grandfathering)
+-- New users from this point forward will need to verify their email
+UPDATE users SET email_verified = 1;
+
 -- Create index for faster queries on verified status
 CREATE INDEX idx_users_email_verified ON users(email_verified);
-
--- Note: Existing users will have email_verified = 0 (false)
--- They can verify via email change flow (User Story 3) if needed
