@@ -4,6 +4,7 @@ export const users = sqliteTable('users', {
   id: text('id').primaryKey(),
   email: text('email').notNull().unique(),
   passwordHash: text('password_hash').notNull(),
+  emailVerified: integer('email_verified').notNull().default(0), // 0 = false, 1 = true
   goalWeight: real('goal_weight'),
   goalCalories: integer('goal_calories'),
   createdAt: text('created_at').notNull(),
@@ -175,3 +176,6 @@ export type MealChatMessage = typeof mealChatMessages.$inferSelect;
 export type NewMealChatMessage = typeof mealChatMessages.$inferInsert;
 export type AIUsageRecord = typeof aiUsageRecords.$inferSelect;
 export type NewAIUsageRecord = typeof aiUsageRecords.$inferInsert;
+
+// Email-related tables
+export * from './schema/email';

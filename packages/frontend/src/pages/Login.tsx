@@ -5,14 +5,17 @@ import { useState } from 'react';
 import { loginSchema, type LoginInput } from '@lifestyle-app/shared';
 import { api } from '../lib/client';
 import { useAuthStore } from '../stores/authStore';
+import { ForgotPasswordLink } from '../components/auth/ForgotPasswordLink';
 
 export function Login() {
   const navigate = useNavigate();
   const location = useLocation();
   const { setUser } = useAuthStore();
   const [error, setError] = useState<string | null>(null);
+  const [isEmailNotVerified, setIsEmailNotVerified] = useState(false);
 
   const from = (location.state as { from?: Location })?.from?.pathname || '/';
+  const successMessage = (location.state as { message?: string })?.message;
 
   const {
     register,
@@ -24,11 +27,19 @@ export function Login() {
 
   const onSubmit = async (data: LoginInput) => {
     setError(null);
+    setIsEmailNotVerified(false);
     try {
       const res = await api.auth.login.$post({ json: data });
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({ message: 'ログインに失敗しました' }));
-        throw new Error((errorData as { message?: string }).message || 'ログインに失敗しました');
+        const errorObj = errorData as { message?: string; code?: string };
+
+        // Check if error is EMAIL_NOT_VERIFIED
+        if (errorObj.code === 'EMAIL_NOT_VERIFIED') {
+          setIsEmailNotVerified(true);
+        }
+
+        throw new Error(errorObj.message || 'ログインに失敗しました');
       }
       const response = await res.json();
       setUser(response.user);
@@ -51,9 +62,37 @@ export function Login() {
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-6">
+          {successMessage && (
+            <div className="rounded-md bg-green-50 p-4">
+              <p className="text-sm text-green-700">{successMessage}</p>
+            </div>
+          )}
+
           {error && (
-            <div className="rounded-md bg-red-50 p-4">
-              <p className="text-sm text-red-700">{error}</p>
+            <div className={`rounded-md p-4 ${isEmailNotVerified ? 'bg-yellow-50 border-l-4 border-yellow-400' : 'bg-red-50'}`}>
+              <div className="flex">
+                {isEmailNotVerified && (
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                )}
+                <div className={isEmailNotVerified ? 'ml-3' : ''}>
+                  <p className={`text-sm ${isEmailNotVerified ? 'text-yellow-800' : 'text-red-700'}`}>
+                    {error}
+                  </p>
+                  {isEmailNotVerified && (
+                    <p className="mt-2 text-sm text-yellow-700">
+                      確認メールが届いていない場合は、迷惑メールフォルダをご確認いただくか、
+                      <Link to="/register" className="font-medium underline hover:text-yellow-900">
+                        登録画面
+                      </Link>
+                      から再度登録してください。
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
           )}
 
@@ -98,6 +137,8 @@ export function Login() {
           >
             {isSubmitting ? 'ログイン中...' : 'ログイン'}
           </button>
+
+          <ForgotPasswordLink />
 
           <p className="text-center text-sm text-gray-600">
             アカウントをお持ちでないですか？{' '}

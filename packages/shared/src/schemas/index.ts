@@ -209,3 +209,7 @@ export * from './log';
 
 // Exercise import schemas
 export * from './exercise';
+
+// Email and token schemas
+export * from './email';
+export * from './token';

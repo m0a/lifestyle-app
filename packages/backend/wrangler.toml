@@ -11,6 +11,10 @@ not_found_handling = "single-page-application"
 ENVIRONMENT = "production"
 AI_PROVIDER = "google"
 AI_MODEL = "gemini-3-flash-preview"
+# Email delivery configuration
+# RESEND_API_KEY should be set via wrangler secrets (see .github/workflows/ci.yml)
+FROM_EMAIL = "onboarding@resend.dev"
+FRONTEND_URL = "https://lifestyle-app.abe00makoto.workers.dev"
 
 [[d1_databases]]
 binding = "DB"
@@ -22,6 +26,10 @@ database_id = "86957e0a-04b6-4530-9b64-79ea36c64ba5"
 binding = "PHOTOS"
 bucket_name = "lifestyle-app-photos"
 
+# Cron triggers for scheduled tasks
+[triggers]
+crons = ["0 2 * * *"]  # Daily at 2:00 AM UTC
+
 # Preview environment configuration
 [env.preview]
 name = "lifestyle-tracker-preview"
@@ -30,6 +38,9 @@ name = "lifestyle-tracker-preview"
 ENVIRONMENT = "preview"
 AI_PROVIDER = "google"
 AI_MODEL = "gemini-3-flash-preview"
+# Email delivery configuration
+FROM_EMAIL = "onboarding@resend.dev"
+FRONTEND_URL = "https://lifestyle-tracker-preview.abe00makoto.workers.dev"
 
 [[env.preview.d1_databases]]
 binding = "DB"

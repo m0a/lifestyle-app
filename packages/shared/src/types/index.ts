@@ -24,6 +24,10 @@ export * from './training-image';
 // Exercise import types
 export * from './exercise';
 
+// Email and token types
+export * from './email';
+export * from './token';
+
 // Infer types from schemas
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
@@ -45,6 +49,7 @@ export type MaxRMResponseType = z.infer<typeof maxRMResponseSchema>;
 export interface User {
   id: string;
   email: string;
+  emailVerified: boolean;
   goalWeight: number | null;
   goalCalories: number | null;
   createdAt: string;
