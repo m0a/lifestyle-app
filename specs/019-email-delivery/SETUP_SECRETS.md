@@ -3,6 +3,21 @@
 **Feature**: 019-email-delivery
 **Date**: 2026-01-10
 
+## 🎯 要約（TL;DR）
+
+| 設定項目 | ローカル開発 | Main/Production | PR Preview |
+|---------|-------------|-----------------|------------|
+| **RESEND_API_KEY** | `.dev.vars`（✅済） | Cloudflare Dashboard（推奨） | GitHub Secrets（必須） |
+| **設定方法** | ファイル編集 | Web UI or wrangler CLI | CI自動設定 |
+| **必要性** | ✅ 必須 | ✅ 必須 | オプショナル（PR使う場合のみ） |
+
+**推奨フロー**:
+1. ✅ **ローカル開発**: `.dev.vars`設定済み → すぐテスト可能
+2. 🌐 **Main/Production**: [Cloudflare Dashboard](https://dash.cloudflare.com/) で直接設定（簡単）
+3. 🔀 **PR Preview**: GitHub Secretsに追加（PRを使う場合のみ）
+
+---
+
 ## 🔐 環境変数の3層管理
 
 ```
@@ -34,9 +49,15 @@ FRONTEND_URL=http://localhost:5173
 
 ---
 
-## 📝 手順1: GitHub Secretsに追加
+## 📝 手順1: GitHub Secretsに追加（オプショナル）
 
-CI/CDパイプラインでデプロイ時に使用するため、GitHubリポジトリにシークレットを追加してください。
+**用途**: PR Preview環境の動的Worker作成時のみ使用
+
+**重要**: Main PreviewとProduction環境では**GitHub Secretsは不要**です。Cloudflare Dashboard上で直接設定してください（手順2参照）。
+
+GitHub Secretsは以下の場合のみ必要:
+- ✅ PR Preview環境を使用する場合（PR番号ごとに動的Worker作成）
+- ❌ Main PreviewやProductionのみの場合は不要
 
 ### 方法1: GitHub Web UI
 
@@ -72,32 +93,67 @@ gh secret list | grep RESEND
 
 ## 📝 手順2: Cloudflare Workers Secretsを設定
 
-GitHub Secretsを追加した後、Cloudflare Workers環境にシークレットを設定します。
-
 **重要**: シークレットは一度設定すれば永続化されます。変更がない限り再設定は不要です。
 
-### Preview環境にシークレットを設定
+### 方法A: Cloudflare Dashboard（推奨）
+
+Web UIで直接設定できます。CLIより視覚的でわかりやすいです。
+
+#### Preview環境の設定
+
+1. **Cloudflare Dashboardにアクセス**:
+   ```
+   https://dash.cloudflare.com/
+   ```
+
+2. **Workers & Pages**を選択
+
+3. **lifestyle-tracker-preview**を選択
+
+4. **Settings** → **Variables and Secrets**
+
+5. **Add variable**をクリック:
+   - **Type**: Secret
+   - **Variable name**: `RESEND_API_KEY`
+   - **Value**: `re_6zBqmXmm_ApxJEDT4w6np3eW1a9rJSnoPY`
+   - **Deploy**をクリック
+
+6. 同様に`GOOGLE_GENERATIVE_AI_API_KEY`も設定（既存の場合はスキップ）
+
+#### Production環境の設定
+
+1. **Cloudflare Dashboard**で**lifestyle-tracker**を選択
+
+2. **Settings** → **Variables and Secrets**
+
+3. 上記と同様に`RESEND_API_KEY`を追加
+
+### 方法B: wrangler CLI
+
+コマンドラインで設定する場合:
+
+#### Preview環境
 
 ```bash
 cd /home/m0a/lifestyle-app/packages/backend
 
-# GOOGLE_GENERATIVE_AI_API_KEY を設定（既存）
-echo "your-google-api-key" | pnpm exec wrangler secret put GOOGLE_GENERATIVE_AI_API_KEY --env preview
-
-# RESEND_API_KEY を設定（新規）
+# RESEND_API_KEY を設定
 echo "re_6zBqmXmm_ApxJEDT4w6np3eW1a9rJSnoPY" | pnpm exec wrangler secret put RESEND_API_KEY --env preview
+
+# GOOGLE_GENERATIVE_AI_API_KEY を設定（既存の場合はスキップ）
+echo "your-google-api-key" | pnpm exec wrangler secret put GOOGLE_GENERATIVE_AI_API_KEY --env preview
 ```
 
-### Production環境にシークレットを設定
+#### Production環境
 
 ```bash
 cd /home/m0a/lifestyle-app/packages/backend
 
-# GOOGLE_GENERATIVE_AI_API_KEY を設定（既存）
-echo "your-google-api-key" | pnpm exec wrangler secret put GOOGLE_GENERATIVE_AI_API_KEY
-
-# RESEND_API_KEY を設定（新規）
+# RESEND_API_KEY を設定
 echo "re_6zBqmXmm_ApxJEDT4w6np3eW1a9rJSnoPY" | pnpm exec wrangler secret put RESEND_API_KEY
+
+# GOOGLE_GENERATIVE_AI_API_KEY を設定（既存の場合はスキップ）
+echo "your-google-api-key" | pnpm exec wrangler secret put GOOGLE_GENERATIVE_AI_API_KEY
 ```
 
 ### PR Preview環境について
@@ -196,18 +252,27 @@ pnpm exec wrangler secret list
 
 ## 🧪 テストでの扱い
 
-### ユニット/統合テスト
+### CI統合テスト
+
+**現状**: `RESEND_API_KEY`は**使用していません**
+
+```yaml
+# .github/workflows/ci.yml Line 78
+echo "GOOGLE_GENERATIVE_AI_API_KEY=${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}" > .dev.vars
+# ↑ RESEND_API_KEYは含まれていない
+```
 
 - **方針**: メール送信を**モック化**
 - **理由**:
   - 外部APIへの依存を排除
   - テストの高速化
   - コスト削減（Resend APIの呼び出し回数を節約）
+  - 統合テストでは実際のメール送信は不要
 
 ### E2Eテスト
 
 - **方針**: 実際のメール送信は**オプショナル**
-- **推奨**: 手動テストで最終確認
+- **推奨**: 手動テストで最終確認（`TESTING_GUIDE.md`参照）
 - **理由**:
   - E2Eでのメール受信確認は複雑（メールボックスAPIが必要）
   - CI環境での実メール送信はコストがかかる
@@ -219,12 +284,21 @@ pnpm exec wrangler secret list
 ### セットアップ
 
 - [x] ローカル開発環境（.dev.vars）設定済み
-- [ ] **手順1**: GitHub Secretsに`RESEND_API_KEY`を追加
-- [ ] **手順2**: Cloudflare Workersに手動でシークレット設定
+- [ ] **手順1**: GitHub Secretsに`RESEND_API_KEY`を追加（PR Preview使う場合のみ）
+- [ ] **手順2**: Cloudflare Workersにシークレット設定（**推奨**: Cloudflare Dashboard）
   - [ ] Preview環境に`RESEND_API_KEY`設定
   - [ ] Production環境に`RESEND_API_KEY`設定
 - [x] CI設定ファイル（.github/workflows/ci.yml）更新済み
 - [x] wrangler.toml設定済み
+
+### 環境別の設定方法
+
+| 環境 | GitHub Secrets | Cloudflare Secrets | 設定タイミング |
+|------|----------------|-------------------|----------------|
+| **ローカル開発** | 不要 | 不要 | `.dev.vars`で設定済み |
+| **Main Preview** | 不要 | ✅ 必要 | 手動（一度のみ） |
+| **Production** | 不要 | ✅ 必要 | 手動（一度のみ） |
+| **PR Preview** | ✅ 必要 | 自動設定 | CI内で自動 |
 
 ### 確認
 
