@@ -39,25 +39,15 @@ export async function sendVerificationEmail(
   fromEmail: string,
   frontendUrl: string
 ): Promise<{ success: true; token: string } | { success: false; error: string }> {
-  console.log('[DEBUG sendVerificationEmail] Function called with:', {
-    email,
-    userId,
-    hasApiKey: !!resendApiKey,
-    fromEmail,
-    frontendUrl,
-  });
   const orm = drizzle(db, { schema });
 
   try {
-    console.log('[DEBUG sendVerificationEmail] Generating token...');
     // Generate secure token
     const token = await generateSecureToken();
-    console.log('[DEBUG sendVerificationEmail] Token generated:', token.substring(0, 10));
     const now = Date.now();
     const expiresAt = now + EMAIL_VERIFICATION_TOKEN_EXPIRATION_MS;
 
     // Insert token into database
-    console.log('[DEBUG sendVerificationEmail] Inserting token to DB...');
     await orm.insert(schema.emailVerificationTokens).values({
       userId,
       token,
@@ -65,14 +55,11 @@ export async function sendVerificationEmail(
       usedAt: null,
       createdAt: now,
     });
-    console.log('[DEBUG sendVerificationEmail] Token inserted to DB');
 
     // Generate verification link
     const verificationLink = `${frontendUrl}/verify-email?token=${token}`;
-    console.log('[DEBUG sendVerificationEmail] Verification link:', verificationLink.substring(0, 80));
 
     // Send email
-    console.log('[DEBUG sendVerificationEmail] Calling sendEmail...');
     const emailResult = await sendEmail(db, resendApiKey, fromEmail, {
       to: email,
       subject: 'メールアドレスの確認',
@@ -80,7 +67,6 @@ export async function sendVerificationEmail(
       emailType: 'email_verification',
       userId,
     });
-    console.log('[DEBUG sendVerificationEmail] sendEmail result:', emailResult);
 
     if (!emailResult.success) {
       return { success: false, error: emailResult.error || 'メール送信に失敗しました' };
