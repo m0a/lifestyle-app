@@ -155,7 +155,7 @@ export default {
   async scheduled(
     event: ScheduledEvent,
     env: Bindings,
-    ctx: ExecutionContext
+    _ctx: ExecutionContext
   ): Promise<void> {
     console.log('[Cron] Scheduled event triggered at:', new Date(event.scheduledTime).toISOString());
 

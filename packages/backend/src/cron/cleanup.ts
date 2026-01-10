@@ -7,7 +7,7 @@
  */
 
 import { drizzle } from 'drizzle-orm/d1';
-import { eq, and, lt, isNotNull } from 'drizzle-orm';
+import { eq, and, lt } from 'drizzle-orm';
 import * as schema from '../db/schema';
 import * as emailSchema from '../db/schema/email';
 
@@ -74,13 +74,6 @@ export async function executeScheduledCleanup(db: D1Database): Promise<CleanupRe
         )
       )
       .all();
-
-    // Filter in-memory for used or expired
-    const tokensToDelete = oldTokens.filter((token) => {
-      // We need to check usedAt and expiresAt, but we only selected id
-      // Let's select all fields instead
-      return true; // Will refine below
-    });
 
     if (oldTokens.length > 0) {
       for (const token of oldTokens) {

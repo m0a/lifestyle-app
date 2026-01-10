@@ -77,7 +77,6 @@ export async function sendEmail(
   options: EmailOptions
 ): Promise<SendEmailResult> {
   const resend = new Resend(resendApiKey);
-  const startTime = Date.now();
 
   // Send email with retry
   const result = await retryWithBackoff(

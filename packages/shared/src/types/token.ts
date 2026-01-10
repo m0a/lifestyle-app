@@ -8,7 +8,6 @@ import type { z } from 'zod';
 import type {
   tokenSchema,
   tokenTypeSchema,
-  emailChangeStatusSchema,
 } from '../schemas/token';
 
 /**
