@@ -26,6 +26,10 @@ database_id = "86957e0a-04b6-4530-9b64-79ea36c64ba5"
 binding = "PHOTOS"
 bucket_name = "lifestyle-app-photos"
 
+# Cron triggers for scheduled tasks
+[triggers]
+crons = ["0 2 * * *"]  # Daily at 2:00 AM UTC
+
 # Preview environment configuration
 [env.preview]
 name = "lifestyle-tracker-preview"
