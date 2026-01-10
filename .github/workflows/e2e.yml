@@ -1,6 +1,6 @@
 name: E2E Tests
 
-# Run E2E tests after CI completes on main branch
+# Run E2E tests after CI completes on main branch, or manually
 on:
   workflow_run:
     workflows: ["CI"]
@@ -8,17 +8,27 @@ on:
       - completed
     branches:
       - main
+  workflow_dispatch:
+    inputs:
+      force_failure:
+        description: 'Force E2E to fail (for testing issue creation)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
 
 jobs:
   e2e:
     name: E2E Tests
     runs-on: ubuntu-latest
-    # Only run if CI workflow succeeded
-    if: github.event.workflow_run.conclusion == 'success'
+    # Only run if CI workflow succeeded (or manual dispatch)
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.sha || github.event.workflow_run.head_sha }}
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v2
@@ -57,7 +67,12 @@ jobs:
 
       - name: Run E2E tests
         id: e2e_tests
-        run: pnpm test:e2e
+        run: |
+          if [ "${{ github.event.inputs.force_failure }}" = "true" ]; then
+            echo "❌ Forcing E2E test failure for testing (force_failure input set to true)"
+            exit 1
+          fi
+          pnpm test:e2e
         env:
           CI: true
           NODE_ENV: test
@@ -77,7 +92,7 @@ jobs:
         with:
           script: |
             const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-            const commitSha = '${{ github.event.workflow_run.head_sha }}';
+            const commitSha = '${{ github.event_name == 'workflow_dispatch' && github.sha || github.event.workflow_run.head_sha }}';
             const commitUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/commit/${commitSha}`;
 
             // Check if there's already an open issue for E2E failures
@@ -132,7 +147,7 @@ _This issue was automatically created by the E2E workflow._`;
         with:
           script: |
             const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-            const commitSha = '${{ github.event.workflow_run.head_sha }}';
+            const commitSha = '${{ github.event_name == 'workflow_dispatch' && github.sha || github.event.workflow_run.head_sha }}';
             const commitUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/commit/${commitSha}`;
 
             // Check if there's an open issue for E2E failures
