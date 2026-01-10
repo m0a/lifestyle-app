@@ -1,13 +1,26 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { setCookie, deleteCookie } from 'hono/cookie';
-import { registerSchema, loginSchema } from '@lifestyle-app/shared';
+import {
+  registerSchema,
+  loginSchema,
+  passwordResetRequestSchema,
+  passwordResetConfirmSchema,
+} from '@lifestyle-app/shared';
 import { AuthService } from '../services/auth';
 import { createSessionToken, authMiddleware } from '../middleware/auth';
 import type { Database } from '../db';
+import {
+  requestPasswordReset,
+  confirmPasswordReset,
+} from '../services/auth/password-reset.service';
+import { getClientIP } from '../services/rate-limit/email-rate-limit';
 
 type Bindings = {
   DB: D1Database;
+  RESEND_API_KEY: string;
+  FROM_EMAIL: string;
+  FRONTEND_URL: string;
 };
 
 type Variables = {
@@ -68,4 +81,44 @@ export const auth = new Hono<{ Bindings: Bindings; Variables: Variables }>()
     const user = await authService.getUserById(authUser.id);
 
     return c.json({ user });
-  });
+  })
+  .post(
+    '/password-reset/request',
+    zValidator('json', passwordResetRequestSchema),
+    async (c) => {
+      const { email } = c.req.valid('json');
+      const clientIP = getClientIP(c.req.raw.headers);
+
+      const result = await requestPasswordReset(
+        c.env.DB,
+        email,
+        clientIP,
+        c.env.RESEND_API_KEY,
+        c.env.FROM_EMAIL,
+        c.env.FRONTEND_URL
+      );
+
+      if (!result.success) {
+        return c.json({ error: result.error }, 400);
+      }
+
+      return c.json({ message: 'パスワードリセットのメールを送信しました。' });
+    }
+  )
+  .post(
+    '/password-reset/confirm',
+    zValidator('json', passwordResetConfirmSchema),
+    async (c) => {
+      const { token, newPassword } = c.req.valid('json');
+
+      const result = await confirmPasswordReset(c.env.DB, token, newPassword);
+
+      if (!result.success) {
+        return c.json({ error: result.error }, 400);
+      }
+
+      return c.json({
+        message: 'パスワードを正常にリセットしました。新しいパスワードでログインできます。',
+      });
+    }
+  );

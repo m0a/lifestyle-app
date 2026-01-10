@@ -4,6 +4,8 @@ import { Layout } from './components/Layout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
+import { ForgotPassword } from './pages/ForgotPassword';
+import { ResetPassword } from './pages/ResetPassword';
 import { Weight } from './pages/Weight';
 import { Meal } from './pages/Meal';
 import { Exercise } from './pages/Exercise';
@@ -39,6 +41,14 @@ const routes: RouteObject[] = [
   {
     path: '/register',
     element: <Layout><Register /></Layout>,
+  },
+  {
+    path: '/forgot-password',
+    element: <Layout><ForgotPassword /></Layout>,
+  },
+  {
+    path: '/reset-password',
+    element: <Layout><ResetPassword /></Layout>,
   },
   {
     path: '/dashboard',

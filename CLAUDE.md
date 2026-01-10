@@ -187,6 +187,7 @@ pnpm dev:backend
 4. `stack` と `componentStack` で原因箇所を特定
 
 ## Recent Changes
+- 019-email-delivery: Added TypeScript 5.x (strict mode) + Hono (backend), React 18+ (frontend), Drizzle ORM, Zod, TanStack Query, Tailwind CSS, Resend (email API), crypto (token generation)
 - 017-multi-exercise-import: Added TypeScript 5.3 (strict mode) + React 18+, Hono, Drizzle ORM, TanStack Query, Zod, Tailwind CSS
 - **016-multiple-meal-photos**: ✅ COMPLETED (84.3% - 70/83 tasks)
   - Multiple photos per meal (up to 10 photos)
@@ -196,7 +197,6 @@ pnpm dev:backend
   - Image resize before upload (1920px width)
   - Client-side validation (10MB limit, JPEG/PNG only)
   - Remaining: 13 Polish tasks (optional enhancements)
-- 015-request-id-tracing: Request ID tracking for debugging
 
 ## Features
 
@@ -228,3 +228,5 @@ pnpm dev:backend
 - Image processing: Canvas API for client-side resize
 - TypeScript 5.3 (strict mode) + React 18+, Hono, Drizzle ORM, TanStack Query, Zod, Tailwind CSS (017-multi-exercise-import)
 - Cloudflare D1 (SQLite) - existing `exercise_records` table (017-multi-exercise-import)
+- TypeScript 5.x (strict mode) + Hono (backend), React 18+ (frontend), Drizzle ORM, Zod, TanStack Query, Tailwind CSS, Resend (email API), crypto (token generation) (019-email-delivery)
+- Cloudflare D1 (SQLite) for tokens/logs, R2 (if email attachments needed in future) (019-email-delivery)

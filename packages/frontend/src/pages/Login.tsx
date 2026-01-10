@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { loginSchema, type LoginInput } from '@lifestyle-app/shared';
 import { api } from '../lib/client';
 import { useAuthStore } from '../stores/authStore';
+import { ForgotPasswordLink } from '../components/auth/ForgotPasswordLink';
 
 export function Login() {
   const navigate = useNavigate();
@@ -13,6 +14,7 @@ export function Login() {
   const [error, setError] = useState<string | null>(null);
 
   const from = (location.state as { from?: Location })?.from?.pathname || '/';
+  const successMessage = (location.state as { message?: string })?.message;
 
   const {
     register,
@@ -51,6 +53,12 @@ export function Login() {
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-6">
+          {successMessage && (
+            <div className="rounded-md bg-green-50 p-4">
+              <p className="text-sm text-green-700">{successMessage}</p>
+            </div>
+          )}
+
           {error && (
             <div className="rounded-md bg-red-50 p-4">
               <p className="text-sm text-red-700">{error}</p>
@@ -98,6 +106,8 @@ export function Login() {
           >
             {isSubmitting ? 'ログイン中...' : 'ログイン'}
           </button>
+
+          <ForgotPasswordLink />
 
           <p className="text-center text-sm text-gray-600">
             アカウントをお持ちでないですか？{' '}
