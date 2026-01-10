@@ -12,9 +12,9 @@ ENVIRONMENT = "production"
 AI_PROVIDER = "google"
 AI_MODEL = "gemini-3-flash-preview"
 # Email delivery configuration
-# RESEND_API_KEY should be set in .dev.vars or wrangler secrets for production
-FROM_EMAIL = "noreply@lifestyle-app.example.com"
-FRONTEND_URL = "https://lifestyle-app.example.com"
+# RESEND_API_KEY should be set via wrangler secrets (see .github/workflows/ci.yml)
+FROM_EMAIL = "onboarding@resend.dev"
+FRONTEND_URL = "https://lifestyle-app.abe00makoto.workers.dev"
 
 [[d1_databases]]
 binding = "DB"
@@ -39,8 +39,8 @@ ENVIRONMENT = "preview"
 AI_PROVIDER = "google"
 AI_MODEL = "gemini-3-flash-preview"
 # Email delivery configuration
-FROM_EMAIL = "noreply@lifestyle-app-preview.example.com"
-FRONTEND_URL = "https://lifestyle-app-preview.example.com"
+FROM_EMAIL = "onboarding@resend.dev"
+FRONTEND_URL = "https://lifestyle-tracker-preview.abe00makoto.workers.dev"
 
 [[env.preview.d1_databases]]
 binding = "DB"
