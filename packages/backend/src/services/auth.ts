@@ -25,15 +25,11 @@ export class AuthService {
     const now = new Date().toISOString();
     const id = uuidv4();
 
-    // In test environment, auto-verify emails to simplify integration tests
-    const isTestEnv = process.env.NODE_ENV === 'test';
-    const emailVerifiedValue = isTestEnv ? 1 : 0;
-
     await this.db.insert(schema.users).values({
       id,
       email: input.email,
       passwordHash,
-      emailVerified: emailVerifiedValue,
+      emailVerified: 0, // New users start unverified
       goalWeight: input.goalWeight ?? null,
       goalCalories: input.goalCalories ?? 2000,
       createdAt: now,
@@ -43,7 +39,7 @@ export class AuthService {
     return {
       id,
       email: input.email,
-      emailVerified: isTestEnv, // Return as boolean for frontend
+      emailVerified: false, // Return as boolean for frontend
       goalWeight: input.goalWeight ?? null,
       goalCalories: input.goalCalories ?? 2000,
       createdAt: now,
