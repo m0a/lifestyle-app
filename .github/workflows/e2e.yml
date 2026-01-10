@@ -1,6 +1,6 @@
 name: E2E Tests
 
-# Run E2E tests after CI completes on main branch, or manually
+# Run E2E tests after CI completes on main branch, or manually via workflow_dispatch
 on:
   workflow_run:
     workflows: ["CI"]
