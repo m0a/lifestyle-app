@@ -79,6 +79,13 @@ export async function sendEmail(
   const resend = new Resend(resendApiKey);
 
   // Send email with retry
+  console.log('[DEBUG email.service] Sending email:', {
+    from: fromEmail,
+    to: options.to,
+    subject: options.subject,
+    emailType: options.emailType,
+  });
+
   const result = await retryWithBackoff(
     async () => {
       const response = await resend.emails.send({
@@ -87,6 +94,8 @@ export async function sendEmail(
         subject: options.subject,
         html: options.html,
       });
+
+      console.log('[DEBUG email.service] Resend API response:', response);
 
       // Resend SDK throws on error, so reaching here means success
       return response;

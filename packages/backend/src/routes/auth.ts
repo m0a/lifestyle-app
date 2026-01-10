@@ -42,18 +42,28 @@ export const auth = new Hono<{ Bindings: Bindings; Variables: Variables }>()
     // Send verification email in background (non-blocking)
     // Skip email sending in test environment (integration tests)
     if (c.env.ENVIRONMENT !== 'test') {
+      console.log('[DEBUG auth] Starting email send for:', user.email);
       // Use waitUntil to send email in background without blocking response
       c.executionCtx.waitUntil(
-        sendVerificationEmail(
-          c.env.DB,
-          user.id,
-          user.email,
-          c.env.RESEND_API_KEY,
-          c.env.FROM_EMAIL,
-          c.env.FRONTEND_URL
-        ).catch((error) => {
-          console.error('Failed to send verification email:', error);
-        })
+        (async () => {
+          try {
+            console.log('[DEBUG auth] Calling sendVerificationEmail...');
+            const result = await sendVerificationEmail(
+              c.env.DB,
+              user.id,
+              user.email,
+              c.env.RESEND_API_KEY,
+              c.env.FROM_EMAIL,
+              c.env.FRONTEND_URL
+            );
+            console.log('[DEBUG auth] Email send result:', result);
+            if (!result.success) {
+              console.error('[DEBUG auth] Email send failed:', result.error);
+            }
+          } catch (error) {
+            console.error('[DEBUG auth] Exception in email send:', error);
+          }
+        })()
       );
     }
 
