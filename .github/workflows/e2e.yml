@@ -92,7 +92,7 @@ jobs:
         with:
           script: |
             const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-            const commitSha = '${{ github.event_name == 'workflow_dispatch' && github.sha || github.event.workflow_run.head_sha }}';
+            const commitSha = "${{ github.event_name == 'workflow_dispatch' && github.sha || github.event.workflow_run.head_sha }}";
             const commitUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/commit/${commitSha}`;
 
             // Check if there's already an open issue for E2E failures
@@ -147,7 +147,7 @@ _This issue was automatically created by the E2E workflow._`;
         with:
           script: |
             const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-            const commitSha = '${{ github.event_name == 'workflow_dispatch' && github.sha || github.event.workflow_run.head_sha }}';
+            const commitSha = "${{ github.event_name == 'workflow_dispatch' && github.sha || github.event.workflow_run.head_sha }}";
             const commitUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/commit/${commitSha}`;
 
             // Check if there's an open issue for E2E failures
