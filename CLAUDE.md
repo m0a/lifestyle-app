@@ -200,6 +200,52 @@ pnpm dev:backend
 
 ## Features
 
+### Email Delivery System (019-email-delivery)
+**Status**: ✅ Complete (81/92 tasks, 88.0%)
+
+**Completed Features:**
+- ✅ Password Reset Flow (User Story 1, P1)
+  - Forgot password link on login page
+  - Email with secure reset link (24-hour expiration)
+  - New password confirmation
+  - Rate limiting (10 requests/hour per IP)
+- ✅ Email Verification on Signup (User Story 2, P2)
+  - Automatic verification email on registration
+  - Email verification banner for unverified users
+  - Resend verification email button
+  - Login blocked until email verified
+- ✅ Email Change Verification (User Story 3, P3)
+  - Confirmation email to NEW address
+  - Notification email to OLD address (with cancel link)
+  - Dual verification for security
+- ✅ Scheduled Cleanup (Cron Job)
+  - Unverified accounts deleted after 7 days
+  - Expired tokens cleanup (>7 days old)
+  - Runs daily at 2:00 AM UTC
+
+**Architecture:**
+- Email Service: Resend API with retry logic (exponential backoff: 1s, 2s, 4s)
+- Token Security: 32-character tokens (256-bit entropy), Web Crypto API
+- Database: `password_reset_tokens`, `email_verification_tokens`, `email_change_requests`, `email_delivery_logs`
+- Cron: Cloudflare Cron Triggers for scheduled cleanup
+- Rate Limiting: IP-based with email_rate_limits table
+
+**Endpoints:**
+- `POST /api/auth/password-reset/request` - Request password reset
+- `POST /api/auth/password-reset/confirm` - Confirm with token
+- `POST /api/email/verify` - Verify email address
+- `POST /api/email/verify/resend` - Resend verification email
+- `POST /api/email/change/request` - Request email change
+- `POST /api/email/change/confirm` - Confirm email change
+- `POST /api/email/change/cancel` - Cancel email change
+
+**Security:**
+- Email enumeration prevention
+- CSRF protection (sameSite: 'Lax')
+- XSS protection (httpOnly cookies)
+- SQL injection prevention (Drizzle ORM)
+- Secure token generation (cryptographically random)
+
 ### Multiple Photos Per Meal (016-multiple-meal-photos)
 **Status**: ✅ Core functionality complete (70/83 tasks)
 

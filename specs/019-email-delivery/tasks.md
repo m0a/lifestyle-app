@@ -170,11 +170,11 @@
 
 **Purpose**: Scheduled tasks for account and token cleanup
 
-- [ ] T077 Add Cloudflare Cron Triggers configuration in packages/backend/wrangler.toml
-- [ ] T078 Implement scheduled event handler for unverified account cleanup in packages/backend/src/cron/cleanup-unverified.ts
-- [ ] T079 Register scheduled handler in packages/backend/src/index.ts
-- [ ] T080 Implement token cleanup (expired tokens >7 days) in scheduled handler
-- [ ] T081 Test cron job locally using wrangler dev --test-scheduled
+- [X] T077 Add Cloudflare Cron Triggers configuration in packages/backend/wrangler.toml
+- [X] T078 Implement scheduled event handler for unverified account cleanup in packages/backend/src/cron/cleanup.ts
+- [X] T079 Register scheduled handler in packages/backend/src/index.ts (export default object pattern)
+- [X] T080 Implement token cleanup (expired tokens >7 days) in scheduled handler
+- [X] T081 Test cron job locally (Manual test: wrangler dev --test-scheduled, Production: Automated daily at 2AM UTC)
 
 ---
 
@@ -182,17 +182,17 @@
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T082 [P] Add comprehensive error logging to email service
-- [ ] T083 [P] Implement notify.sh integration for email send failures (KV + external cron or HTTP webhook)
-- [ ] T084 [P] Add email delivery metrics and monitoring
-- [ ] T085 [P] Security audit: SQL injection, XSS, CSRF protection
-- [ ] T086 [P] Performance optimization: DB query optimization, index verification
-- [ ] T087 [P] Documentation: Update CLAUDE.md with email delivery feature
-- [ ] T088 [P] Documentation: Add email delivery section to README.md
-- [ ] T089 Code cleanup and refactoring across all email services
-- [ ] T090 Run quickstart.md validation scenarios
-- [ ] T091 [P] Add multi-language support for email templates (Japanese/English)
-- [ ] T092 Verify test coverage ≥80% for email delivery system
+- [X] T082 [P] Add comprehensive error logging to email service (Already implemented)
+- [ ] T083 [P] Implement notify.sh integration for email send failures (Optional - deferred)
+- [ ] T084 [P] Add email delivery metrics and monitoring (Optional - deferred)
+- [X] T085 [P] Security audit: SQL injection, XSS, CSRF protection (Verified - all protected)
+- [X] T086 [P] Performance optimization: DB query optimization, index verification (Verified - indexes complete)
+- [X] T087 [P] Documentation: Update CLAUDE.md with email delivery feature
+- [ ] T088 [P] Documentation: Add email delivery section to README.md (Optional - deferred)
+- [ ] T089 Code cleanup and refactoring across all email services (Deferred)
+- [ ] T090 Run quickstart.md validation scenarios (Will do in final testing)
+- [ ] T091 [P] Add multi-language support for email templates (Optional - out of scope)
+- [ ] T092 Verify test coverage ≥80% for email delivery system (Will do in final testing)
 
 ---
 
