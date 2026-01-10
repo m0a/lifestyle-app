@@ -76,6 +76,7 @@ jobs:
         run: |
           cd packages/backend
           echo "GOOGLE_GENERATIVE_AI_API_KEY=${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}" > .dev.vars
+          echo "ENVIRONMENT=test" >> .dev.vars
           pnpm dev > backend.log 2>&1 &
           echo $! > backend.pid
         env:

@@ -9,7 +9,7 @@ import type { RegisterInput, LoginInput } from '@lifestyle-app/shared';
 export class AuthService {
   constructor(private db: Database) {}
 
-  async register(input: RegisterInput) {
+  async register(input: RegisterInput, environment?: string) {
     // Check if email already exists
     const existing = await this.db
       .select({ id: schema.users.id })
@@ -25,11 +25,15 @@ export class AuthService {
     const now = new Date().toISOString();
     const id = uuidv4();
 
+    // In integration test environment (ENVIRONMENT=test), auto-verify emails
+    // to simplify testing. E2E tests (ENVIRONMENT=e2e) and production use normal flow.
+    const emailVerifiedValue = environment === 'test' ? 1 : 0;
+
     await this.db.insert(schema.users).values({
       id,
       email: input.email,
       passwordHash,
-      emailVerified: 0, // New users start unverified
+      emailVerified: emailVerifiedValue,
       goalWeight: input.goalWeight ?? null,
       goalCalories: input.goalCalories ?? 2000,
       createdAt: now,
@@ -39,7 +43,7 @@ export class AuthService {
     return {
       id,
       email: input.email,
-      emailVerified: false, // Return as boolean for frontend
+      emailVerified: environment === 'test',
       goalWeight: input.goalWeight ?? null,
       goalCalories: input.goalCalories ?? 2000,
       createdAt: now,

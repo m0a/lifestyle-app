@@ -19,6 +19,7 @@ import { getClientIP } from '../services/rate-limit/email-rate-limit';
 
 type Bindings = {
   DB: D1Database;
+  ENVIRONMENT: string;
   RESEND_API_KEY: string;
   FROM_EMAIL: string;
   FRONTEND_URL: string;
@@ -36,20 +37,23 @@ export const auth = new Hono<{ Bindings: Bindings; Variables: Variables }>()
     const db = c.get('db');
     const authService = new AuthService(db);
 
-    const user = await authService.register(input);
+    const user = await authService.register(input, c.env.ENVIRONMENT);
 
     // Send verification email (fire-and-forget - don't block registration)
-    sendVerificationEmail(
-      c.env.DB,
-      user.id,
-      user.email,
-      c.env.RESEND_API_KEY,
-      c.env.FROM_EMAIL,
-      c.env.FRONTEND_URL
-    ).catch((error) => {
-      console.error('Failed to send verification email:', error);
-      // Continue with registration even if email fails
-    });
+    // Skip email sending in test environment (integration tests)
+    if (c.env.ENVIRONMENT !== 'test') {
+      sendVerificationEmail(
+        c.env.DB,
+        user.id,
+        user.email,
+        c.env.RESEND_API_KEY,
+        c.env.FROM_EMAIL,
+        c.env.FRONTEND_URL
+      ).catch((error) => {
+        console.error('Failed to send verification email:', error);
+        // Continue with registration even if email fails
+      });
+    }
 
     const token = createSessionToken(user.id);
 
