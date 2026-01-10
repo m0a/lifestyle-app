@@ -41,7 +41,15 @@ export const auth = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
     // Send verification email (fire-and-forget - don't block registration)
     // Skip email sending in test environment (integration tests)
+    console.log('[DEBUG] Email config:', {
+      environment: c.env.ENVIRONMENT,
+      hasApiKey: !!c.env.RESEND_API_KEY,
+      apiKeyPrefix: c.env.RESEND_API_KEY?.substring(0, 10),
+      fromEmail: c.env.FROM_EMAIL,
+      frontendUrl: c.env.FRONTEND_URL,
+    });
     if (c.env.ENVIRONMENT !== 'test') {
+      console.log('[DEBUG] Calling sendVerificationEmail for:', user.email);
       sendVerificationEmail(
         c.env.DB,
         user.id,
@@ -53,6 +61,8 @@ export const auth = new Hono<{ Bindings: Bindings; Variables: Variables }>()
         console.error('Failed to send verification email:', error);
         // Continue with registration even if email fails
       });
+    } else {
+      console.log('[DEBUG] Skipping email send in test environment');
     }
 
     const token = createSessionToken(user.id);
