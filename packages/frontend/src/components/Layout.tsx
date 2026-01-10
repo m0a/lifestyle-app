@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { api } from '../lib/client';
 import { SyncStatusIndicator } from './SyncStatusIndicator';
+import { EmailVerificationBanner } from './auth/EmailVerificationBanner';
 
 interface LayoutProps {
   children: ReactNode;
@@ -86,6 +87,9 @@ export function Layout({ children }: LayoutProps) {
           </div>
         </nav>
       </header>
+      {isAuthenticated && user?.emailVerified === false && (
+        <EmailVerificationBanner />
+      )}
       <main className="mx-auto max-w-7xl px-4 py-8 pb-24 md:pb-8 sm:px-6 lg:px-8">{children}</main>
       <SyncStatusIndicator />
 

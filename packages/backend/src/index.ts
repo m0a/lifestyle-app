@@ -13,7 +13,7 @@ import { user } from './routes/user';
 import { logs } from './routes/logs';
 import { mealAnalysis } from './routes/meal-analysis';
 import { mealChat } from './routes/meal-chat';
-import emailVerify from './routes/email/verify';
+import { emailVerify } from './routes/email/verify';
 import { PhotoStorageService } from './services/photo-storage';
 import { requestContext } from './middleware/requestContext';
 

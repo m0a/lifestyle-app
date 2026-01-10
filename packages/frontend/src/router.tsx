@@ -6,6 +6,7 @@ import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { ForgotPassword } from './pages/ForgotPassword';
 import { ResetPassword } from './pages/ResetPassword';
+import { VerifyEmail } from './pages/VerifyEmail';
 import { Weight } from './pages/Weight';
 import { Meal } from './pages/Meal';
 import { Exercise } from './pages/Exercise';
@@ -49,6 +50,10 @@ const routes: RouteObject[] = [
   {
     path: '/reset-password',
     element: <Layout><ResetPassword /></Layout>,
+  },
+  {
+    path: '/verify-email',
+    element: <Layout><VerifyEmail /></Layout>,
   },
   {
     path: '/dashboard',

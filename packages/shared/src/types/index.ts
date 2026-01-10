@@ -49,6 +49,7 @@ export type MaxRMResponseType = z.infer<typeof maxRMResponseSchema>;
 export interface User {
   id: string;
   email: string;
+  emailVerified: boolean;
   goalWeight: number | null;
   goalCalories: number | null;
   createdAt: string;
