@@ -1,140 +1,126 @@
 /**
- * Email change confirmation template
+ * Email change notification templates
  *
- * Simple HTML template for email change confirmation
- * - Clear call-to-action button
- * - Expiration time (24 hours)
- * - Security notice
- * - Plain text fallback
+ * Templates for:
+ * - New email confirmation (with confirmation link)
+ * - Old email notification (with cancel link)
  */
 
-export interface EmailChangeTemplateData {
-  /**
-   * Email change confirmation link with token
-   */
-  confirmUrl: string;
-
-  /**
-   * Old email address
-   */
-  oldEmail: string;
-
-  /**
-   * New email address
-   */
+interface EmailChangeConfirmationData {
+  confirmationUrl: string;
   newEmail: string;
+  expirationHours: number;
+}
 
-  /**
-   * Token expiration time in hours (default: 24)
-   */
-  expirationHours?: number;
+interface EmailChangeCancellationData {
+  cancelUrl: string;
+  oldEmail: string;
+  newEmail: string;
+  expirationHours: number;
 }
 
 /**
- * Generate email change confirmation email HTML
- *
- * @param data - Template data
- * @returns HTML email content
+ * Generate email change confirmation email (sent to NEW email address)
  */
-export function generateEmailChangeEmail(
-  data: EmailChangeTemplateData
+export function generateEmailChangeConfirmationEmail(
+  data: EmailChangeConfirmationData
 ): string {
-  const { confirmUrl, oldEmail, newEmail, expirationHours = 24 } = data;
-
   return `
 <!DOCTYPE html>
-<html lang="ja">
+<html>
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>メールアドレス変更確認</title>
+  <title>メールアドレス変更の確認</title>
 </head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 40px 20px;">
-    <tr>
-      <td align="center">
-        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-          <!-- Header -->
-          <tr>
-            <td style="background-color: #f59e0b; padding: 32px 24px; text-align: center;">
-              <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">メールアドレス変更確認</h1>
-            </td>
-          </tr>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background-color: #f8f9fa; border-radius: 5px; padding: 20px; margin-bottom: 20px;">
+    <h2 style="color: #2563eb; margin-top: 0;">メールアドレス変更の確認</h2>
+    <p>あなたのアカウントで新しいメールアドレス（${data.newEmail}）への変更がリクエストされました。</p>
+    <p>この変更を完了するには、下のボタンをクリックしてください:</p>
 
-          <!-- Body -->
-          <tr>
-            <td style="padding: 40px 24px;">
-              <p style="margin: 0 0 24px; color: #374151; font-size: 16px; line-height: 1.6;">
-                メールアドレスの変更リクエストを受け付けました。
-              </p>
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${data.confirmationUrl}"
+         style="display: inline-block; background-color: #2563eb; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+        メールアドレス変更を確認
+      </a>
+    </div>
 
-              <!-- Email Change Info -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 32px; background-color: #f3f4f6; border-radius: 6px; padding: 16px;">
-                <tr>
-                  <td>
-                    <p style="margin: 0 0 8px; color: #6b7280; font-size: 14px;">
-                      <strong>変更前:</strong> ${oldEmail}
-                    </p>
-                    <p style="margin: 0; color: #374151; font-size: 14px;">
-                      <strong>変更後:</strong> ${newEmail}
-                    </p>
-                  </td>
-                </tr>
-              </table>
+    <p style="font-size: 14px; color: #666;">
+      このリンクは${data.expirationHours}時間有効です。<br>
+      ボタンがクリックできない場合は、以下のURLをブラウザにコピー&ペーストしてください:
+    </p>
+    <p style="font-size: 12px; word-break: break-all; color: #666;">
+      ${data.confirmationUrl}
+    </p>
 
-              <p style="margin: 0 0 32px; color: #374151; font-size: 16px; line-height: 1.6;">
-                以下のボタンをクリックして、メールアドレスの変更を確定してください。
-              </p>
+    <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
 
-              <!-- CTA Button -->
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td align="center" style="padding: 0 0 32px;">
-                    <a href="${confirmUrl}" style="display: inline-block; padding: 16px 32px; background-color: #f59e0b; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600;">
-                      変更を確定
-                    </a>
-                  </td>
-                </tr>
-              </table>
+    <p style="font-size: 14px; color: #666;">
+      <strong>このリクエストに心当たりがない場合:</strong><br>
+      このメールを無視してください。誰かがあなたのメールアドレスを誤って入力した可能性があります。
+    </p>
+  </div>
 
-              <p style="margin: 0 0 16px; color: #6b7280; font-size: 14px; line-height: 1.6;">
-                このリンクは<strong>${expirationHours}時間</strong>後に有効期限が切れます。
-              </p>
-              <p style="margin: 0 0 24px; color: #6b7280; font-size: 14px; line-height: 1.6;">
-                ボタンが機能しない場合は、以下のURLをコピーしてブラウザに貼り付けてください：
-              </p>
-              <p style="margin: 0; padding: 16px; background-color: #f3f4f6; border-radius: 4px; word-break: break-all; font-size: 12px; color: #374151;">
-                ${confirmUrl}
-              </p>
-            </td>
-          </tr>
+  <p style="font-size: 12px; color: #999; text-align: center;">
+    このメールは自動送信されています。返信しないでください。
+  </p>
+</body>
+</html>
+  `.trim();
+}
 
-          <!-- Security Notice -->
-          <tr>
-            <td style="padding: 24px; background-color: #fef3c7; border-top: 1px solid #fcd34d;">
-              <p style="margin: 0 0 8px; color: #92400e; font-size: 14px; font-weight: 600;">
-                ⚠️ セキュリティに関する注意
-              </p>
-              <p style="margin: 0; color: #92400e; font-size: 12px; line-height: 1.6;">
-                このメールアドレス変更に心当たりがない場合は、アカウントが不正アクセスされている可能性があります。<br>
-                すぐにパスワードを変更し、サポートにお問い合わせください。
-              </p>
-            </td>
-          </tr>
+/**
+ * Generate email change notification email (sent to OLD email address)
+ */
+export function generateEmailChangeNotificationEmail(
+  data: EmailChangeCancellationData
+): string {
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>メールアドレス変更のお知らせ</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 20px; margin-bottom: 20px;">
+    <h2 style="color: #856404; margin-top: 0;">⚠️ メールアドレス変更のお知らせ</h2>
+    <p>あなたのアカウント（${data.oldEmail}）で、新しいメールアドレス（${data.newEmail}）への変更がリクエストされました。</p>
 
-          <!-- Footer -->
-          <tr>
-            <td style="padding: 24px; background-color: #f9fafb; border-top: 1px solid #e5e7eb;">
-              <p style="margin: 0; color: #6b7280; font-size: 12px; line-height: 1.6; text-align: center;">
-                このメールに心当たりがない場合は、無視してください。<br>
-                メールアドレスは変更されません。
-              </p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
+    <p style="font-weight: bold; color: #856404;">
+      この変更に心当たりがない場合は、すぐに下のボタンをクリックして変更をキャンセルしてください:
+    </p>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${data.cancelUrl}"
+         style="display: inline-block; background-color: #dc2626; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+        メールアドレス変更をキャンセル
+      </a>
+    </div>
+
+    <p style="font-size: 14px; color: #666;">
+      このリンクは${data.expirationHours}時間有効です。<br>
+      ボタンがクリックできない場合は、以下のURLをブラウザにコピー&ペーストしてください:
+    </p>
+    <p style="font-size: 12px; word-break: break-all; color: #666;">
+      ${data.cancelUrl}
+    </p>
+
+    <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
+
+    <p style="font-size: 14px; color: #666;">
+      <strong>この変更をご自身で行った場合:</strong><br>
+      このメールを無視してください。新しいメールアドレスで確認を完了すると、変更が適用されます。
+    </p>
+
+    <p style="font-size: 14px; color: #dc2626; font-weight: bold;">
+      不正なアクセスの可能性がある場合は、すぐにパスワードを変更してください。
+    </p>
+  </div>
+
+  <p style="font-size: 12px; color: #999; text-align: center;">
+    このメールは自動送信されています。返信しないでください。
+  </p>
 </body>
 </html>
   `.trim();

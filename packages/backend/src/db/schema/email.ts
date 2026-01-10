@@ -4,7 +4,7 @@
  * Tables:
  * - password_reset_tokens
  * - email_verification_tokens
- * - email_change_requests (TODO: User Story 3)
+ * - email_change_requests
  * - email_delivery_logs
  * - email_rate_limits
  */
@@ -63,6 +63,38 @@ export const emailVerificationTokens = sqliteTable(
     tokenIdx: uniqueIndex('idx_email_verification_token').on(table.token),
     userIdIdx: index('idx_email_verification_user_id').on(table.userId),
     expiresAtIdx: index('idx_email_verification_expires_at').on(table.expiresAt),
+  })
+);
+
+/**
+ * Email change requests table
+ *
+ * Stores email change requests for existing users
+ * - 32-character tokens (256-bit entropy)
+ * - 24-hour expiration
+ * - One-time use (tracked via confirmed_at or cancelled_at)
+ * - Sends confirmation emails to both old and new addresses
+ */
+export const emailChangeRequests = sqliteTable(
+  'email_change_requests',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    oldEmail: text('old_email').notNull(),
+    newEmail: text('new_email').notNull(),
+    token: text('token').notNull().unique(),
+    expiresAt: integer('expires_at').notNull(),
+    confirmedAt: integer('confirmed_at'),
+    cancelledAt: integer('cancelled_at'),
+    createdAt: integer('created_at').notNull(),
+  },
+  (table) => ({
+    tokenIdx: uniqueIndex('idx_email_change_token').on(table.token),
+    userIdIdx: index('idx_email_change_user_id').on(table.userId),
+    expiresAtIdx: index('idx_email_change_expires_at').on(table.expiresAt),
+    newEmailIdx: index('idx_email_change_new_email').on(table.newEmail),
   })
 );
 
