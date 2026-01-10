@@ -46,7 +46,8 @@ export function generateEmailVerificationEmail(
           <!-- Header -->
           <tr>
             <td style="background-color: #10b981; padding: 32px 24px; text-align: center;">
-              <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">メールアドレス確認</h1>
+              <h1 style="margin: 0 0 8px; color: #ffffff; font-size: 28px; font-weight: 700;">Health Tracker</h1>
+              <p style="margin: 0; color: #d1fae5; font-size: 16px;">メールアドレス確認</p>
             </td>
           </tr>
 
@@ -54,7 +55,7 @@ export function generateEmailVerificationEmail(
           <tr>
             <td style="padding: 40px 24px;">
               <p style="margin: 0 0 24px; color: #374151; font-size: 16px; line-height: 1.6;">
-                アカウントの登録ありがとうございます！
+                Health Trackerへのご登録ありがとうございます！
               </p>
               <p style="margin: 0 0 32px; color: #374151; font-size: 16px; line-height: 1.6;">
                 以下のボタンをクリックして、メールアドレスを確認してください。
@@ -86,9 +87,12 @@ export function generateEmailVerificationEmail(
           <!-- Footer -->
           <tr>
             <td style="padding: 24px; background-color: #f9fafb; border-top: 1px solid #e5e7eb;">
-              <p style="margin: 0; color: #6b7280; font-size: 12px; line-height: 1.6; text-align: center;">
+              <p style="margin: 0 0 12px; color: #6b7280; font-size: 12px; line-height: 1.6; text-align: center;">
                 このメールに心当たりがない場合は、無視してください。<br>
                 アカウントは作成されません。
+              </p>
+              <p style="margin: 0; color: #9ca3af; font-size: 11px; text-align: center;">
+                © Health Tracker - 体重・食事・運動を記録して健康管理
               </p>
             </td>
           </tr>
