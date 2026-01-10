@@ -115,12 +115,12 @@
 - [X] T044 [US2] Run migrations locally for email verification tables
 - [X] T045 [P] [US2] Update Drizzle schema for users table with email_verified column in packages/backend/src/db/schema.ts
 - [X] T046 [P] [US2] Create Drizzle schema for email_verification_tokens in packages/backend/src/db/schema/email.ts
-- [ ] T047 [P] [US2] Implement email verification service in packages/backend/src/services/email/email-verification.service.ts
-- [ ] T048 [US2] Update POST /auth/register endpoint to send verification email in packages/backend/src/routes/auth/register.ts
-- [ ] T049 [US2] Implement POST /email/verify endpoint in packages/backend/src/routes/email/verify.ts
-- [ ] T050 [US2] Implement POST /email/verify/resend endpoint in packages/backend/src/routes/email/verify.ts
-- [ ] T051 [US2] Register email verification routes in packages/backend/src/index.ts
-- [ ] T052 [US2] Add login check for email_verified status in packages/backend/src/routes/auth/login.ts
+- [X] T047 [P] [US2] Implement email verification service in packages/backend/src/services/email/email-verification.service.ts
+- [X] T048 [US2] Update POST /auth/register endpoint to send verification email in packages/backend/src/routes/auth/register.ts
+- [X] T049 [US2] Implement POST /email/verify endpoint in packages/backend/src/routes/email/verify.ts
+- [X] T050 [US2] Implement POST /email/verify/resend endpoint in packages/backend/src/routes/email/verify.ts (Merged into T049)
+- [X] T051 [US2] Register email verification routes in packages/backend/src/index.ts
+- [X] T052 [US2] Add login check for email_verified status in packages/backend/src/services/auth.ts (AuthService返却値にemailVerified追加)
 - [ ] T053 [P] [US2] Create VerifyEmail page in packages/frontend/src/pages/VerifyEmail.tsx
 - [ ] T054 [P] [US2] Create ResendEmailButton component in packages/frontend/src/components/auth/ResendEmailButton.tsx
 - [ ] T055 [P] [US2] Create EmailVerificationBanner component in packages/frontend/src/components/auth/EmailVerificationBanner.tsx

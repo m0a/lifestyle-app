@@ -13,6 +13,7 @@ import { user } from './routes/user';
 import { logs } from './routes/logs';
 import { mealAnalysis } from './routes/meal-analysis';
 import { mealChat } from './routes/meal-chat';
+import emailVerify from './routes/email/verify';
 import { PhotoStorageService } from './services/photo-storage';
 import { requestContext } from './middleware/requestContext';
 
@@ -131,7 +132,8 @@ const routes = app
   .route('/api/exercises', exercises)
   .route('/api/dashboard', dashboard)
   .route('/api/user', user)
-  .route('/api/logs', logs);
+  .route('/api/logs', logs)
+  .route('/api/email', emailVerify);
 
 // SPA fallback - serve index.html for non-API routes
 app.get('*', async (c) => {

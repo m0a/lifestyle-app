@@ -29,6 +29,7 @@ export class AuthService {
       id,
       email: input.email,
       passwordHash,
+      emailVerified: 0, // New users start unverified
       goalWeight: input.goalWeight ?? null,
       goalCalories: input.goalCalories ?? 2000,
       createdAt: now,
@@ -38,6 +39,7 @@ export class AuthService {
     return {
       id,
       email: input.email,
+      emailVerified: false, // Return as boolean for frontend
       goalWeight: input.goalWeight ?? null,
       goalCalories: input.goalCalories ?? 2000,
       createdAt: now,
@@ -65,6 +67,7 @@ export class AuthService {
     return {
       id: user.id,
       email: user.email,
+      emailVerified: user.emailVerified === 1, // Convert to boolean
       goalWeight: user.goalWeight,
       goalCalories: user.goalCalories,
       createdAt: user.createdAt,
@@ -77,6 +80,7 @@ export class AuthService {
       .select({
         id: schema.users.id,
         email: schema.users.email,
+        emailVerified: schema.users.emailVerified,
         goalWeight: schema.users.goalWeight,
         goalCalories: schema.users.goalCalories,
         createdAt: schema.users.createdAt,
@@ -90,6 +94,9 @@ export class AuthService {
       throw new AppError('ユーザーが見つかりません', 404, 'USER_NOT_FOUND');
     }
 
-    return user;
+    return {
+      ...user,
+      emailVerified: user.emailVerified === 1, // Convert to boolean
+    };
   }
 }

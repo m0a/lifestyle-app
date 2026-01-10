@@ -100,3 +100,13 @@ export function generateEmailVerificationEmail(
 </html>
   `.trim();
 }
+
+/**
+ * Simplified template function (alias for backward compatibility)
+ */
+export function emailVerificationTemplate(verificationLink: string, _email?: string): string {
+  return generateEmailVerificationEmail({
+    verificationUrl: verificationLink,
+    expirationHours: 24, // Match the 24-hour expiration in service
+  });
+}

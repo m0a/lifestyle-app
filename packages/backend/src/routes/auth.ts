@@ -14,6 +14,7 @@ import {
   requestPasswordReset,
   confirmPasswordReset,
 } from '../services/auth/password-reset.service';
+import { sendVerificationEmail } from '../services/email/email-verification.service';
 import { getClientIP } from '../services/rate-limit/email-rate-limit';
 
 type Bindings = {
@@ -36,6 +37,20 @@ export const auth = new Hono<{ Bindings: Bindings; Variables: Variables }>()
     const authService = new AuthService(db);
 
     const user = await authService.register(input);
+
+    // Send verification email (fire-and-forget - don't block registration)
+    sendVerificationEmail(
+      c.env.DB,
+      user.id,
+      user.email,
+      c.env.RESEND_API_KEY,
+      c.env.FROM_EMAIL,
+      c.env.FRONTEND_URL
+    ).catch((error) => {
+      console.error('Failed to send verification email:', error);
+      // Continue with registration even if email fails
+    });
+
     const token = createSessionToken(user.id);
 
     setCookie(c, 'session', token, {
