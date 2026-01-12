@@ -1,12 +1,10 @@
 <!--
 Sync Impact Report
 ==================
-Version change: 0.0.0 → 1.0.0 (Initial constitution)
-Added sections:
-  - Core Principles (5 principles)
-  - Technical Standards
-  - Development Workflow
-  - Governance
+Version change: 1.0.0 → 1.1.0
+Changes:
+  - Added Email (Resend API) to Technical Standards
+  - Updated Last Amended date to 2026-01-13
 Templates status:
   - .specify/templates/plan-template.md ✅ compatible
   - .specify/templates/spec-template.md ✅ compatible
@@ -75,6 +73,7 @@ TypeScriptの型システムを最大限活用する。
 **Validation**: Zod
 **Testing**: Vitest + Playwright
 **Styling**: Tailwind CSS
+**Email**: Resend API (domain: yasedas.com)
 **Deployment**: Cloudflare Workers (with Static Assets)
 
 ## Development Workflow
@@ -93,4 +92,4 @@ TypeScriptの型システムを最大限活用する。
 - すべてのPR/レビューはこの憲法への準拠を確認すること
 - 複雑さの追加には明確な正当化が必要
 
-**Version**: 1.0.0 | **Ratified**: 2025-12-27 | **Last Amended**: 2025-12-27
+**Version**: 1.1.0 | **Ratified**: 2025-12-27 | **Last Amended**: 2026-01-13
