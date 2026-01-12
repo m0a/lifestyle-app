@@ -13,7 +13,7 @@ AI_PROVIDER = "google"
 AI_MODEL = "gemini-3-flash-preview"
 # Email delivery configuration
 # RESEND_API_KEY should be set via wrangler secrets (see .github/workflows/ci.yml)
-FROM_EMAIL = "onboarding@resend.dev"
+FROM_EMAIL = "noreply@yasedas.com"
 FRONTEND_URL = "https://lifestyle-app.abe00makoto.workers.dev"
 
 [[d1_databases]]
