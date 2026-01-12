@@ -135,7 +135,7 @@ Preview環境は別のD1データベース（`health-tracker-preview-db`）を�
 gh run list --branch main --limit 3
 
 # 本番URL
-https://lifestyle-app.abe00makoto.workers.dev
+https://lifestyle-tracker.abe00makoto.workers.dev
 ```
 
 ### Preview Test Account
@@ -201,7 +201,13 @@ pnpm dev:backend
 ## Features
 
 ### Email Delivery System (019-email-delivery)
-**Status**: ✅ Complete (81/92 tasks, 88.0%)
+**Status**: ✅ Complete (81/92 tasks, 88.0%) - Production Ready
+
+**Email Configuration:**
+- **Domain**: yasedas.com (verified via Resend)
+- **FROM_EMAIL**: `noreply@yasedas.com`
+- **DNS Records**: SPF, DKIM, MX configured on お名前.com
+- **Region**: ap-northeast-1 (Tokyo)
 
 **Completed Features:**
 - ✅ Password Reset Flow (User Story 1, P1)
