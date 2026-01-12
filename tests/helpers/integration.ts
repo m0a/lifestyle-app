@@ -144,13 +144,17 @@ export async function cleanupTestData(session: TestSession, userId?: string): Pr
 
 /**
  * Wait for backend to be ready
+ * Uses root endpoint (/) which returns { status: 'ok' }
  */
 export async function waitForBackend(maxAttempts = 30, delayMs = 1000): Promise<boolean> {
   for (let i = 0; i < maxAttempts; i++) {
     try {
-      const response = await fetch(`${API_BASE}/health`, { signal: AbortSignal.timeout(5000) });
+      const response = await fetch(`${API_BASE}/`, { signal: AbortSignal.timeout(5000) });
       if (response.ok) {
-        return true;
+        const data = await response.json() as { status?: string };
+        if (data.status === 'ok') {
+          return true;
+        }
       }
     } catch {
       // Backend not ready yet
