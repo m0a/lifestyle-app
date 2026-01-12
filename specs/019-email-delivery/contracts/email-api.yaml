@@ -1,0 +1,379 @@
+openapi: 3.0.3
+info:
+  title: Email Delivery API
+  version: 1.0.0
+  description: |
+    メール配信システムAPI。パスワードリセット、メールアドレス確認、メールアドレス変更機能を提供。
+
+servers:
+  - url: https://lifestyle-app.example.com/api
+    description: Production
+  - url: http://localhost:8787/api
+    description: Local development
+
+paths:
+  /auth/password-reset/request:
+    post:
+      summary: パスワードリセット要求
+      description: |
+        メールアドレスを受け取り、パスワードリセット用トークン付きメールを送信。
+        セキュリティのため、メールアドレスが存在しない場合も成功レスポンスを返す（メールは送信しない）。
+      operationId: requestPasswordReset
+      tags:
+        - Password Reset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@example.com
+      responses:
+        '200':
+          description: リセットメール送信成功（またはメールアドレス不存在）
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: パスワードリセットメールを送信しました
+        '429':
+          description: レート制限超過
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/password-reset/confirm:
+    post:
+      summary: パスワードリセット確認
+      description: |
+        トークンと新しいパスワードを受け取り、パスワードを更新。
+        トークンは24時間有効、一度のみ使用可能。
+      operationId: confirmPasswordReset
+      tags:
+        - Password Reset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+                - newPassword
+              properties:
+                token:
+                  type: string
+                  minLength: 32
+                  maxLength: 32
+                  example: abc123def456ghi789jkl012mno345pq
+                newPassword:
+                  type: string
+                  minLength: 8
+                  example: NewSecureP@ss123
+                  description: 最低8文字、大文字・小文字・数字を含む
+      responses:
+        '200':
+          description: パスワード更新成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: パスワードが更新されました
+        '400':
+          description: トークン無効（期限切れ、使用済み、不正）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/register:
+    post:
+      summary: 新規ユーザー登録
+      description: |
+        メールアドレスとパスワードで新規登録。
+        アカウントは仮登録状態で作成され、確認メールが送信される。
+        メール確認完了までログイン不可。
+      operationId: registerUser
+      tags:
+        - Registration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: newuser@example.com
+                password:
+                  type: string
+                  minLength: 8
+                  example: SecureP@ss123
+      responses:
+        '201':
+          description: 登録成功、確認メール送信
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  userId:
+                    type: integer
+                    example: 123
+                  message:
+                    type: string
+                    example: 確認メールを送信しました。メールのリンクをクリックしてアカウントを有効化してください
+        '400':
+          description: バリデーションエラー（重複メールアドレス等）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /email/verify:
+    post:
+      summary: メールアドレス確認
+      description: |
+        トークンを受け取り、メールアドレスを確認。
+        トークンは48時間有効、一度のみ使用可能。
+      operationId: verifyEmail
+      tags:
+        - Email Verification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+              properties:
+                token:
+                  type: string
+                  minLength: 32
+                  maxLength: 32
+                  example: xyz789abc123def456ghi012jkl345mno
+      responses:
+        '200':
+          description: メール確認成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: メールアドレスが確認されました
+        '400':
+          description: トークン無効（期限切れ、使用済み、不正）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /email/verify/resend:
+    post:
+      summary: 確認メール再送
+      description: |
+        ログイン済みユーザーの確認メールを再送。
+        最大3回/日まで。
+      operationId: resendVerificationEmail
+      tags:
+        - Email Verification
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 確認メール再送成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 確認メールを再送しました
+        '429':
+          description: 再送回数制限超過（3回/日）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /email/change/request:
+    post:
+      summary: メールアドレス変更要求
+      description: |
+        新しいメールアドレスを受け取り、新旧両方のメールアドレスに確認メールを送信。
+        新メールアドレスで確認リンククリックで変更完了、旧メールアドレスでキャンセル可能。
+      operationId: requestEmailChange
+      tags:
+        - Email Change
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - newEmail
+              properties:
+                newEmail:
+                  type: string
+                  format: email
+                  example: newemail@example.com
+      responses:
+        '200':
+          description: 変更確認メール送信成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 新しいメールアドレスに確認メールを送信しました
+        '400':
+          description: バリデーションエラー（重複メールアドレス等）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /email/change/confirm:
+    post:
+      summary: メールアドレス変更確認
+      description: |
+        新メールアドレスに送信されたトークンを受け取り、メールアドレスを更新。
+        トークンは24時間有効。
+      operationId: confirmEmailChange
+      tags:
+        - Email Change
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+              properties:
+                token:
+                  type: string
+                  minLength: 32
+                  maxLength: 32
+                  example: pqr567stu890vwx123yza456bcd789efg
+      responses:
+        '200':
+          description: メールアドレス変更成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: メールアドレスが変更されました
+        '400':
+          description: トークン無効（期限切れ、使用済み、不正）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /email/change/cancel:
+    post:
+      summary: メールアドレス変更キャンセル
+      description: |
+        旧メールアドレスに送信されたキャンセルリンクのトークンを受け取り、変更要求をキャンセル。
+      operationId: cancelEmailChange
+      tags:
+        - Email Change
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+              properties:
+                token:
+                  type: string
+                  minLength: 32
+                  maxLength: 32
+                  example: hij012klm345nop678qrs901tuv234wxy
+      responses:
+        '200':
+          description: 変更キャンセル成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: メールアドレス変更がキャンセルされました
+        '400':
+          description: トークン無効
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: ユーザー認証トークン（既存の認証システム）
+
+  schemas:
+    Error:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          example: RATE_LIMIT_EXCEEDED
+        message:
+          type: string
+          example: レート制限を超えました。1時間後に再試行してください
+        details:
+          type: object
+          additionalProperties: true
+          example:
+            retryAfter: 3600
+
+tags:
+  - name: Password Reset
+    description: パスワードリセット機能
+  - name: Registration
+    description: 新規ユーザー登録
+  - name: Email Verification
+    description: メールアドレス確認
+  - name: Email Change
+    description: メールアドレス変更

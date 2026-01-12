@@ -13,8 +13,11 @@ import { user } from './routes/user';
 import { logs } from './routes/logs';
 import { mealAnalysis } from './routes/meal-analysis';
 import { mealChat } from './routes/meal-chat';
+import { emailVerify } from './routes/email/verify';
+import { emailChange } from './routes/email/change';
 import { PhotoStorageService } from './services/photo-storage';
 import { requestContext } from './middleware/requestContext';
+import { executeScheduledCleanup } from './cron/cleanup';
 
 type Bindings = {
   DB: D1Database;
@@ -131,7 +134,9 @@ const routes = app
   .route('/api/exercises', exercises)
   .route('/api/dashboard', dashboard)
   .route('/api/user', user)
-  .route('/api/logs', logs);
+  .route('/api/logs', logs)
+  .route('/api/email', emailVerify)
+  .route('/api/email', emailChange);
 
 // SPA fallback - serve index.html for non-API routes
 app.get('*', async (c) => {
@@ -142,4 +147,24 @@ app.get('*', async (c) => {
 // Export type for RPC client
 export type AppType = typeof routes;
 
-export default app;
+// Export worker with fetch and scheduled handlers
+export default {
+  fetch: app.fetch,
+
+  // Scheduled event handler for cron jobs
+  async scheduled(
+    event: ScheduledEvent,
+    env: Bindings,
+    _ctx: ExecutionContext
+  ): Promise<void> {
+    console.log('[Cron] Scheduled event triggered at:', new Date(event.scheduledTime).toISOString());
+
+    try {
+      const result = await executeScheduledCleanup(env.DB);
+      console.log('[Cron] Cleanup completed successfully:', result);
+    } catch (error) {
+      console.error('[Cron] Cleanup failed:', error);
+      // Don't throw - let the cron job complete
+    }
+  },
+};
