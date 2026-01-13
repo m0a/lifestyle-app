@@ -25,6 +25,7 @@ export function Exercise() {
     isDeleting,
     createError,
     fetchLastRecord,
+    fetchLastSession,
   } = useExercises();
 
   if (isLoading) {
@@ -71,6 +72,7 @@ export function Exercise() {
           isLoading={isCreating}
           error={createError}
           onFetchLastRecord={fetchLastRecord}
+          onFetchLastSession={fetchLastSession}
           customTypes={exerciseTypes}
         />
       </div>

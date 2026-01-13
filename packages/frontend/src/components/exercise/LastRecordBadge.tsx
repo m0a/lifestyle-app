@@ -2,11 +2,12 @@ import type { ExerciseRecord } from '@lifestyle-app/shared';
 
 interface LastRecordBadgeProps {
   record: ExerciseRecord | null;
+  sessionCount?: number;
   onCopy: () => void;
   isLoading?: boolean;
 }
 
-export function LastRecordBadge({ record, onCopy, isLoading }: LastRecordBadgeProps) {
+export function LastRecordBadge({ record, sessionCount = 1, onCopy, isLoading }: LastRecordBadgeProps) {
   if (isLoading) {
     return (
       <div className="flex items-center gap-2 text-sm text-gray-500">
@@ -37,7 +38,7 @@ export function LastRecordBadge({ record, onCopy, isLoading }: LastRecordBadgePr
     <div className="flex items-center gap-3 rounded-lg bg-gray-50 px-3 py-2">
       <div className="flex-1">
         <span className="text-sm text-gray-600">
-          前回: {formatExercise(record)}
+          前回: {sessionCount > 1 ? `${sessionCount}セット` : formatExercise(record)}
         </span>
         <span className="ml-2 text-xs text-gray-400">
           ({formatDate(record.recordedAt)})

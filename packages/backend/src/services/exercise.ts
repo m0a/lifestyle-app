@@ -1,4 +1,4 @@
-import { eq, desc, and } from 'drizzle-orm';
+import { eq, desc, and, sql } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import type { Database } from '../db';
 import { schema } from '../db';
@@ -161,6 +161,37 @@ export class ExerciseService {
       .get();
 
     return record || null;
+  }
+
+  /**
+   * Get all sets from the last session of a specific exercise type
+   * Returns all records from the same date as the most recent record
+   */
+  async getLastSessionByType(userId: string, exerciseType: string) {
+    // First, get the most recent record to find the date
+    const lastRecord = await this.getLastByType(userId, exerciseType);
+    if (!lastRecord) {
+      return [];
+    }
+
+    // Extract the date part (YYYY-MM-DD) from recordedAt
+    const lastDate = lastRecord.recordedAt.split('T')[0];
+
+    // Get all records from the same date for this exercise type
+    const records = await this.db
+      .select()
+      .from(schema.exerciseRecords)
+      .where(
+        and(
+          eq(schema.exerciseRecords.userId, userId),
+          eq(schema.exerciseRecords.exerciseType, exerciseType),
+          sql`date(${schema.exerciseRecords.recordedAt}) = ${lastDate}`
+        )
+      )
+      .orderBy(schema.exerciseRecords.setNumber)
+      .all();
+
+    return records;
   }
 
   async getWeeklySummary(userId: string) {
