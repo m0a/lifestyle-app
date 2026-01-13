@@ -1,20 +1,15 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest';
-import { createTestSession, ensureTestUser, waitForBackend, TEST_USERS, API_BASE } from '../helpers/integration';
+import { createTestSession, ensureTestUser, TEST_USERS, API_BASE } from '../helpers/integration';
 import type { TestSession } from '../helpers/integration';
 
 describe('Meal API Integration Tests', () => {
   let session: TestSession;
 
   beforeAll(async () => {
-    // Wait for backend to be ready
-    const isReady = await waitForBackend();
-    if (!isReady) {
-      throw new Error('Backend not ready after 30 seconds');
-    }
-
+    // Backend readiness is checked by CI workflow before tests run
     // Ensure test user exists
     await ensureTestUser(TEST_USERS.default.email, TEST_USERS.default.password);
-  }, 35000); // 35s timeout for backend startup
+  });
 
   beforeEach(async () => {
     // Create new session and login before each test
