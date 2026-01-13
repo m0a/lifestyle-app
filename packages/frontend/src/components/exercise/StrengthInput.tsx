@@ -3,6 +3,7 @@ import { EXERCISE_PRESETS, MUSCLE_GROUPS, MUSCLE_GROUP_LABELS, type MuscleGroup,
 import { SetRow } from './SetRow';
 import { LastRecordBadge } from './LastRecordBadge';
 import { SessionListModal } from './SessionListModal';
+import { RestTimer } from './RestTimer';
 import { logValidationError } from '../../lib/errorLogger';
 
 interface SetInput {
@@ -330,6 +331,14 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, c
             />
           </div>
         )}
+      </div>
+
+      {/* Rest Timer */}
+      <div className="border-t border-gray-200 pt-4">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-sm font-medium text-gray-700">休憩タイマー</span>
+        </div>
+        <RestTimer defaultSeconds={60} incrementSeconds={60} />
       </div>
 
       {/* Sets Input */}
