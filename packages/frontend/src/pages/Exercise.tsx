@@ -3,6 +3,7 @@ import { useExercises } from '../hooks/useExercises';
 import { StrengthInput } from '../components/exercise/StrengthInput';
 import { ExerciseList } from '../components/exercise/ExerciseList';
 import { ExerciseSummary } from '../components/exercise/ExerciseSummary';
+import { RestTimer } from '../components/exercise/RestTimer';
 
 export function Exercise() {
   const navigate = useNavigate();
@@ -61,7 +62,10 @@ export function Exercise() {
 
       {/* Input Form */}
       <div className="rounded-lg border border-gray-200 bg-white p-6">
-        <h2 className="mb-4 text-lg font-semibold text-gray-900">筋トレを記録</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-900">筋トレを記録</h2>
+          <RestTimer defaultSeconds={60} incrementSeconds={60} />
+        </div>
         <StrengthInput
           onSubmit={create}
           isLoading={isCreating}

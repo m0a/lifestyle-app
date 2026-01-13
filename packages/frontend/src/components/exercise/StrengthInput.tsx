@@ -3,7 +3,6 @@ import { EXERCISE_PRESETS, MUSCLE_GROUPS, MUSCLE_GROUP_LABELS, type MuscleGroup,
 import { SetRow } from './SetRow';
 import { LastRecordBadge } from './LastRecordBadge';
 import { SessionListModal } from './SessionListModal';
-import { RestTimer } from './RestTimer';
 import { logValidationError } from '../../lib/errorLogger';
 
 interface SetInput {
@@ -255,12 +254,9 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, c
 
       {/* Exercise Presets */}
       <div>
-        <div className="flex items-center justify-between mb-2">
-          <label className="block text-sm font-medium text-gray-700">
-            種目
-          </label>
-          <RestTimer defaultSeconds={60} incrementSeconds={60} />
-        </div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          種目
+        </label>
         <div className="flex flex-wrap gap-2">
           {filteredPresets.map((preset) => (
             <button
