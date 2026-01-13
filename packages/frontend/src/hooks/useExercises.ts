@@ -113,6 +113,16 @@ export function useExercises(options?: UseExercisesOptions) {
     return data.exercise;
   };
 
+  const fetchLastSession = async (exerciseType: string): Promise<ExerciseRecord[]> => {
+    const encodedType = encodeURIComponent(exerciseType);
+    const res = await api.exercises['last-session'][':exerciseType'].$get({ param: { exerciseType: encodedType } });
+    if (!res.ok) {
+      return [];
+    }
+    const data = await res.json();
+    return data.exercises as ExerciseRecord[];
+  };
+
   return {
     exercises: exercisesQuery.data ?? [],
     weeklySummary: weeklySummaryQuery.data,
@@ -129,6 +139,7 @@ export function useExercises(options?: UseExercisesOptions) {
     updateError: updateMutation.error,
     deleteError: deleteMutation.error,
     fetchLastRecord,
+    fetchLastSession,
   };
 }
 

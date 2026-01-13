@@ -76,6 +76,16 @@ export const exercises = new Hono<{ Bindings: Bindings; Variables: Variables }>(
 
     return c.json({ exercise });
   })
+  .get('/last-session/:exerciseType', async (c) => {
+    const exerciseType = decodeURIComponent(c.req.param('exerciseType'));
+    const db = c.get('db');
+    const user = c.get('user');
+
+    const exerciseService = new ExerciseService(db);
+    const exercises = await exerciseService.getLastSessionByType(user.id, exerciseType);
+
+    return c.json({ exercises });
+  })
   .get('/types', async (c) => {
     const db = c.get('db');
     const user = c.get('user');

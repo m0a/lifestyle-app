@@ -28,6 +28,7 @@ interface StrengthInputProps {
   isLoading?: boolean;
   error?: Error | null;
   onFetchLastRecord?: (exerciseType: string) => Promise<ExerciseRecord | null>;
+  onFetchLastSession?: (exerciseType: string) => Promise<ExerciseRecord[]>;
   customTypes?: ExerciseTypeWithMuscleGroup[];
   pendingImport?: Session | null;
 }
@@ -48,11 +49,12 @@ interface Session {
   exercises: SessionExercise[];
 }
 
-export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, customTypes = [], pendingImport }: StrengthInputProps) {
+export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, onFetchLastSession, customTypes = [], pendingImport }: StrengthInputProps) {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [selectedMuscleGroup, setSelectedMuscleGroup] = useState<MuscleGroup>('chest');
   const [lastRecord, setLastRecord] = useState<ExerciseRecord | null>(null);
+  const [lastSession, setLastSession] = useState<ExerciseRecord[]>([]);
   const [isLoadingLastRecord, setIsLoadingLastRecord] = useState(false);
   const [showSessionModal, setShowSessionModal] = useState(false);
 
@@ -65,20 +67,33 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, c
   const actualExerciseType = showCustomInput ? customExerciseName : exerciseType;
 
   const fetchLastRecordForType = useCallback(async (type: string) => {
-    if (!onFetchLastRecord || !type) {
+    if (!type) {
       setLastRecord(null);
+      setLastSession([]);
       return;
     }
     setIsLoadingLastRecord(true);
     try {
-      const record = await onFetchLastRecord(type);
-      setLastRecord(record);
+      // Fetch last session (all sets) if available, otherwise fall back to single record
+      if (onFetchLastSession) {
+        const session = await onFetchLastSession(type);
+        setLastSession(session);
+        setLastRecord(session[0] || null);
+      } else if (onFetchLastRecord) {
+        const record = await onFetchLastRecord(type);
+        setLastRecord(record);
+        setLastSession(record ? [record] : []);
+      } else {
+        setLastRecord(null);
+        setLastSession([]);
+      }
     } catch {
       setLastRecord(null);
+      setLastSession([]);
     } finally {
       setIsLoadingLastRecord(false);
     }
-  }, [onFetchLastRecord]);
+  }, [onFetchLastRecord, onFetchLastSession]);
 
   const handleExerciseTypeSelect = (type: string) => {
     if (type === 'その他') {
@@ -93,8 +108,16 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, c
   };
 
   const handleCopyLastRecord = () => {
-    if (lastRecord) {
-      // Copy the last record's values to the first set
+    if (lastSession.length > 0) {
+      // Copy all sets from the last session
+      const newSets: SetInput[] = lastSession.map((record) => ({
+        reps: record.reps,
+        weight: record.weight,
+        variation: record.variation || undefined,
+      }));
+      setSets(newSets);
+    } else if (lastRecord) {
+      // Fallback: copy single record to first set
       const newSets = [...sets];
       if (newSets.length > 0) {
         newSets[0] = {
@@ -325,6 +348,7 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, c
           <div className="mt-3">
             <LastRecordBadge
               record={lastRecord}
+              sessionCount={lastSession.length}
               onCopy={handleCopyLastRecord}
               isLoading={isLoadingLastRecord}
             />
