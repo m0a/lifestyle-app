@@ -177,24 +177,14 @@ export function RestTimer({ defaultSeconds = 60, incrementSeconds = 60 }: RestTi
         </div>
 
         {/* Time display */}
-        <div className="flex flex-col">
-          <span
-            className={`text-lg font-bold tabular-nums ${
-              isRunning ? 'text-orange-600' : seconds === 0 ? 'text-green-600' : 'text-gray-700'
-            }`}
-          >
-            {formatTime(seconds)}
-          </span>
-          <span className="text-xs text-gray-400">
-            {isRunning ? 'タップでリセット' : 'タップでスタート'}
-          </span>
-        </div>
+        <span
+          className={`text-lg font-bold tabular-nums ${
+            isRunning ? 'text-orange-600' : seconds === 0 ? 'text-green-600' : 'text-gray-700'
+          }`}
+        >
+          {formatTime(seconds)}
+        </span>
       </div>
-
-      {/* Swipe hint */}
-      <p className="text-xs text-gray-400 mt-1">
-        ← → スワイプで{incrementSeconds}秒調整
-      </p>
     </div>
   );
 }

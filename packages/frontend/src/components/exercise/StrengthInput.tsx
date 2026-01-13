@@ -255,9 +255,12 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, c
 
       {/* Exercise Presets */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          種目
-        </label>
+        <div className="flex items-center justify-between mb-2">
+          <label className="block text-sm font-medium text-gray-700">
+            種目
+          </label>
+          <RestTimer defaultSeconds={60} incrementSeconds={60} />
+        </div>
         <div className="flex flex-wrap gap-2">
           {filteredPresets.map((preset) => (
             <button
@@ -331,14 +334,6 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, c
             />
           </div>
         )}
-      </div>
-
-      {/* Rest Timer */}
-      <div className="border-t border-gray-200 pt-4">
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-sm font-medium text-gray-700">休憩タイマー</span>
-        </div>
-        <RestTimer defaultSeconds={60} incrementSeconds={60} />
       </div>
 
       {/* Sets Input */}
