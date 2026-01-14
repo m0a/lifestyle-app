@@ -188,7 +188,7 @@ export function ActivityDotGrid({ activities, isLoading }: ActivityDotGridProps)
     <div className="relative">
       <div
         ref={containerRef}
-        className="grid gap-1 touch-none"
+        className="grid touch-none"
         style={{
           gridTemplateColumns: `repeat(${COLUMNS}, 1fr)`,
         }}
