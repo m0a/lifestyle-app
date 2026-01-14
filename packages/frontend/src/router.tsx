@@ -54,35 +54,10 @@ function Home() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="text-center">
-        <h1 className="text-2xl font-bold text-gray-900">あなたの記録</h1>
-      </div>
-      <ActivityDotGrid
-        activities={activityData?.activities ?? []}
-        isLoading={isLoading}
-      />
-      <div className="flex flex-wrap justify-center gap-3">
-        <a
-          href="/weight"
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-        >
-          体重を記録
-        </a>
-        <a
-          href="/meals"
-          className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
-        >
-          食事を記録
-        </a>
-        <a
-          href="/exercises"
-          className="rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700"
-        >
-          運動を記録
-        </a>
-      </div>
-    </div>
+    <ActivityDotGrid
+      activities={activityData?.activities ?? []}
+      isLoading={isLoading}
+    />
   );
 }
 
