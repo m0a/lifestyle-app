@@ -207,14 +207,14 @@ export function ActivityDotGrid({ activities, isLoading }: ActivityDotGridProps)
         ))}
       </div>
 
-      {/* Lens circle indicator */}
-      {lens !== null && (
+      {/* Lens circle indicator - disabled for cleaner look */}
+      {/* {lens !== null && (
         <LensCircle
           centerX={lens.centerX}
           centerY={lens.centerY}
           radius={LENS_RADIUS * lens.cellSize}
         />
-      )}
+      )} */}
 
       {/* Info popup - positioned above lens center */}
       {lens !== null && focusedActivity && containerRef.current && (
