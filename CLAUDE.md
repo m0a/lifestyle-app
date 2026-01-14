@@ -27,6 +27,11 @@ pnpm test tests/unit/meal.service.test.ts
 pnpm lint             # ESLint
 pnpm typecheck        # TypeScript check all packages
 
+# Dead Code Detection
+pnpm find-deadcode       # Detect unused exports, files, and dependencies with Knip
+pnpm find-deadcode:fix   # Auto-fix unused exports (experimental)
+pnpm find-deadcode:ci    # CI mode with threshold check (threshold: 40 → 0)
+
 # Build
 pnpm build:shared     # Must build first (dependency)
 pnpm build            # Build all packages
@@ -188,6 +193,7 @@ pnpm dev:backend
 
 ## Recent Changes
 - 019-email-delivery: Added TypeScript 5.x (strict mode) + Hono (backend), React 18+ (frontend), Drizzle ORM, Zod, TanStack Query, Tailwind CSS, Resend (email API), crypto (token generation)
+- 018-cleanup-deadcode: Knip integration for dead code detection
 - 017-multi-exercise-import: Added TypeScript 5.3 (strict mode) + React 18+, Hono, Drizzle ORM, TanStack Query, Zod, Tailwind CSS
 - **016-multiple-meal-photos**: ✅ COMPLETED (84.3% - 70/83 tasks)
   - Multiple photos per meal (up to 10 photos)
@@ -197,6 +203,43 @@ pnpm dev:backend
   - Image resize before upload (1920px width)
   - Client-side validation (10MB limit, JPEG/PNG only)
   - Remaining: 13 Polish tasks (optional enhancements)
+
+## Dead Code Detection (018-cleanup-deadcode)
+
+**Tool**: Knip - 包括的なTypeScript/JavaScriptデッドコード検出ツール
+
+**Current Status**:
+- Current: 16 unused exports
+- Threshold: 30 (Week 2完了)
+- Roadmap: ~~40~~ → **30** → 20 → 10 → 0 (reduce by 10 every 2 weeks)
+
+**Usage**:
+```bash
+# Local development
+pnpm find-deadcode       # Full report with unused exports, files, dependencies
+
+# CI integration
+pnpm find-deadcode:ci    # JSON report + threshold check
+```
+
+**What Knip Detects**:
+- Unused exports (functions, classes, types not imported elsewhere)
+- Unused files (files never imported)
+- Unused dependencies (packages in package.json but not used)
+- Duplicate exports (same export from multiple sources)
+
+**CI Integration**:
+- Runs on every pull request
+- Posts comment with unused export count
+- Blocks merge if count exceeds threshold
+- Generates artifact report (30-day retention)
+
+**Configuration**: `knip.json` at repository root
+- Workspace-specific entry points
+- Ignore patterns for test files, config files
+- Type definitions excluded from checks
+
+**For detailed usage**: See `specs/018-cleanup-deadcode/quickstart.md`
 
 ## Features
 
@@ -282,3 +325,4 @@ pnpm dev:backend
 - Cloudflare D1 (SQLite) - existing `exercise_records` table (017-multi-exercise-import)
 - TypeScript 5.x (strict mode) + Hono (backend), React 18+ (frontend), Drizzle ORM, Zod, TanStack Query, Tailwind CSS, Resend (email API), crypto (token generation) (019-email-delivery)
 - Cloudflare D1 (SQLite) for tokens/logs, R2 (if email attachments needed in future) (019-email-delivery)
+- Knip for dead code detection (018-cleanup-deadcode)
