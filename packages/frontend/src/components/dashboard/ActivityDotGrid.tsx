@@ -308,10 +308,7 @@ interface InfoPopupProps {
 
 function InfoPopup({ activity, centerX, centerY, lensRadius, containerWidth }: InfoPopupProps) {
   const date = new Date(activity.date);
-  const dateStr = date.toLocaleDateString('ja-JP', {
-    month: 'short',
-    day: 'numeric',
-  });
+  const dateStr = `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
 
   // Show below lens if too close to top (popup height ~60px + margin)
   const showBelow = centerY - lensRadius < 80;
