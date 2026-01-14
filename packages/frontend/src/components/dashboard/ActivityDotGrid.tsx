@@ -26,6 +26,7 @@ const BASE_SIZES = [2, 6, 12, 18]; // Level 0-3 base sizes
 const MAX_SCALE = 5; // Maximum scale factor for center dot
 const LENS_RADIUS = 4; // Number of dots affected by lens
 const LERP_SPEED = 0.15; // Smoothing factor (0-1, lower = smoother)
+const IDLE_TIMEOUT = 3000; // Hide lens after 3 seconds of inactivity
 
 /**
  * 800 dots grid with fisheye lens effect on touch/hover.
@@ -86,50 +87,74 @@ export function ActivityDotGrid({ activities, isLoading }: ActivityDotGridProps)
     };
   }, [target, reversedActivities.length]);
 
-  // On pointer down, jump immediately to new position (like lifting mouse)
-  const handlePointerDown = useCallback((e: React.PointerEvent) => {
-    if (!containerRef.current) return;
+  const isDraggingRef = useRef(false);
+  const idleTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
-    const rect = containerRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    const cellWidth = rect.width / COLUMNS;
-    const col = Math.floor(x / cellWidth);
-    const row = Math.floor(y / cellWidth);
-    const index = row * COLUMNS + col;
-
-    if (index >= 0 && index < reversedActivities.length) {
-      // Immediately jump to new position
-      currentPosRef.current = { col, row };
-      setTarget({ col, row, cellSize: cellWidth });
+  // Reset idle timer - call this on any activity
+  const resetIdleTimer = useCallback(() => {
+    if (idleTimerRef.current) {
+      clearTimeout(idleTimerRef.current);
     }
-  }, [reversedActivities.length]);
+    idleTimerRef.current = setTimeout(() => {
+      setTarget(null);
+      setLens(null);
+    }, IDLE_TIMEOUT);
+  }, []);
 
-  // On pointer move, smoothly follow (like dragging mouse)
+  // On pointer down, start dragging
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    isDraggingRef.current = true;
+    // Capture pointer for tracking outside element
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    // Clear idle timer while dragging
+    if (idleTimerRef.current) {
+      clearTimeout(idleTimerRef.current);
+    }
+  }, []);
+
+  // On pointer move while dragging, update target (lens follows like mouse cursor)
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
-    if (!containerRef.current || !target) return; // Only follow if already touching
+    if (!containerRef.current || !isDraggingRef.current) return;
 
     const rect = containerRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
     const cellWidth = rect.width / COLUMNS;
-    const col = Math.floor(x / cellWidth);
-    const row = Math.floor(y / cellWidth);
+    const col = Math.max(0, Math.min(COLUMNS - 1, Math.floor(x / cellWidth)));
+    const totalRows = Math.ceil(reversedActivities.length / COLUMNS);
+    const row = Math.max(0, Math.min(totalRows - 1, Math.floor(y / cellWidth)));
     const index = row * COLUMNS + col;
 
     if (index >= 0 && index < reversedActivities.length) {
+      // Initialize lens position on first move
+      if (!target) {
+        currentPosRef.current = { col, row };
+      }
       setTarget({ col, row, cellSize: cellWidth });
     }
   }, [reversedActivities.length, target]);
 
-  const handlePointerLeave = useCallback(() => {
-    setTarget(null);
-  }, []);
+  // On pointer up, stop dragging but keep lens visible, start idle timer
+  const handlePointerUp = useCallback((e: React.PointerEvent) => {
+    isDraggingRef.current = false;
+    (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+    resetIdleTimer();
+  }, [resetIdleTimer]);
 
-  const handlePointerUp = useCallback(() => {
-    setTarget(null);
+  // On pointer leave, stop dragging and start idle timer
+  const handlePointerLeave = useCallback(() => {
+    isDraggingRef.current = false;
+    resetIdleTimer();
+  }, [resetIdleTimer]);
+
+  // Cleanup idle timer on unmount
+  useEffect(() => {
+    return () => {
+      if (idleTimerRef.current) {
+        clearTimeout(idleTimerRef.current);
+      }
+    };
   }, []);
 
   if (isLoading) {
