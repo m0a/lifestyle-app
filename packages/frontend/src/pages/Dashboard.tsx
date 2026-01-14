@@ -1,13 +1,16 @@
 import { useState } from 'react';
 import { useDashboard, type Period } from '../hooks/useDashboard';
+import { useActivityDots } from '../hooks/useActivityDots';
 import { PeriodSelector } from '../components/dashboard/PeriodSelector';
 import { WeightSummaryCard } from '../components/dashboard/WeightSummaryCard';
 import { MealSummaryCard } from '../components/dashboard/MealSummaryCard';
 import { ExerciseSummaryCard } from '../components/dashboard/ExerciseSummaryCard';
+import { ActivityDotGrid } from '../components/dashboard/ActivityDotGrid';
 
 export function Dashboard() {
   const [period, setPeriod] = useState<Period>('week');
   const { summary, isLoading, refetch } = useDashboard({ period });
+  const { data: activityData, isLoading: isActivityLoading } = useActivityDots(800);
 
   if (isLoading) {
     return (
@@ -101,6 +104,12 @@ export function Dashboard() {
         </div>
       ) : (
         <>
+          {/* Activity Dot Grid */}
+          <ActivityDotGrid
+            activities={activityData?.activities ?? []}
+            isLoading={isActivityLoading}
+          />
+
           {/* Summary Cards */}
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             <WeightSummaryCard

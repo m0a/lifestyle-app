@@ -89,6 +89,20 @@ interface GoalProgress {
   };
 }
 
+interface DailyActivity {
+  date: string;
+  hasMeal: boolean;
+  hasWeight: boolean;
+  hasExercise: boolean;
+  level: number;
+}
+
+interface DailyActivityResponse {
+  activities: DailyActivity[];
+  startDate: string;
+  endDate: string;
+}
+
 export class DashboardService {
   constructor(private db: Database) {}
 
@@ -410,6 +424,103 @@ export class DashboardService {
         target: targetCalories,
         difference: Math.round(averageCalories - targetCalories),
       },
+    };
+  }
+
+  /**
+   * Get daily activity data for the specified number of days.
+   * Returns an array of daily activities with hasMeal, hasWeight, hasExercise flags.
+   * Level is calculated as the sum of flags (0-3).
+   */
+  async getDailyActivity(userId: string, days: number = 800): Promise<DailyActivityResponse> {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - (days - 1));
+
+    // Format dates as YYYY-MM-DD
+    const formatDate = (d: Date) => d.toISOString().split('T')[0]!;
+    const startDateStr = formatDate(startDate);
+    const endDateStr = formatDate(endDate);
+
+    // Generate all dates in range
+    const allDates: string[] = [];
+    const current = new Date(startDate);
+    while (current <= endDate) {
+      allDates.push(formatDate(current));
+      current.setDate(current.getDate() + 1);
+    }
+
+    // Get dates with weight records
+    const weightRecords = await this.db
+      .select({ recordedAt: weights.recordedAt })
+      .from(weights)
+      .where(
+        and(
+          eq(weights.userId, userId),
+          gte(weights.recordedAt, startDate.toISOString()),
+          lte(weights.recordedAt, endDate.toISOString())
+        )
+      )
+      .all();
+
+    const weightDates = new Set(
+      weightRecords.map((r) => r.recordedAt.split('T')[0])
+    );
+
+    // Get dates with meal records
+    const mealRecords = await this.db
+      .select({ recordedAt: meals.recordedAt })
+      .from(meals)
+      .where(
+        and(
+          eq(meals.userId, userId),
+          gte(meals.recordedAt, startDate.toISOString()),
+          lte(meals.recordedAt, endDate.toISOString())
+        )
+      )
+      .all();
+
+    const mealDates = new Set(
+      mealRecords.map((r) => r.recordedAt.split('T')[0])
+    );
+
+    // Get dates with exercise records
+    const exerciseRecords = await this.db
+      .select({ recordedAt: exercises.recordedAt })
+      .from(exercises)
+      .where(
+        and(
+          eq(exercises.userId, userId),
+          gte(exercises.recordedAt, startDate.toISOString()),
+          lte(exercises.recordedAt, endDate.toISOString())
+        )
+      )
+      .all();
+
+    const exerciseDates = new Set(
+      exerciseRecords.map((r) => r.recordedAt.split('T')[0])
+    );
+
+    // Build activities array
+    const activities: DailyActivity[] = allDates.map((date) => {
+      const hasMeal = mealDates.has(date);
+      const hasWeight = weightDates.has(date);
+      const hasExercise = exerciseDates.has(date);
+      const level = (hasMeal ? 1 : 0) + (hasWeight ? 1 : 0) + (hasExercise ? 1 : 0);
+
+      return {
+        date,
+        hasMeal,
+        hasWeight,
+        hasExercise,
+        level,
+      };
+    });
+
+    return {
+      activities,
+      startDate: startDateStr,
+      endDate: endDateStr,
     };
   }
 }
