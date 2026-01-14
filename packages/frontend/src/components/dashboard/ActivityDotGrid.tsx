@@ -327,14 +327,16 @@ function InfoPopup({ activity, centerX, centerY, lensRadius }: InfoPopupProps) {
     day: 'numeric',
   });
 
-  // Position above lens center
+  // Show below lens if too close to top (popup height ~60px + margin)
+  const showBelow = centerY - lensRadius < 80;
+
   return (
     <div
-      className="pointer-events-none absolute z-10 -translate-x-1/2 rounded-lg bg-black/95 px-4 py-2 text-center text-white shadow-xl"
+      className="pointer-events-none absolute z-10 rounded-lg bg-black/95 px-4 py-2 text-center text-white shadow-xl"
       style={{
         left: centerX,
-        top: centerY - lensRadius - 8,
-        transform: 'translate(-50%, -100%)',
+        top: showBelow ? centerY + lensRadius + 8 : centerY - lensRadius - 8,
+        transform: showBelow ? 'translate(-50%, 0)' : 'translate(-50%, -100%)',
       }}
     >
       <div className="text-base font-bold">{dateStr}</div>
@@ -359,8 +361,12 @@ function InfoPopup({ activity, centerX, centerY, lensRadius }: InfoPopupProps) {
       ) : (
         <div className="mt-1 text-xs text-gray-400">記録なし</div>
       )}
-      {/* Arrow pointing down */}
-      <div className="absolute left-1/2 top-full -translate-x-1/2 border-8 border-transparent border-t-black/95" />
+      {/* Arrow pointing to lens */}
+      {showBelow ? (
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 border-8 border-transparent border-b-black/95" />
+      ) : (
+        <div className="absolute left-1/2 top-full -translate-x-1/2 border-8 border-transparent border-t-black/95" />
+      )}
     </div>
   );
 }
