@@ -25,8 +25,13 @@ function useDotsCount(): number {
 
   useEffect(() => {
     const calculateDots = () => {
-      // Available height: viewport - header(64px) - nav(80px) - padding(32px)
-      const availableHeight = window.innerHeight - 176;
+      // Get safe area inset for bottom navigation
+      const safeAreaBottom = parseInt(
+        getComputedStyle(document.documentElement).getPropertyValue('--safe-area-inset-bottom') || '0',
+        10
+      ) || 0;
+      // Available height: viewport - header(64px) - nav(80px + safeArea) - padding(32px)
+      const availableHeight = window.innerHeight - 176 - safeAreaBottom;
       const cellSize = window.innerWidth / COLUMNS;
       const rows = Math.floor(availableHeight / cellSize);
       const dots = rows * COLUMNS;
