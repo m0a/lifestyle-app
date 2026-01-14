@@ -240,14 +240,16 @@ function Dot({ activity, index, lensPos }: DotProps) {
   let scale = 1;
   let offsetX = 0;
   let offsetY = 0;
+  let isCenter = false;
 
   if (lensPos !== null) {
     const row = Math.floor(index / COLUMNS);
     const col = index % COLUMNS;
 
-    // Center dot (the one being focused) gets maximum scale
+    // Center dot (the one being focused) gets maximum scale and highlight
     if (index === lensPos.index) {
       scale = MAX_SCALE;
+      isCenter = true;
     } else {
       // Use smooth lens position for distance calculation
       const dx = col - lensPos.col;
@@ -269,15 +271,19 @@ function Dot({ activity, index, lensPos }: DotProps) {
 
   const baseSize = BASE_SIZES[activity.level] || 2;
 
-  // Black-based colors
-  const colorMap: Record<number, string> = {
-    0: 'bg-gray-300',
-    1: 'bg-gray-500',
-    2: 'bg-gray-700',
-    3: 'bg-black',
-  };
-
-  const color = colorMap[activity.level] || 'bg-gray-300';
+  // Center dot gets blue color, others use gray scale
+  let color: string;
+  if (isCenter) {
+    color = 'bg-blue-500';
+  } else {
+    const colorMap: Record<number, string> = {
+      0: 'bg-gray-300',
+      1: 'bg-gray-500',
+      2: 'bg-gray-700',
+      3: 'bg-black',
+    };
+    color = colorMap[activity.level] || 'bg-gray-300';
+  }
 
   // Use transform scale instead of width/height to avoid layout shifts
   return (
