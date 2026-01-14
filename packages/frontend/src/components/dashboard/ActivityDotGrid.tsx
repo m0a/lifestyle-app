@@ -10,6 +10,9 @@ interface FocusState {
   index: number;
   x: number;
   y: number;
+  centerX: number; // Center of the focused cell
+  centerY: number;
+  cellSize: number;
 }
 
 const COLUMNS = 25;
@@ -46,7 +49,10 @@ export function ActivityDotGrid({ activities, isLoading }: ActivityDotGridProps)
     const index = row * COLUMNS + col;
 
     if (index >= 0 && index < reversedActivities.length) {
-      setFocus({ index, x, y });
+      // Calculate center of the cell for lens positioning
+      const centerX = (col + 0.5) * cellWidth;
+      const centerY = (row + 0.5) * cellHeight;
+      setFocus({ index, x, y, centerX, centerY, cellSize: cellWidth });
     }
   }, [reversedActivities.length]);
 
@@ -88,6 +94,15 @@ export function ActivityDotGrid({ activities, isLoading }: ActivityDotGridProps)
           />
         ))}
       </div>
+
+      {/* Lens circle indicator */}
+      {focus !== null && (
+        <LensCircle
+          centerX={focus.centerX}
+          centerY={focus.centerY}
+          radius={LENS_RADIUS * focus.cellSize}
+        />
+      )}
 
       {/* Info popup - fixed at top */}
       {focus !== null && focusedActivity && (
@@ -162,6 +177,20 @@ function Dot({ activity, index, focusIndex }: DotProps) {
         }}
       />
     </div>
+  );
+}
+
+function LensCircle({ centerX, centerY, radius }: { centerX: number; centerY: number; radius: number }) {
+  return (
+    <div
+      className="pointer-events-none absolute rounded-full border-2 border-gray-400/50"
+      style={{
+        left: centerX - radius,
+        top: centerY - radius,
+        width: radius * 2,
+        height: radius * 2,
+      }}
+    />
   );
 }
 
