@@ -209,9 +209,9 @@ pnpm dev:backend
 **Tool**: Knip - 包括的なTypeScript/JavaScriptデッドコード検出ツール
 
 **Current Status**:
-- Baseline: 36 unused exports
-- Threshold: 40 → 30 (Week 2進行中)
-- Roadmap: 40 → 30 → 20 → 10 → 0 (reduce by 10 every 2 weeks)
+- Current: 16 unused exports
+- Threshold: 30 (Week 2完了)
+- Roadmap: ~~40~~ → **30** → 20 → 10 → 0 (reduce by 10 every 2 weeks)
 
 **Usage**:
 ```bash

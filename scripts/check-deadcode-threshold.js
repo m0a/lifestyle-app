@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 import { readFileSync } from 'fs';
 
-// Initial threshold set to 40 based on current baseline (36 unused exports + 4 buffer)
 // Roadmap: 40 → 30 → 20 → 10 → 0 (reduce by 10 every 2 weeks)
-const MAX_UNUSED_EXPORTS = 40;
+// Week 2: Reduced from 40 to 30
+const MAX_UNUSED_EXPORTS = 30;
 
 try {
   const report = JSON.parse(readFileSync('knip-report.json', 'utf8'));

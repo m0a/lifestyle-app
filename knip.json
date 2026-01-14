@@ -1,10 +1,11 @@
 {
   "$schema": "https://unpkg.com/knip@latest/schema.json",
+  "github-actions": false,
   "workspaces": {
     ".": {
       "entry": ["tests/**/*.test.ts", "tests/**/*.spec.ts"],
       "project": ["tests/**/*.ts"],
-      "ignore": ["**/*.d.ts", "**/dist/**", "**/node_modules/**"]
+      "ignore": ["**/*.d.ts", "**/dist/**", "**/node_modules/**", ".github/**"]
     },
     "packages/shared": {
       "entry": ["src/**/*.ts"],
@@ -27,7 +28,8 @@
     "**/*.spec.ts",
     "**/vite.config.ts",
     "**/vitest.config.ts",
-    "**/playwright.config.ts"
+    "**/playwright.config.ts",
+    ".github/**"
   ],
   "ignoreDependencies": [
     "@types/*"

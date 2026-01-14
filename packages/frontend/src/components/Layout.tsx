@@ -2,7 +2,6 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { api } from '../lib/client';
-import { SyncStatusIndicator } from './SyncStatusIndicator';
 import { EmailVerificationBanner } from './auth/EmailVerificationBanner';
 
 interface LayoutProps {
@@ -91,7 +90,6 @@ export function Layout({ children }: LayoutProps) {
         <EmailVerificationBanner />
       )}
       <main className="mx-auto max-w-7xl px-4 py-8 pb-24 md:pb-8 sm:px-6 lg:px-8">{children}</main>
-      <SyncStatusIndicator />
 
       {/* Mobile Bottom Navigation */}
       {isAuthenticated && (

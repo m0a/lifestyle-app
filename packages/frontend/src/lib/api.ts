@@ -102,7 +102,6 @@ export class ApiRequestError extends Error {
 }
 
 export const api = new ApiClient(API_BASE_URL);
-export const apiClient = api;
 
 // Meal Analysis API
 import type {
