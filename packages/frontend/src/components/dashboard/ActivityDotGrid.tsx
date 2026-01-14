@@ -24,7 +24,7 @@ interface LensPosition {
 const COLUMNS = 25;
 const BASE_SIZES = [2, 6, 12, 18]; // Level 0-3 base sizes
 const MAX_SCALE = 5; // Maximum scale factor for center dot
-const LENS_RADIUS = 4; // Number of dots affected by lens
+const LENS_RADIUS = 3; // Number of dots affected by lens
 const LERP_SPEED = 0.15; // Smoothing factor (0-1, lower = smoother)
 const IDLE_TIMEOUT = 3000; // Hide lens after 3 seconds of inactivity
 
