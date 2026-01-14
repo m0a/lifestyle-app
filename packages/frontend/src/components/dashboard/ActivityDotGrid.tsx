@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useMemo } from 'react';
 import type { DailyActivity } from '../../hooks/useActivityDots';
 
 interface ActivityDotGridProps {
@@ -25,6 +25,12 @@ export function ActivityDotGrid({ activities, isLoading }: ActivityDotGridProps)
   const [focus, setFocus] = useState<FocusState | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Reverse activities so newest is at top-left
+  const reversedActivities = useMemo(
+    () => [...activities].reverse(),
+    [activities]
+  );
+
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     if (!containerRef.current) return;
 
@@ -39,10 +45,10 @@ export function ActivityDotGrid({ activities, isLoading }: ActivityDotGridProps)
     const row = Math.floor(y / cellHeight);
     const index = row * COLUMNS + col;
 
-    if (index >= 0 && index < activities.length) {
+    if (index >= 0 && index < reversedActivities.length) {
       setFocus({ index, x, y });
     }
-  }, [activities.length]);
+  }, [reversedActivities.length]);
 
   const handlePointerLeave = useCallback(() => {
     setFocus(null);
@@ -56,11 +62,11 @@ export function ActivityDotGrid({ activities, isLoading }: ActivityDotGridProps)
     );
   }
 
-  if (activities.length === 0) {
+  if (reversedActivities.length === 0) {
     return null;
   }
 
-  const focusedActivity = focus !== null ? activities[focus.index] : null;
+  const focusedActivity = focus !== null ? reversedActivities[focus.index] : null;
 
   return (
     <div className="relative">
@@ -73,7 +79,7 @@ export function ActivityDotGrid({ activities, isLoading }: ActivityDotGridProps)
         onPointerMove={handlePointerMove}
         onPointerLeave={handlePointerLeave}
       >
-        {activities.map((activity, index) => (
+        {reversedActivities.map((activity, index) => (
           <Dot
             key={activity.date}
             activity={activity}
