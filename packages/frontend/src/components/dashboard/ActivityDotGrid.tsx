@@ -14,8 +14,9 @@ interface FocusState {
 
 const COLUMNS = 25;
 const BASE_SIZES = [2, 6, 12, 18]; // Level 0-3 base sizes
-const MAX_SCALE = 3; // Maximum scale factor for center dot
-const LENS_RADIUS = 3; // Number of dots affected by lens
+const MAX_SCALE = 5; // Maximum scale factor for center dot
+const LENS_RADIUS = 4; // Number of dots affected by lens
+const VERTICAL_OFFSET = 3; // Offset lens center above touch point (in rows)
 
 /**
  * 800 dots grid with fisheye lens effect on touch/hover.
@@ -36,11 +37,16 @@ export function ActivityDotGrid({ activities, isLoading }: ActivityDotGridProps)
     const cellWidth = rect.width / COLUMNS;
     const cellHeight = cellWidth; // Square cells
     const col = Math.floor(x / cellWidth);
-    const row = Math.floor(y / cellHeight);
-    const index = row * COLUMNS + col;
+    const touchRow = Math.floor(y / cellHeight);
+
+    // Offset lens center above the touch point so finger doesn't cover it
+    const lensRow = Math.max(0, touchRow - VERTICAL_OFFSET);
+    const index = lensRow * COLUMNS + col;
 
     if (index >= 0 && index < activities.length) {
-      setFocus({ index, x, y });
+      // Calculate the visual position of the lens center (above touch)
+      const lensY = (lensRow + 0.5) * cellHeight;
+      setFocus({ index, x, y: lensY });
     }
   }, [activities.length]);
 
@@ -100,19 +106,30 @@ interface DotProps {
 function Dot({ activity, index, focusIndex }: DotProps) {
   // Calculate distance from focus
   let scale = 1;
+  let offsetX = 0;
+  let offsetY = 0;
+
   if (focusIndex !== null) {
     const focusRow = Math.floor(focusIndex / COLUMNS);
     const focusCol = focusIndex % COLUMNS;
     const row = Math.floor(index / COLUMNS);
     const col = index % COLUMNS;
 
-    const distance = Math.sqrt(
-      Math.pow(row - focusRow, 2) + Math.pow(col - focusCol, 2)
-    );
+    const dx = col - focusCol;
+    const dy = row - focusRow;
+    const distance = Math.sqrt(dx * dx + dy * dy);
 
-    if (distance <= LENS_RADIUS) {
+    if (distance <= LENS_RADIUS && distance > 0) {
       // Smooth falloff: max scale at center, 1 at edge
-      scale = 1 + (MAX_SCALE - 1) * Math.pow(1 - distance / LENS_RADIUS, 2);
+      const factor = Math.pow(1 - distance / LENS_RADIUS, 2);
+      scale = 1 + (MAX_SCALE - 1) * factor;
+
+      // Pull dots toward center (fisheye distortion effect)
+      const pullStrength = factor * 8; // pixels to pull toward center
+      offsetX = -(dx / distance) * pullStrength;
+      offsetY = -(dy / distance) * pullStrength;
+    } else if (distance === 0) {
+      scale = MAX_SCALE;
     }
   }
 
@@ -137,10 +154,11 @@ function Dot({ activity, index, focusIndex }: DotProps) {
       }}
     >
       <span
-        className={`rounded-full ${color} transition-all duration-75`}
+        className={`rounded-full ${color} transition-all duration-100`}
         style={{
           width: `${size}px`,
           height: `${size}px`,
+          transform: `translate(${offsetX}px, ${offsetY}px)`,
         }}
       />
     </div>
@@ -162,27 +180,29 @@ function InfoPopup({ activity, x, y }: InfoPopupProps) {
 
   return (
     <div
-      className="pointer-events-none absolute z-10 -translate-x-1/2 rounded-lg bg-black/90 px-3 py-2 text-center text-white shadow-lg"
+      className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-lg bg-black/95 px-4 py-2 text-center text-white shadow-xl"
       style={{
         left: x,
-        top: y - 80, // Position above the touch point
+        top: y - 60, // Position well above the lens center
       }}
     >
-      <div className="text-sm font-bold">{dateStr}</div>
-      <div className="mt-1 flex gap-2 text-xs">
+      <div className="text-base font-bold">{dateStr}</div>
+      <div className="mt-1 flex justify-center gap-2 text-xs">
         {activity.hasWeight && (
-          <span className="rounded bg-gray-700 px-1">体重</span>
+          <span className="rounded bg-white/20 px-2 py-0.5">体重</span>
         )}
         {activity.hasMeal && (
-          <span className="rounded bg-gray-700 px-1">食事</span>
+          <span className="rounded bg-white/20 px-2 py-0.5">食事</span>
         )}
         {activity.hasExercise && (
-          <span className="rounded bg-gray-700 px-1">運動</span>
+          <span className="rounded bg-white/20 px-2 py-0.5">運動</span>
         )}
       </div>
       {activity.level === 0 && (
         <div className="mt-1 text-xs text-gray-400">記録なし</div>
       )}
+      {/* Arrow pointing down */}
+      <div className="absolute left-1/2 top-full -translate-x-1/2 border-8 border-transparent border-t-black/95" />
     </div>
   );
 }
