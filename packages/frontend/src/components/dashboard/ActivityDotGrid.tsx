@@ -16,7 +16,7 @@ const COLUMNS = 25;
 const BASE_SIZES = [2, 6, 12, 18]; // Level 0-3 base sizes
 const MAX_SCALE = 5; // Maximum scale factor for center dot
 const LENS_RADIUS = 4; // Number of dots affected by lens
-const VERTICAL_OFFSET = 3; // Offset lens center above touch point (in rows)
+const VERTICAL_OFFSET = 6; // Offset lens center above touch point (in rows)
 
 /**
  * 800 dots grid with fisheye lens effect on touch/hover.
@@ -70,29 +70,26 @@ export function ActivityDotGrid({ activities, isLoading }: ActivityDotGridProps)
 
   return (
     <div className="relative">
-      {/* Grid container with overflow hidden to contain lens effect */}
-      <div className="overflow-hidden">
-        <div
-          ref={containerRef}
-          className="grid gap-1 touch-none"
-          style={{
-            gridTemplateColumns: `repeat(${COLUMNS}, 1fr)`,
-          }}
-          onPointerMove={handlePointerMove}
-          onPointerLeave={handlePointerLeave}
-        >
-          {activities.map((activity, index) => (
-            <Dot
-              key={activity.date}
-              activity={activity}
-              index={index}
-              focusIndex={focus?.index ?? null}
-            />
-          ))}
-        </div>
+      <div
+        ref={containerRef}
+        className="grid gap-1 touch-none"
+        style={{
+          gridTemplateColumns: `repeat(${COLUMNS}, 1fr)`,
+        }}
+        onPointerMove={handlePointerMove}
+        onPointerLeave={handlePointerLeave}
+      >
+        {activities.map((activity, index) => (
+          <Dot
+            key={activity.date}
+            activity={activity}
+            index={index}
+            focusIndex={focus?.index ?? null}
+          />
+        ))}
       </div>
 
-      {/* Info popup - outside overflow-hidden to remain visible */}
+      {/* Info popup */}
       {focus !== null && focusedActivity && (
         <InfoPopup activity={focusedActivity} x={focus.x} y={focus.y} />
       )}
@@ -137,7 +134,6 @@ function Dot({ activity, index, focusIndex }: DotProps) {
   }
 
   const baseSize = BASE_SIZES[activity.level] || 2;
-  const size = baseSize * scale;
 
   // Black-based colors
   const colorMap: Record<number, string> = {
@@ -149,6 +145,7 @@ function Dot({ activity, index, focusIndex }: DotProps) {
 
   const color = colorMap[activity.level] || 'bg-gray-300';
 
+  // Use transform scale instead of width/height to avoid layout shifts
   return (
     <div
       className="flex items-center justify-center"
@@ -157,11 +154,11 @@ function Dot({ activity, index, focusIndex }: DotProps) {
       }}
     >
       <span
-        className={`rounded-full ${color} transition-all duration-100`}
+        className={`rounded-full ${color} transition-transform duration-100`}
         style={{
-          width: `${size}px`,
-          height: `${size}px`,
-          transform: `translate(${offsetX}px, ${offsetY}px)`,
+          width: `${baseSize}px`,
+          height: `${baseSize}px`,
+          transform: `translate(${offsetX}px, ${offsetY}px) scale(${scale})`,
         }}
       />
     </div>
