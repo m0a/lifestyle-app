@@ -89,6 +89,7 @@ export function ActivityDotGrid({ activities, isLoading }: ActivityDotGridProps)
 
   const isDraggingRef = useRef(false);
   const idleTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const lastPointerRef = useRef<{ x: number; y: number } | null>(null);
 
   // Reset idle timer - call this on any activity
   const resetIdleTimer = useCallback(() => {
@@ -101,9 +102,10 @@ export function ActivityDotGrid({ activities, isLoading }: ActivityDotGridProps)
     }, IDLE_TIMEOUT);
   }, []);
 
-  // On pointer down, start dragging
+  // On pointer down, start dragging and record initial pointer position
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     isDraggingRef.current = true;
+    lastPointerRef.current = { x: e.clientX, y: e.clientY };
     // Capture pointer for tracking outside element
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
     // Clear idle timer while dragging
@@ -112,26 +114,37 @@ export function ActivityDotGrid({ activities, isLoading }: ActivityDotGridProps)
     }
   }, []);
 
-  // On pointer move while dragging, update target (lens follows like mouse cursor)
+  // On pointer move while dragging, move lens by delta (relative movement like mouse)
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
-    if (!containerRef.current || !isDraggingRef.current) return;
+    if (!containerRef.current || !isDraggingRef.current || !lastPointerRef.current) return;
 
     const rect = containerRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
     const cellWidth = rect.width / COLUMNS;
-    const col = Math.max(0, Math.min(COLUMNS - 1, Math.floor(x / cellWidth)));
     const totalRows = Math.ceil(reversedActivities.length / COLUMNS);
-    const row = Math.max(0, Math.min(totalRows - 1, Math.floor(y / cellWidth)));
-    const index = row * COLUMNS + col;
+
+    // Calculate pointer movement delta in cell units
+    const deltaX = (e.clientX - lastPointerRef.current.x) / cellWidth;
+    const deltaY = (e.clientY - lastPointerRef.current.y) / cellWidth;
+    lastPointerRef.current = { x: e.clientX, y: e.clientY };
+
+    // If no target yet, initialize at pointer position
+    if (!target) {
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const col = Math.max(0, Math.min(COLUMNS - 1, Math.floor(x / cellWidth)));
+      const row = Math.max(0, Math.min(totalRows - 1, Math.floor(y / cellWidth)));
+      currentPosRef.current = { col, row };
+      setTarget({ col, row, cellSize: cellWidth });
+      return;
+    }
+
+    // Move target by delta (relative movement)
+    const newCol = Math.max(0, Math.min(COLUMNS - 1, target.col + deltaX));
+    const newRow = Math.max(0, Math.min(totalRows - 1, target.row + deltaY));
+    const index = Math.round(newRow) * COLUMNS + Math.round(newCol);
 
     if (index >= 0 && index < reversedActivities.length) {
-      // Initialize lens position on first move
-      if (!target) {
-        currentPosRef.current = { col, row };
-      }
-      setTarget({ col, row, cellSize: cellWidth });
+      setTarget({ col: newCol, row: newRow, cellSize: cellWidth });
     }
   }, [reversedActivities.length, target]);
 
