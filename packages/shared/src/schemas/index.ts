@@ -183,6 +183,10 @@ export const dailyActivitySchema = z.object({
   hasWeight: z.boolean(),
   hasExercise: z.boolean(),
   level: z.number().int().min(0).max(3),
+  // Actual values for display
+  weight: z.number().nullable(),
+  calories: z.number().nullable(),
+  exerciseSets: z.number().nullable(),
 });
 
 export const dailyActivityResponseSchema = z.object({

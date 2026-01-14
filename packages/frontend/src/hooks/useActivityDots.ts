@@ -7,6 +7,9 @@ export interface DailyActivity {
   hasWeight: boolean;
   hasExercise: boolean;
   level: number;
+  weight: number | null;
+  calories: number | null;
+  exerciseSets: number | null;
 }
 
 export interface DailyActivityResponse {

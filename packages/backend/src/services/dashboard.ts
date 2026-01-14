@@ -450,9 +450,9 @@ export class DashboardService {
       current.setDate(current.getDate() + 1);
     }
 
-    // Get dates with weight records
+    // Get weight records with values
     const weightRecords = await this.db
-      .select({ recordedAt: weights.recordedAt })
+      .select({ recordedAt: weights.recordedAt, weight: weights.weight })
       .from(weights)
       .where(
         and(
@@ -463,13 +463,16 @@ export class DashboardService {
       )
       .all();
 
-    const weightDates = new Set(
-      weightRecords.map((r) => r.recordedAt.split('T')[0])
-    );
+    // Map date to latest weight value
+    const weightByDate = new Map<string, number>();
+    for (const r of weightRecords) {
+      const date = r.recordedAt.split('T')[0]!;
+      weightByDate.set(date, r.weight);
+    }
 
-    // Get dates with meal records
+    // Get meal records with calories
     const mealRecords = await this.db
-      .select({ recordedAt: meals.recordedAt })
+      .select({ recordedAt: meals.recordedAt, calories: meals.calories })
       .from(meals)
       .where(
         and(
@@ -480,11 +483,15 @@ export class DashboardService {
       )
       .all();
 
-    const mealDates = new Set(
-      mealRecords.map((r) => r.recordedAt.split('T')[0])
-    );
+    // Map date to total calories
+    const caloriesByDate = new Map<string, number>();
+    for (const r of mealRecords) {
+      const date = r.recordedAt.split('T')[0]!;
+      const current = caloriesByDate.get(date) || 0;
+      caloriesByDate.set(date, current + (r.calories || 0));
+    }
 
-    // Get dates with exercise records
+    // Get exercise records with set count
     const exerciseRecords = await this.db
       .select({ recordedAt: exercises.recordedAt })
       .from(exercises)
@@ -497,15 +504,23 @@ export class DashboardService {
       )
       .all();
 
-    const exerciseDates = new Set(
-      exerciseRecords.map((r) => r.recordedAt.split('T')[0])
-    );
+    // Map date to total sets
+    const setsByDate = new Map<string, number>();
+    for (const r of exerciseRecords) {
+      const date = r.recordedAt.split('T')[0]!;
+      const current = setsByDate.get(date) || 0;
+      setsByDate.set(date, current + 1);
+    }
 
     // Build activities array
     const activities: DailyActivity[] = allDates.map((date) => {
-      const hasMeal = mealDates.has(date);
-      const hasWeight = weightDates.has(date);
-      const hasExercise = exerciseDates.has(date);
+      const weight = weightByDate.get(date) ?? null;
+      const calories = caloriesByDate.get(date) ?? null;
+      const exerciseSets = setsByDate.get(date) ?? null;
+
+      const hasMeal = calories !== null && calories > 0;
+      const hasWeight = weight !== null;
+      const hasExercise = exerciseSets !== null && exerciseSets > 0;
       const level = (hasMeal ? 1 : 0) + (hasWeight ? 1 : 0) + (hasExercise ? 1 : 0);
 
       return {
@@ -514,6 +529,9 @@ export class DashboardService {
         hasWeight,
         hasExercise,
         level,
+        weight,
+        calories: calories !== null && calories > 0 ? calories : null,
+        exerciseSets: exerciseSets !== null && exerciseSets > 0 ? exerciseSets : null,
       };
     });
 

@@ -176,18 +176,25 @@ function InfoPopup({ activity }: { activity: DailyActivity }) {
   return (
     <div className="pointer-events-none absolute left-1/2 top-0 z-10 -translate-x-1/2 -translate-y-full rounded-lg bg-black/95 px-4 py-2 text-center text-white shadow-xl">
       <div className="text-base font-bold">{dateStr}</div>
-      <div className="mt-1 flex justify-center gap-2 text-xs">
-        {activity.hasWeight && (
-          <span className="rounded bg-white/20 px-2 py-0.5">体重</span>
-        )}
-        {activity.hasMeal && (
-          <span className="rounded bg-white/20 px-2 py-0.5">食事</span>
-        )}
-        {activity.hasExercise && (
-          <span className="rounded bg-white/20 px-2 py-0.5">運動</span>
-        )}
-      </div>
-      {activity.level === 0 && (
+      {activity.level > 0 ? (
+        <div className="mt-1 flex justify-center gap-3 text-xs">
+          {activity.weight !== null && (
+            <span className="rounded bg-white/20 px-2 py-0.5">
+              {activity.weight.toFixed(1)}kg
+            </span>
+          )}
+          {activity.calories !== null && (
+            <span className="rounded bg-white/20 px-2 py-0.5">
+              {activity.calories}kcal
+            </span>
+          )}
+          {activity.exerciseSets !== null && (
+            <span className="rounded bg-white/20 px-2 py-0.5">
+              {activity.exerciseSets}セット
+            </span>
+          )}
+        </div>
+      ) : (
         <div className="mt-1 text-xs text-gray-400">記録なし</div>
       )}
       {/* Arrow pointing down */}
