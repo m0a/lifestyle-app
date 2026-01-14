@@ -59,9 +59,10 @@ export const auth = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
     const token = createSessionToken(user.id);
 
+    const isProduction = c.env.ENVIRONMENT === 'production';
     setCookie(c, 'session', token, {
       httpOnly: true,
-      secure: true,
+      secure: isProduction,
       sameSite: 'Lax',
       path: '/',
       maxAge: 60 * 60 * 24 * 7, // 7 days
@@ -77,9 +78,10 @@ export const auth = new Hono<{ Bindings: Bindings; Variables: Variables }>()
     const user = await authService.login(input);
     const token = createSessionToken(user.id);
 
+    const isProduction = c.env.ENVIRONMENT === 'production';
     setCookie(c, 'session', token, {
       httpOnly: true,
-      secure: true,
+      secure: isProduction,
       sameSite: 'Lax',
       path: '/',
       maxAge: 60 * 60 * 24 * 7, // 7 days

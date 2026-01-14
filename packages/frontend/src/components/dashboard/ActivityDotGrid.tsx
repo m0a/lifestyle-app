@@ -23,8 +23,8 @@ interface LensPosition {
 
 const COLUMNS = 25;
 const BASE_SIZES = [2, 6, 12, 18]; // Level 0-3 base sizes
-const MAX_SCALE = 5; // Maximum scale factor for center dot
-const LENS_RADIUS = 3; // Number of dots affected by lens
+const MAX_SCALE = 2.5; // Maximum scale factor for center dot
+const LENS_RADIUS = 4; // Number of dots affected by lens (wider = smoother)
 const LERP_SPEED = 0.15; // Smoothing factor (0-1, lower = smoother)
 const IDLE_TIMEOUT = 3000; // Hide lens after 3 seconds of inactivity
 
@@ -250,8 +250,8 @@ function Dot({ activity, index, lensPos }: DotProps) {
       const distance = Math.sqrt(dx * dx + dy * dy);
 
       if (distance <= LENS_RADIUS && distance > 0) {
-        // Smooth falloff: max scale at center, 1 at edge
-        const factor = Math.pow(1 - distance / LENS_RADIUS, 2);
+        // Gentle linear falloff: max scale at center, 1 at edge
+        const factor = 1 - distance / LENS_RADIUS;
         scale = 1 + (MAX_SCALE - 1) * factor;
 
         // Pull dots toward center (fisheye distortion effect)
@@ -263,6 +263,13 @@ function Dot({ activity, index, lensPos }: DotProps) {
   }
 
   const baseSize = BASE_SIZES[activity.level] || 2;
+
+  // Limit maximum size to prevent huge dots for high-level activities
+  // Cap scaled size to 18px max, and reduce scale factor for larger dots
+  const MAX_SIZE = 18;
+  // Larger dots get less scaling (baseSize 18 → scale ~1.0, baseSize 2 → scale up to MAX_SCALE)
+  const scaleFactor = 1 + (scale - 1) * (1 - baseSize / 24);
+  const effectiveScale = Math.min(scaleFactor, MAX_SIZE / baseSize);
 
   // Center dot gets blue color, others use gray scale
   let color: string;
@@ -279,11 +286,14 @@ function Dot({ activity, index, lensPos }: DotProps) {
   }
 
   // Use transform scale instead of width/height to avoid layout shifts
+  // Center dot gets higher z-index to appear on top
   return (
     <div
       className="flex items-center justify-center"
       style={{
         aspectRatio: '1',
+        zIndex: isCenter ? 10 : scale > 1 ? 5 : 1,
+        position: 'relative',
       }}
     >
       <span
@@ -291,7 +301,7 @@ function Dot({ activity, index, lensPos }: DotProps) {
         style={{
           width: `${baseSize}px`,
           height: `${baseSize}px`,
-          transform: `translate(${offsetX}px, ${offsetY}px) scale(${scale})`,
+          transform: `translate(${offsetX}px, ${offsetY}px) scale(${effectiveScale})`,
         }}
       />
     </div>
@@ -310,34 +320,37 @@ function InfoPopup({ activity, centerX, centerY, lensRadius, containerWidth }: I
   const date = new Date(activity.date);
   const dateStr = `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
 
-  // Show below lens if too close to top (popup height ~60px + margin)
-  const showBelow = centerY - lensRadius < 80;
+  // Show below lens if too close to top (popup height ~80px + margin)
+  const showBelow = centerY - lensRadius < 100;
 
   // Clamp popup position to stay within container (popup width ~150px)
   const popupHalfWidth = 75;
   const clampedX = Math.max(popupHalfWidth, Math.min(containerWidth - popupHalfWidth, centerX));
 
+  // Position popup closer to lens center (reduced offset from 8px to 2px)
+  const offset = 2;
+
   return (
     <div
-      className="pointer-events-none absolute z-10 rounded-lg bg-black/95 px-4 py-2 text-center text-white shadow-xl"
+      className="pointer-events-none absolute z-10 rounded-lg bg-black/95 px-3 py-1.5 text-center text-white shadow-xl"
       style={{
         left: clampedX,
-        top: showBelow ? centerY + lensRadius + 8 : centerY - lensRadius - 8,
+        top: showBelow ? centerY + lensRadius * 0.5 + offset : centerY - lensRadius * 0.5 - offset,
         transform: showBelow ? 'translate(-50%, 0)' : 'translate(-50%, -100%)',
       }}
     >
       <div className="text-base font-bold">{dateStr}</div>
       {activity.level > 0 ? (
-        <div className="mt-1 grid grid-cols-3 gap-1 text-xs">
-          <span className={`rounded px-1 py-0.5 text-center ${activity.weight !== null ? 'bg-white/20' : 'text-gray-500'}`}>
-            {activity.weight !== null ? `${activity.weight.toFixed(1)}kg` : '-'}
-          </span>
-          <span className={`rounded px-1 py-0.5 text-center ${activity.calories !== null ? 'bg-white/20' : 'text-gray-500'}`}>
-            {activity.calories !== null ? `${activity.calories}kcal` : '-'}
-          </span>
-          <span className={`rounded px-1 py-0.5 text-center ${activity.exerciseSets !== null ? 'bg-white/20' : 'text-gray-500'}`}>
-            {activity.exerciseSets !== null ? `${activity.exerciseSets}set` : '-'}
-          </span>
+        <div className="mt-1 flex flex-col gap-0.5 text-xs">
+          {activity.weight !== null && (
+            <span className="rounded bg-white/20 px-2 py-0.5">{activity.weight.toFixed(1)}kg</span>
+          )}
+          {activity.calories !== null && (
+            <span className="rounded bg-white/20 px-2 py-0.5">{activity.calories}kcal</span>
+          )}
+          {activity.exerciseSets !== null && (
+            <span className="rounded bg-white/20 px-2 py-0.5">{activity.exerciseSets}set</span>
+          )}
         </div>
       ) : (
         <div className="mt-1 text-xs text-gray-400">記録なし</div>
