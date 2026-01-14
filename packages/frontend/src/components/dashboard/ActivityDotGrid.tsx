@@ -43,24 +43,24 @@ interface DotProps {
 }
 
 function Dot({ activity }: DotProps) {
-  // Larger dot sizes for better visibility (4-10px)
+  // Size with strong contrast: dot level (2px) to large (12px)
   const sizeMap: Record<number, string> = {
-    0: '4px',
-    1: '6px',
+    0: '2px',
+    1: '5px',
     2: '8px',
-    3: '10px',
+    3: '12px',
   };
 
-  // Color based on level
+  // Black-based colors
   const colorMap: Record<number, string> = {
-    0: 'bg-gray-200',
-    1: 'bg-green-300',
-    2: 'bg-green-500',
-    3: 'bg-green-700',
+    0: 'bg-gray-300',
+    1: 'bg-gray-500',
+    2: 'bg-gray-700',
+    3: 'bg-black',
   };
 
-  const size = sizeMap[activity.level] || '4px';
-  const color = colorMap[activity.level] || 'bg-gray-200';
+  const size = sizeMap[activity.level] || '2px';
+  const color = colorMap[activity.level] || 'bg-gray-300';
 
   return (
     <div
