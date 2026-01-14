@@ -216,9 +216,14 @@ export function ActivityDotGrid({ activities, isLoading }: ActivityDotGridProps)
         />
       )}
 
-      {/* Info popup - fixed at top */}
+      {/* Info popup - positioned above lens center */}
       {lens !== null && focusedActivity && (
-        <InfoPopup activity={focusedActivity} />
+        <InfoPopup
+          activity={focusedActivity}
+          centerX={lens.centerX}
+          centerY={lens.centerY}
+          lensRadius={LENS_RADIUS * lens.cellSize}
+        />
       )}
     </div>
   );
@@ -240,23 +245,25 @@ function Dot({ activity, index, lensPos }: DotProps) {
     const row = Math.floor(index / COLUMNS);
     const col = index % COLUMNS;
 
-    // Use smooth lens position for distance calculation
-    const dx = col - lensPos.col;
-    const dy = row - lensPos.row;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-
-    if (distance <= LENS_RADIUS && distance > 0) {
-      // Smooth falloff: max scale at center, 1 at edge
-      const factor = Math.pow(1 - distance / LENS_RADIUS, 2);
-      scale = 1 + (MAX_SCALE - 1) * factor;
-
-      // Pull dots toward center (fisheye distortion effect)
-      const pullStrength = factor * 8; // pixels to pull toward center
-      offsetX = -(dx / distance) * pullStrength;
-      offsetY = -(dy / distance) * pullStrength;
-    } else if (distance < 0.5) {
-      // Very close to center
+    // Center dot (the one being focused) gets maximum scale
+    if (index === lensPos.index) {
       scale = MAX_SCALE;
+    } else {
+      // Use smooth lens position for distance calculation
+      const dx = col - lensPos.col;
+      const dy = row - lensPos.row;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance <= LENS_RADIUS && distance > 0) {
+        // Smooth falloff: max scale at center, 1 at edge
+        const factor = Math.pow(1 - distance / LENS_RADIUS, 2);
+        scale = 1 + (MAX_SCALE - 1) * factor;
+
+        // Pull dots toward center (fisheye distortion effect)
+        const pullStrength = factor * 8; // pixels to pull toward center
+        offsetX = -(dx / distance) * pullStrength;
+        offsetY = -(dy / distance) * pullStrength;
+      }
     }
   }
 
@@ -306,16 +313,30 @@ function LensCircle({ centerX, centerY, radius }: { centerX: number; centerY: nu
   );
 }
 
-function InfoPopup({ activity }: { activity: DailyActivity }) {
+interface InfoPopupProps {
+  activity: DailyActivity;
+  centerX: number;
+  centerY: number;
+  lensRadius: number;
+}
+
+function InfoPopup({ activity, centerX, centerY, lensRadius }: InfoPopupProps) {
   const date = new Date(activity.date);
   const dateStr = date.toLocaleDateString('ja-JP', {
     month: 'short',
     day: 'numeric',
   });
 
-  // Fixed position at top of grid
+  // Position above lens center
   return (
-    <div className="pointer-events-none absolute left-1/2 top-0 z-10 -translate-x-1/2 -translate-y-full rounded-lg bg-black/95 px-4 py-2 text-center text-white shadow-xl">
+    <div
+      className="pointer-events-none absolute z-10 -translate-x-1/2 rounded-lg bg-black/95 px-4 py-2 text-center text-white shadow-xl"
+      style={{
+        left: centerX,
+        top: centerY - lensRadius - 8,
+        transform: 'translate(-50%, -100%)',
+      }}
+    >
       <div className="text-base font-bold">{dateStr}</div>
       {activity.level > 0 ? (
         <div className="mt-1 flex justify-center gap-3 text-xs">
