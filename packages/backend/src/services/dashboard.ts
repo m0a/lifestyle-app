@@ -89,6 +89,20 @@ interface GoalProgress {
   };
 }
 
+interface DailyActivity {
+  date: string;
+  hasMeal: boolean;
+  hasWeight: boolean;
+  hasExercise: boolean;
+  level: number;
+}
+
+interface DailyActivityResponse {
+  activities: DailyActivity[];
+  startDate: string;
+  endDate: string;
+}
+
 export class DashboardService {
   constructor(private db: Database) {}
 
@@ -410,6 +424,121 @@ export class DashboardService {
         target: targetCalories,
         difference: Math.round(averageCalories - targetCalories),
       },
+    };
+  }
+
+  /**
+   * Get daily activity data for the specified number of days.
+   * Returns an array of daily activities with hasMeal, hasWeight, hasExercise flags.
+   * Level is calculated as the sum of flags (0-3).
+   */
+  async getDailyActivity(userId: string, days: number = 800): Promise<DailyActivityResponse> {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - (days - 1));
+
+    // Format dates as YYYY-MM-DD
+    const formatDate = (d: Date) => d.toISOString().split('T')[0]!;
+    const startDateStr = formatDate(startDate);
+    const endDateStr = formatDate(endDate);
+
+    // Generate all dates in range
+    const allDates: string[] = [];
+    const current = new Date(startDate);
+    while (current <= endDate) {
+      allDates.push(formatDate(current));
+      current.setDate(current.getDate() + 1);
+    }
+
+    // Get weight records with values
+    const weightRecords = await this.db
+      .select({ recordedAt: weights.recordedAt, weight: weights.weight })
+      .from(weights)
+      .where(
+        and(
+          eq(weights.userId, userId),
+          gte(weights.recordedAt, startDate.toISOString()),
+          lte(weights.recordedAt, endDate.toISOString())
+        )
+      )
+      .all();
+
+    // Map date to latest weight value
+    const weightByDate = new Map<string, number>();
+    for (const r of weightRecords) {
+      const date = r.recordedAt.split('T')[0]!;
+      weightByDate.set(date, r.weight);
+    }
+
+    // Get meal records with calories
+    const mealRecords = await this.db
+      .select({ recordedAt: meals.recordedAt, calories: meals.calories })
+      .from(meals)
+      .where(
+        and(
+          eq(meals.userId, userId),
+          gte(meals.recordedAt, startDate.toISOString()),
+          lte(meals.recordedAt, endDate.toISOString())
+        )
+      )
+      .all();
+
+    // Map date to total calories
+    const caloriesByDate = new Map<string, number>();
+    for (const r of mealRecords) {
+      const date = r.recordedAt.split('T')[0]!;
+      const current = caloriesByDate.get(date) || 0;
+      caloriesByDate.set(date, current + (r.calories || 0));
+    }
+
+    // Get exercise records with set count
+    const exerciseRecords = await this.db
+      .select({ recordedAt: exercises.recordedAt })
+      .from(exercises)
+      .where(
+        and(
+          eq(exercises.userId, userId),
+          gte(exercises.recordedAt, startDate.toISOString()),
+          lte(exercises.recordedAt, endDate.toISOString())
+        )
+      )
+      .all();
+
+    // Map date to total sets
+    const setsByDate = new Map<string, number>();
+    for (const r of exerciseRecords) {
+      const date = r.recordedAt.split('T')[0]!;
+      const current = setsByDate.get(date) || 0;
+      setsByDate.set(date, current + 1);
+    }
+
+    // Build activities array
+    const activities: DailyActivity[] = allDates.map((date) => {
+      const weight = weightByDate.get(date) ?? null;
+      const calories = caloriesByDate.get(date) ?? null;
+      const exerciseSets = setsByDate.get(date) ?? null;
+
+      const hasMeal = calories !== null && calories > 0;
+      const hasWeight = weight !== null;
+      const hasExercise = exerciseSets !== null && exerciseSets > 0;
+      const level = (hasMeal ? 1 : 0) + (hasWeight ? 1 : 0) + (hasExercise ? 1 : 0);
+
+      return {
+        date,
+        hasMeal,
+        hasWeight,
+        hasExercise,
+        level,
+        weight,
+        calories: calories !== null && calories > 0 ? calories : null,
+        exerciseSets: exerciseSets !== null && exerciseSets > 0 ? exerciseSets : null,
+      };
+    });
+
+    return {
+      activities,
+      startDate: startDateStr,
+      endDate: endDateStr,
     };
   }
 }

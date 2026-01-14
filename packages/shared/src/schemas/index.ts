@@ -172,6 +172,33 @@ export const exerciseQuerySchema = z.object({
 export const dashboardPeriodSchema = z.enum(['week', 'month']);
 export type DashboardPeriod = z.infer<typeof dashboardPeriodSchema>;
 
+// Activity dots schema (800 dots visualization)
+export const activityQuerySchema = z.object({
+  days: z.coerce.number().int().min(1).max(1000).optional().default(800),
+});
+
+export const dailyActivitySchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  hasMeal: z.boolean(),
+  hasWeight: z.boolean(),
+  hasExercise: z.boolean(),
+  level: z.number().int().min(0).max(3),
+  // Actual values for display
+  weight: z.number().nullable(),
+  calories: z.number().nullable(),
+  exerciseSets: z.number().nullable(),
+});
+
+export const dailyActivityResponseSchema = z.object({
+  activities: z.array(dailyActivitySchema),
+  startDate: z.string(),
+  endDate: z.string(),
+});
+
+export type ActivityQuery = z.infer<typeof activityQuerySchema>;
+export type DailyActivity = z.infer<typeof dailyActivitySchema>;
+export type DailyActivityResponse = z.infer<typeof dailyActivityResponseSchema>;
+
 // Max RM schemas (for training image feature)
 export const maxRMQuerySchema = z.object({
   exerciseTypes: z.string().optional(), // Comma-separated exercise types

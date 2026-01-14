@@ -1,0 +1,366 @@
+import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
+import type { DailyActivity } from '../../hooks/useActivityDots';
+
+interface ActivityDotGridProps {
+  activities: DailyActivity[];
+  isLoading?: boolean;
+}
+
+interface FocusTarget {
+  col: number;
+  row: number;
+  cellSize: number;
+}
+
+interface LensPosition {
+  col: number;
+  row: number;
+  index: number;
+  centerX: number;
+  centerY: number;
+  cellSize: number;
+}
+
+const COLUMNS = 25;
+const BASE_SIZES = [2, 6, 12, 18]; // Level 0-3 base sizes
+const MAX_SCALE = 2.5; // Maximum scale factor for center dot
+const LENS_RADIUS = 4; // Number of dots affected by lens (wider = smoother)
+const LERP_SPEED = 0.15; // Smoothing factor (0-1, lower = smoother)
+const IDLE_TIMEOUT = 3000; // Hide lens after 3 seconds of inactivity
+
+/**
+ * 800 dots grid with fisheye lens effect on touch/hover.
+ * Shows date, weight, calories, exercise in the center of the lens.
+ */
+export function ActivityDotGrid({ activities, isLoading }: ActivityDotGridProps) {
+  const [target, setTarget] = useState<FocusTarget | null>(null);
+  const [lens, setLens] = useState<LensPosition | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const currentPosRef = useRef({ col: 0, row: 0 });
+  const animationRef = useRef<number>();
+
+  // Reverse activities so newest is at top-left
+  const reversedActivities = useMemo(
+    () => [...activities].reverse(),
+    [activities]
+  );
+
+  // Smooth animation loop
+  useEffect(() => {
+    if (!target) {
+      setLens(null);
+      return;
+    }
+
+    const animate = () => {
+      const current = currentPosRef.current;
+
+      // Lerp toward target
+      current.col += (target.col - current.col) * LERP_SPEED;
+      current.row += (target.row - current.row) * LERP_SPEED;
+
+      // Calculate snapped index for the activity lookup
+      const snappedCol = Math.round(current.col);
+      const snappedRow = Math.round(current.row);
+      const index = snappedRow * COLUMNS + snappedCol;
+
+      if (index >= 0 && index < reversedActivities.length) {
+        setLens({
+          col: current.col,
+          row: current.row,
+          index,
+          centerX: (current.col + 0.5) * target.cellSize,
+          centerY: (current.row + 0.5) * target.cellSize,
+          cellSize: target.cellSize,
+        });
+      }
+
+      animationRef.current = requestAnimationFrame(animate);
+    };
+
+    animationRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    };
+  }, [target, reversedActivities.length]);
+
+  const isDraggingRef = useRef(false);
+  const idleTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const lastPointerRef = useRef<{ x: number; y: number } | null>(null);
+
+  // Reset idle timer - call this on any activity
+  const resetIdleTimer = useCallback(() => {
+    if (idleTimerRef.current) {
+      clearTimeout(idleTimerRef.current);
+    }
+    idleTimerRef.current = setTimeout(() => {
+      setTarget(null);
+      setLens(null);
+    }, IDLE_TIMEOUT);
+  }, []);
+
+  // On pointer down, start dragging and record initial pointer position
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    isDraggingRef.current = true;
+    lastPointerRef.current = { x: e.clientX, y: e.clientY };
+    // Capture pointer for tracking outside element
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    // Clear idle timer while dragging
+    if (idleTimerRef.current) {
+      clearTimeout(idleTimerRef.current);
+    }
+  }, []);
+
+  // On pointer move while dragging, move lens by delta (relative movement like mouse)
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    if (!containerRef.current || !isDraggingRef.current || !lastPointerRef.current) return;
+
+    const rect = containerRef.current.getBoundingClientRect();
+    const cellWidth = rect.width / COLUMNS;
+    const totalRows = Math.ceil(reversedActivities.length / COLUMNS);
+
+    // Calculate pointer movement delta in cell units
+    const deltaX = (e.clientX - lastPointerRef.current.x) / cellWidth;
+    const deltaY = (e.clientY - lastPointerRef.current.y) / cellWidth;
+    lastPointerRef.current = { x: e.clientX, y: e.clientY };
+
+    // If no target yet, initialize at pointer position
+    if (!target) {
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const col = Math.max(0, Math.min(COLUMNS - 1, Math.floor(x / cellWidth)));
+      const row = Math.max(0, Math.min(totalRows - 1, Math.floor(y / cellWidth)));
+      currentPosRef.current = { col, row };
+      setTarget({ col, row, cellSize: cellWidth });
+      return;
+    }
+
+    // Move target by delta (relative movement)
+    const newCol = Math.max(0, Math.min(COLUMNS - 1, target.col + deltaX));
+    const newRow = Math.max(0, Math.min(totalRows - 1, target.row + deltaY));
+    const index = Math.round(newRow) * COLUMNS + Math.round(newCol);
+
+    if (index >= 0 && index < reversedActivities.length) {
+      setTarget({ col: newCol, row: newRow, cellSize: cellWidth });
+    }
+  }, [reversedActivities.length, target]);
+
+  // On pointer up, stop dragging but keep lens visible, start idle timer
+  const handlePointerUp = useCallback((e: React.PointerEvent) => {
+    isDraggingRef.current = false;
+    (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+    resetIdleTimer();
+  }, [resetIdleTimer]);
+
+  // On pointer leave, stop dragging and start idle timer
+  const handlePointerLeave = useCallback(() => {
+    isDraggingRef.current = false;
+    resetIdleTimer();
+  }, [resetIdleTimer]);
+
+  // Cleanup idle timer on unmount
+  useEffect(() => {
+    return () => {
+      if (idleTimerRef.current) {
+        clearTimeout(idleTimerRef.current);
+      }
+    };
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
+      </div>
+    );
+  }
+
+  if (reversedActivities.length === 0) {
+    return null;
+  }
+
+  const focusedActivity = lens !== null ? reversedActivities[lens.index] : null;
+
+  return (
+    <div className="relative">
+      <div
+        ref={containerRef}
+        className="grid touch-none"
+        style={{
+          gridTemplateColumns: `repeat(${COLUMNS}, 1fr)`,
+        }}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerLeave={handlePointerLeave}
+      >
+        {reversedActivities.map((activity, index) => (
+          <Dot
+            key={activity.date}
+            activity={activity}
+            index={index}
+            lensPos={lens}
+          />
+        ))}
+      </div>
+
+
+      {/* Info popup - positioned above lens center */}
+      {lens !== null && focusedActivity && containerRef.current && (
+        <InfoPopup
+          activity={focusedActivity}
+          centerX={lens.centerX}
+          centerY={lens.centerY}
+          lensRadius={LENS_RADIUS * lens.cellSize}
+          containerWidth={containerRef.current.getBoundingClientRect().width}
+        />
+      )}
+    </div>
+  );
+}
+
+interface DotProps {
+  activity: DailyActivity;
+  index: number;
+  lensPos: LensPosition | null;
+}
+
+function Dot({ activity, index, lensPos }: DotProps) {
+  // Calculate distance from lens center (using smooth float position)
+  let scale = 1;
+  let offsetX = 0;
+  let offsetY = 0;
+  let isCenter = false;
+
+  if (lensPos !== null) {
+    const row = Math.floor(index / COLUMNS);
+    const col = index % COLUMNS;
+
+    // Center dot (the one being focused) gets maximum scale and highlight
+    if (index === lensPos.index) {
+      scale = MAX_SCALE;
+      isCenter = true;
+    } else {
+      // Use smooth lens position for distance calculation
+      const dx = col - lensPos.col;
+      const dy = row - lensPos.row;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance <= LENS_RADIUS && distance > 0) {
+        // Gentle linear falloff: max scale at center, 1 at edge
+        const factor = 1 - distance / LENS_RADIUS;
+        scale = 1 + (MAX_SCALE - 1) * factor;
+
+        // Pull dots toward center (fisheye distortion effect)
+        const pullStrength = factor * 8; // pixels to pull toward center
+        offsetX = -(dx / distance) * pullStrength;
+        offsetY = -(dy / distance) * pullStrength;
+      }
+    }
+  }
+
+  const baseSize = BASE_SIZES[activity.level] || 2;
+
+  // Limit maximum size to prevent huge dots for high-level activities
+  // Cap scaled size to 18px max, and reduce scale factor for larger dots
+  const MAX_SIZE = 18;
+  // Larger dots get less scaling (baseSize 18 → scale ~1.0, baseSize 2 → scale up to MAX_SCALE)
+  const scaleFactor = 1 + (scale - 1) * (1 - baseSize / 24);
+  const effectiveScale = Math.min(scaleFactor, MAX_SIZE / baseSize);
+
+  // Center dot gets blue color, others use gray scale
+  let color: string;
+  if (isCenter) {
+    color = 'bg-blue-500';
+  } else {
+    const colorMap: Record<number, string> = {
+      0: 'bg-gray-300',
+      1: 'bg-gray-500',
+      2: 'bg-gray-700',
+      3: 'bg-black',
+    };
+    color = colorMap[activity.level] || 'bg-gray-300';
+  }
+
+  // Use transform scale instead of width/height to avoid layout shifts
+  // Center dot gets higher z-index to appear on top
+  return (
+    <div
+      className="flex items-center justify-center"
+      style={{
+        aspectRatio: '1',
+        zIndex: isCenter ? 10 : scale > 1 ? 5 : 1,
+        position: 'relative',
+      }}
+    >
+      <span
+        className={`rounded-full ${color} transition-transform duration-100`}
+        style={{
+          width: `${baseSize}px`,
+          height: `${baseSize}px`,
+          transform: `translate(${offsetX}px, ${offsetY}px) scale(${effectiveScale})`,
+        }}
+      />
+    </div>
+  );
+}
+
+interface InfoPopupProps {
+  activity: DailyActivity;
+  centerX: number;
+  centerY: number;
+  lensRadius: number;
+  containerWidth: number;
+}
+
+function InfoPopup({ activity, centerX, centerY, lensRadius, containerWidth }: InfoPopupProps) {
+  const date = new Date(activity.date);
+  const dateStr = `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
+
+  // Show below lens if too close to top (popup height ~80px + margin)
+  const showBelow = centerY - lensRadius < 100;
+
+  // Clamp popup position to stay within container (popup width ~150px)
+  const popupHalfWidth = 75;
+  const clampedX = Math.max(popupHalfWidth, Math.min(containerWidth - popupHalfWidth, centerX));
+
+  // Position popup closer to lens center (reduced offset from 8px to 2px)
+  const offset = 2;
+
+  return (
+    <div
+      className="pointer-events-none absolute z-10 rounded-lg bg-black/95 px-3 py-1.5 text-center text-white shadow-xl"
+      style={{
+        left: clampedX,
+        top: showBelow ? centerY + lensRadius * 0.5 + offset : centerY - lensRadius * 0.5 - offset,
+        transform: showBelow ? 'translate(-50%, 0)' : 'translate(-50%, -100%)',
+      }}
+    >
+      <div className="text-base font-bold">{dateStr}</div>
+      {activity.level > 0 ? (
+        <div className="mt-1 flex flex-col gap-0.5 text-xs">
+          {activity.weight !== null && (
+            <span className="rounded bg-white/20 px-2 py-0.5">{activity.weight.toFixed(1)}kg</span>
+          )}
+          {activity.calories !== null && (
+            <span className="rounded bg-white/20 px-2 py-0.5">{activity.calories}kcal</span>
+          )}
+          {activity.exerciseSets !== null && (
+            <span className="rounded bg-white/20 px-2 py-0.5">{activity.exerciseSets}set</span>
+          )}
+        </div>
+      ) : (
+        <div className="mt-1 text-xs text-gray-400">記録なし</div>
+      )}
+      {/* Arrow pointing to lens */}
+      {showBelow ? (
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 border-8 border-transparent border-b-black/95" />
+      ) : (
+        <div className="absolute left-1/2 top-full -translate-x-1/2 border-8 border-transparent border-t-black/95" />
+      )}
+    </div>
+  );
+}

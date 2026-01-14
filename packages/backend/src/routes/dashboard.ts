@@ -29,6 +29,10 @@ const goalsQuerySchema = z.object({
   dailyCalories: z.coerce.number().positive().optional(),
 });
 
+const activityQuerySchema = z.object({
+  days: z.coerce.number().int().min(1).max(1000).optional().default(800),
+});
+
 // Chain format for RPC type inference
 // All dashboard routes require authentication
 export const dashboard = new Hono<{ Bindings: Bindings; Variables: Variables }>()
@@ -82,4 +86,14 @@ export const dashboard = new Hono<{ Bindings: Bindings; Variables: Variables }>(
     const progress = await service.getGoalProgress(user.id, goals);
 
     return c.json(progress);
+  })
+  .get('/activity', zValidator('query', activityQuerySchema), async (c) => {
+    const user = c.get('user');
+    const { days } = c.req.valid('query');
+    const db = c.get('db');
+    const service = new DashboardService(db);
+
+    const activity = await service.getDailyActivity(user.id, days);
+
+    return c.json(activity);
   });
