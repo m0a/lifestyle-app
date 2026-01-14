@@ -43,12 +43,12 @@ interface DotProps {
 }
 
 function Dot({ activity }: DotProps) {
-  // Size with strong contrast: dot level (2px) to large (12px)
+  // Size with strong contrast: tiny dot (2px) to large (18px)
   const sizeMap: Record<number, string> = {
     0: '2px',
-    1: '5px',
-    2: '8px',
-    3: '12px',
+    1: '6px',
+    2: '12px',
+    3: '18px',
   };
 
   // Black-based colors
