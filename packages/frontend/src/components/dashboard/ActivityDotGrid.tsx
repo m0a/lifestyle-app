@@ -70,26 +70,29 @@ export function ActivityDotGrid({ activities, isLoading }: ActivityDotGridProps)
 
   return (
     <div className="relative">
-      <div
-        ref={containerRef}
-        className="grid gap-1 touch-none"
-        style={{
-          gridTemplateColumns: `repeat(${COLUMNS}, 1fr)`,
-        }}
-        onPointerMove={handlePointerMove}
-        onPointerLeave={handlePointerLeave}
-      >
-        {activities.map((activity, index) => (
-          <Dot
-            key={activity.date}
-            activity={activity}
-            index={index}
-            focusIndex={focus?.index ?? null}
-          />
-        ))}
+      {/* Grid container with overflow hidden to contain lens effect */}
+      <div className="overflow-hidden">
+        <div
+          ref={containerRef}
+          className="grid gap-1 touch-none"
+          style={{
+            gridTemplateColumns: `repeat(${COLUMNS}, 1fr)`,
+          }}
+          onPointerMove={handlePointerMove}
+          onPointerLeave={handlePointerLeave}
+        >
+          {activities.map((activity, index) => (
+            <Dot
+              key={activity.date}
+              activity={activity}
+              index={index}
+              focusIndex={focus?.index ?? null}
+            />
+          ))}
+        </div>
       </div>
 
-      {/* Info popup */}
+      {/* Info popup - outside overflow-hidden to remain visible */}
       {focus !== null && focusedActivity && (
         <InfoPopup activity={focusedActivity} x={focus.x} y={focus.y} />
       )}
