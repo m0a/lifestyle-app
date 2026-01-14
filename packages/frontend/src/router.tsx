@@ -1,5 +1,5 @@
 import { createBrowserRouter, type RouteObject } from 'react-router-dom';
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useState, useEffect } from 'react';
 import { Layout } from './components/Layout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Login } from './pages/Login';
@@ -18,6 +18,30 @@ import { useAuthStore } from './stores/authStore';
 import { useActivityDots } from './hooks/useActivityDots';
 import { ActivityDotGrid } from './components/dashboard/ActivityDotGrid';
 
+const COLUMNS = 25; // Must match ActivityDotGrid
+
+function useDotsCount(): number {
+  const [count, setCount] = useState(400);
+
+  useEffect(() => {
+    const calculateDots = () => {
+      // Available height: viewport - header(64px) - nav(80px) - padding(32px)
+      const availableHeight = window.innerHeight - 176;
+      const cellSize = window.innerWidth / COLUMNS;
+      const rows = Math.floor(availableHeight / cellSize);
+      const dots = rows * COLUMNS;
+      // Clamp between 200 and 1000
+      setCount(Math.max(200, Math.min(1000, dots)));
+    };
+
+    calculateDots();
+    window.addEventListener('resize', calculateDots);
+    return () => window.removeEventListener('resize', calculateDots);
+  }, []);
+
+  return count;
+}
+
 // Lazy load meal pages
 const MealDetail = lazy(() => import('./pages/MealDetail'));
 const MealHistory = lazy(() => import('./pages/MealHistory'));
@@ -28,7 +52,8 @@ const TrainingImagePage = lazy(() => import('./pages/exercise/TrainingImagePage'
 // Home component - shows activity dots for logged-in users
 function Home() {
   const { isAuthenticated } = useAuthStore();
-  const { data: activityData, isLoading } = useActivityDots(400); // Reduced for debugging
+  const dotsCount = useDotsCount();
+  const { data: activityData, isLoading } = useActivityDots(dotsCount);
 
   if (!isAuthenticated) {
     return (
