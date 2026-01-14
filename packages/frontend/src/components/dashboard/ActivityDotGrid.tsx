@@ -207,14 +207,6 @@ export function ActivityDotGrid({ activities, isLoading }: ActivityDotGridProps)
         ))}
       </div>
 
-      {/* Lens circle indicator - disabled for cleaner look */}
-      {/* {lens !== null && (
-        <LensCircle
-          centerX={lens.centerX}
-          centerY={lens.centerY}
-          radius={LENS_RADIUS * lens.cellSize}
-        />
-      )} */}
 
       {/* Info popup - positioned above lens center */}
       {lens !== null && focusedActivity && containerRef.current && (
@@ -306,20 +298,6 @@ function Dot({ activity, index, lensPos }: DotProps) {
   );
 }
 
-function LensCircle({ centerX, centerY, radius }: { centerX: number; centerY: number; radius: number }) {
-  return (
-    <div
-      className="pointer-events-none absolute rounded-full border-2 border-gray-400/50"
-      style={{
-        left: centerX - radius,
-        top: centerY - radius,
-        width: radius * 2,
-        height: radius * 2,
-      }}
-    />
-  );
-}
-
 interface InfoPopupProps {
   activity: DailyActivity;
   centerX: number;
@@ -353,22 +331,16 @@ function InfoPopup({ activity, centerX, centerY, lensRadius, containerWidth }: I
     >
       <div className="text-base font-bold">{dateStr}</div>
       {activity.level > 0 ? (
-        <div className="mt-1 flex justify-center gap-3 text-xs">
-          {activity.weight !== null && (
-            <span className="rounded bg-white/20 px-2 py-0.5">
-              {activity.weight.toFixed(1)}kg
-            </span>
-          )}
-          {activity.calories !== null && (
-            <span className="rounded bg-white/20 px-2 py-0.5">
-              {activity.calories}kcal
-            </span>
-          )}
-          {activity.exerciseSets !== null && (
-            <span className="rounded bg-white/20 px-2 py-0.5">
-              {activity.exerciseSets}セット
-            </span>
-          )}
+        <div className="mt-1 grid grid-cols-3 gap-1 text-xs">
+          <span className={`rounded px-1 py-0.5 text-center ${activity.weight !== null ? 'bg-white/20' : 'text-gray-500'}`}>
+            {activity.weight !== null ? `${activity.weight.toFixed(1)}kg` : '-'}
+          </span>
+          <span className={`rounded px-1 py-0.5 text-center ${activity.calories !== null ? 'bg-white/20' : 'text-gray-500'}`}>
+            {activity.calories !== null ? `${activity.calories}kcal` : '-'}
+          </span>
+          <span className={`rounded px-1 py-0.5 text-center ${activity.exerciseSets !== null ? 'bg-white/20' : 'text-gray-500'}`}>
+            {activity.exerciseSets !== null ? `${activity.exerciseSets}set` : '-'}
+          </span>
         </div>
       ) : (
         <div className="mt-1 text-xs text-gray-400">記録なし</div>
