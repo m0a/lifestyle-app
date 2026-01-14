@@ -16,7 +16,6 @@ const COLUMNS = 25;
 const BASE_SIZES = [2, 6, 12, 18]; // Level 0-3 base sizes
 const MAX_SCALE = 5; // Maximum scale factor for center dot
 const LENS_RADIUS = 4; // Number of dots affected by lens
-const VERTICAL_OFFSET = 6; // Offset lens center above touch point (in rows)
 
 /**
  * 800 dots grid with fisheye lens effect on touch/hover.
@@ -37,16 +36,11 @@ export function ActivityDotGrid({ activities, isLoading }: ActivityDotGridProps)
     const cellWidth = rect.width / COLUMNS;
     const cellHeight = cellWidth; // Square cells
     const col = Math.floor(x / cellWidth);
-    const touchRow = Math.floor(y / cellHeight);
-
-    // Offset lens center above the touch point so finger doesn't cover it
-    const lensRow = Math.max(0, touchRow - VERTICAL_OFFSET);
-    const index = lensRow * COLUMNS + col;
+    const row = Math.floor(y / cellHeight);
+    const index = row * COLUMNS + col;
 
     if (index >= 0 && index < activities.length) {
-      // Calculate the visual position of the lens center (above touch)
-      const lensY = (lensRow + 0.5) * cellHeight;
-      setFocus({ index, x, y: lensY });
+      setFocus({ index, x, y });
     }
   }, [activities.length]);
 
@@ -89,9 +83,9 @@ export function ActivityDotGrid({ activities, isLoading }: ActivityDotGridProps)
         ))}
       </div>
 
-      {/* Info popup */}
+      {/* Info popup - fixed at top */}
       {focus !== null && focusedActivity && (
-        <InfoPopup activity={focusedActivity} x={focus.x} y={focus.y} />
+        <InfoPopup activity={focusedActivity} />
       )}
     </div>
   );
@@ -165,27 +159,16 @@ function Dot({ activity, index, focusIndex }: DotProps) {
   );
 }
 
-interface InfoPopupProps {
-  activity: DailyActivity;
-  x: number;
-  y: number;
-}
-
-function InfoPopup({ activity, x, y }: InfoPopupProps) {
+function InfoPopup({ activity }: { activity: DailyActivity }) {
   const date = new Date(activity.date);
   const dateStr = date.toLocaleDateString('ja-JP', {
     month: 'short',
     day: 'numeric',
   });
 
+  // Fixed position at top of grid
   return (
-    <div
-      className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-lg bg-black/95 px-4 py-2 text-center text-white shadow-xl"
-      style={{
-        left: x,
-        top: y - 60, // Position well above the lens center
-      }}
-    >
+    <div className="pointer-events-none absolute left-1/2 top-0 z-10 -translate-x-1/2 -translate-y-full rounded-lg bg-black/95 px-4 py-2 text-center text-white shadow-xl">
       <div className="text-base font-bold">{dateStr}</div>
       <div className="mt-1 flex justify-center gap-2 text-xs">
         {activity.hasWeight && (

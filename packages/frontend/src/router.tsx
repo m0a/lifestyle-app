@@ -28,7 +28,7 @@ const TrainingImagePage = lazy(() => import('./pages/exercise/TrainingImagePage'
 // Home component - shows activity dots for logged-in users
 function Home() {
   const { isAuthenticated } = useAuthStore();
-  const { data: activityData, isLoading } = useActivityDots(800);
+  const { data: activityData, isLoading } = useActivityDots(400); // Reduced for debugging
 
   if (!isAuthenticated) {
     return (
