@@ -93,7 +93,7 @@ export function Layout({ children }: LayoutProps) {
 
       {/* Mobile Bottom Navigation */}
       {isAuthenticated && (
-        <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 md:hidden">
+        <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 md:hidden" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
           <div className="flex justify-around py-2">
             <Link
               to="/dashboard"

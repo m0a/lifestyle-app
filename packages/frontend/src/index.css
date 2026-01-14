@@ -1,3 +1,8 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Safe area insets for mobile devices */
+:root {
+  --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+}
