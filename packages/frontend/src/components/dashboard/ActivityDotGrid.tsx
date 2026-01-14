@@ -217,12 +217,13 @@ export function ActivityDotGrid({ activities, isLoading }: ActivityDotGridProps)
       )}
 
       {/* Info popup - positioned above lens center */}
-      {lens !== null && focusedActivity && (
+      {lens !== null && focusedActivity && containerRef.current && (
         <InfoPopup
           activity={focusedActivity}
           centerX={lens.centerX}
           centerY={lens.centerY}
           lensRadius={LENS_RADIUS * lens.cellSize}
+          containerWidth={containerRef.current.getBoundingClientRect().width}
         />
       )}
     </div>
@@ -324,9 +325,10 @@ interface InfoPopupProps {
   centerX: number;
   centerY: number;
   lensRadius: number;
+  containerWidth: number;
 }
 
-function InfoPopup({ activity, centerX, centerY, lensRadius }: InfoPopupProps) {
+function InfoPopup({ activity, centerX, centerY, lensRadius, containerWidth }: InfoPopupProps) {
   const date = new Date(activity.date);
   const dateStr = date.toLocaleDateString('ja-JP', {
     month: 'short',
@@ -336,11 +338,15 @@ function InfoPopup({ activity, centerX, centerY, lensRadius }: InfoPopupProps) {
   // Show below lens if too close to top (popup height ~60px + margin)
   const showBelow = centerY - lensRadius < 80;
 
+  // Clamp popup position to stay within container (popup width ~150px)
+  const popupHalfWidth = 75;
+  const clampedX = Math.max(popupHalfWidth, Math.min(containerWidth - popupHalfWidth, centerX));
+
   return (
     <div
       className="pointer-events-none absolute z-10 rounded-lg bg-black/95 px-4 py-2 text-center text-white shadow-xl"
       style={{
-        left: centerX,
+        left: clampedX,
         top: showBelow ? centerY + lensRadius + 8 : centerY - lensRadius - 8,
         transform: showBelow ? 'translate(-50%, 0)' : 'translate(-50%, -100%)',
       }}
