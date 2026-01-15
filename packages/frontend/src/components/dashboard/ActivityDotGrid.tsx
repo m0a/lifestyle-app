@@ -185,7 +185,7 @@ export function ActivityDotGrid({ activities, isLoading }: ActivityDotGridProps)
   const focusedActivity = lens !== null ? reversedActivities[lens.index] : null;
 
   return (
-    <div className="relative">
+    <div className="relative max-h-dots-grid">
       <div
         ref={containerRef}
         className="grid touch-none"

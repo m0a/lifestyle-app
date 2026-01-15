@@ -12,4 +12,10 @@
   .pb-safe-bottom {
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
+
+  /* Dots grid max height: 100dvh - header(64) - py-8(32) - pb-24(96) - nav(80) - safe-area */
+  .max-h-dots-grid {
+    max-height: calc(100dvh - 272px - env(safe-area-inset-bottom, 0px));
+    overflow: hidden;
+  }
 }
