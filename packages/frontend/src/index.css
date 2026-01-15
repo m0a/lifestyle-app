@@ -6,3 +6,10 @@
 :root {
   --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
 }
+
+/* Custom utility for safe area bottom padding */
+@layer utilities {
+  .pb-safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}
