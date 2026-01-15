@@ -30,8 +30,8 @@ function useDotsCount(): number {
         getComputedStyle(document.documentElement).getPropertyValue('--safe-area-inset-bottom') || '0',
         10
       ) || 0;
-      // Available height: viewport - header(64px) - nav(80px + safeArea) - padding(32px)
-      const availableHeight = window.innerHeight - 176 - safeAreaBottom;
+      // Available height: viewport - header(64px) - main-py-8(32px) - main-pb-24(96px) - nav(80px) - safeArea
+      const availableHeight = window.innerHeight - 272 - safeAreaBottom;
       const cellSize = window.innerWidth / COLUMNS;
       const rows = Math.floor(availableHeight / cellSize);
       const dots = rows * COLUMNS;
