@@ -28,16 +28,13 @@ type Variables = {
   user: { id: string; email: string };
 };
 
-// Query schema with mealType filter and timezone
+// Query schema with mealType filter
 const mealQuerySchema = dateRangeSchema.extend({
   mealType: mealTypeSchema.optional(),
-  timezone: z.string().optional(),
 });
 
-// Query schema for today endpoint with timezone
-const todayQuerySchema = z.object({
-  timezone: z.string().optional(),
-});
+// Query schema for today endpoint (no parameters needed)
+const todayQuerySchema = z.object({});
 
 // Chain format for RPC type inference
 // All meal routes require authentication
@@ -252,7 +249,6 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
       startDate: query.startDate,
       endDate: query.endDate,
       mealType: query.mealType,
-      timezone: query.timezone,
     });
 
     return c.json({ meals: mealsList });
@@ -273,20 +269,19 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
   .get('/today', zValidator('query', todayQuerySchema), async (c) => {
     const db = c.get('db');
     const user = c.get('user');
-    const { timezone } = c.req.valid('query');
 
     const mealService = new MealService(db);
-    const summary = await mealService.getTodaysSummary(user.id, timezone);
+    const summary = await mealService.getTodaysSummary(user.id);
 
     return c.json({ summary });
   })
   .get('/dates', zValidator('query', mealDatesQuerySchema), async (c) => {
-    const { year, month, timezone } = c.req.valid('query');
+    const { year, month } = c.req.valid('query');
     const db = c.get('db');
     const user = c.get('user');
 
     const mealService = new MealService(db);
-    const dates = await mealService.getMealDates(user.id, year, month, timezone);
+    const dates = await mealService.getMealDates(user.id, year, month);
 
     return c.json({ dates });
   })

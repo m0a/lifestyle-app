@@ -4,6 +4,7 @@ import { SetRow } from './SetRow';
 import { LastRecordBadge } from './LastRecordBadge';
 import { SessionListModal } from './SessionListModal';
 import { logValidationError } from '../../lib/errorLogger';
+import { toLocalISOString } from '../../lib/datetime';
 
 interface SetInput {
   reps: number;
@@ -188,7 +189,7 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, o
         weight: s.weight,
         variation: s.variation,
       })),
-      recordedAt: new Date().toISOString(),
+      recordedAt: toLocalISOString(new Date()),
     });
 
     // Reset form

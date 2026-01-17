@@ -1,8 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/client';
 
-const getUserTimezone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
-
 export interface DailyActivity {
   date: string;
   hasMeal: boolean;
@@ -21,13 +19,11 @@ export interface DailyActivityResponse {
 }
 
 export function useActivityDots(days: number = 800) {
-  const timezone = getUserTimezone();
-
   return useQuery({
-    queryKey: ['dashboard', 'activity', days, timezone],
+    queryKey: ['dashboard', 'activity', days],
     queryFn: async (): Promise<DailyActivityResponse> => {
       const res = await api.dashboard.activity.$get({
-        query: { days: String(days), timezone },
+        query: { days: String(days) },
       });
       if (!res.ok) {
         const error = await res.json().catch(() => ({ message: 'Failed to fetch activity' }));

@@ -5,17 +5,9 @@ import {
   createExerciseSchema,
 } from '../../packages/shared/src/schemas';
 
-describe('Schema datetime validation', () => {
+describe('Schema datetime validation (timezone offset REQUIRED)', () => {
   describe('createWeightSchema', () => {
-    it('should accept full ISO datetime format', () => {
-      const result = createWeightSchema.safeParse({
-        weight: 70.5,
-        recordedAt: '2025-12-31T10:13:00.000Z',
-      });
-      expect(result.success).toBe(true);
-    });
-
-    it('should accept ISO datetime without milliseconds', () => {
+    it('should accept ISO datetime with Z suffix', () => {
       const result = createWeightSchema.safeParse({
         weight: 70.5,
         recordedAt: '2025-12-31T10:13:00Z',
@@ -23,20 +15,39 @@ describe('Schema datetime validation', () => {
       expect(result.success).toBe(true);
     });
 
-    it('should accept datetime-local format (no timezone)', () => {
+    it('should accept datetime with positive timezone offset', () => {
       const result = createWeightSchema.safeParse({
         weight: 70.5,
-        recordedAt: '2025-12-31T10:13',
+        recordedAt: '2025-12-31T10:44:00+09:00',
       });
       expect(result.success).toBe(true);
     });
 
-    it('should accept datetime-local format with seconds', () => {
+    it('should accept datetime with negative timezone offset', () => {
+      const result = createWeightSchema.safeParse({
+        weight: 70.5,
+        recordedAt: '2025-12-31T10:44:00-05:00',
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('should REJECT datetime-local format (no timezone) - BREAKING CHANGE', () => {
+      const result = createWeightSchema.safeParse({
+        weight: 70.5,
+        recordedAt: '2025-12-31T10:13',
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues[0]?.message).toContain('Timezone offset required');
+      }
+    });
+
+    it('should REJECT datetime without offset - BREAKING CHANGE', () => {
       const result = createWeightSchema.safeParse({
         weight: 70.5,
         recordedAt: '2025-12-31T10:13:45',
       });
-      expect(result.success).toBe(true);
+      expect(result.success).toBe(false);
     });
 
     it('should reject invalid datetime format', () => {
@@ -46,50 +57,52 @@ describe('Schema datetime validation', () => {
       });
       expect(result.success).toBe(false);
     });
-
-    it('should accept datetime with timezone offset', () => {
-      const result = createWeightSchema.safeParse({
-        weight: 70.5,
-        recordedAt: '2025-12-31T10:44:00+09:00',
-      });
-      expect(result.success).toBe(true);
-    });
   });
 
   describe('createMealSchema', () => {
-    it('should accept datetime-local format', () => {
+    it('should accept datetime with timezone offset', () => {
+      const result = createMealSchema.safeParse({
+        mealType: 'breakfast',
+        content: 'チキンラーメン',
+        calories: 350,
+        recordedAt: '2025-12-31T10:13:00+09:00',
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('should accept full ISO datetime with Z', () => {
+      const result = createMealSchema.safeParse({
+        mealType: 'lunch',
+        content: '牛丼',
+        recordedAt: '2025-12-31T12:00:00Z',
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('should REJECT datetime-local format - BREAKING CHANGE', () => {
       const result = createMealSchema.safeParse({
         mealType: 'breakfast',
         content: 'チキンラーメン',
         calories: 350,
         recordedAt: '2025-12-31T10:13',
       });
-      expect(result.success).toBe(true);
-    });
-
-    it('should accept full ISO datetime format', () => {
-      const result = createMealSchema.safeParse({
-        mealType: 'lunch',
-        content: '牛丼',
-        recordedAt: '2025-12-31T12:00:00.000Z',
-      });
-      expect(result.success).toBe(true);
+      expect(result.success).toBe(false);
     });
   });
 
   describe('createExerciseSchema', () => {
-    it('should accept datetime-local format', () => {
+    it('should accept datetime with timezone offset', () => {
       const result = createExerciseSchema.safeParse({
         exerciseType: 'ベンチプレス',
         sets: 3,
         reps: 10,
         weight: 60,
-        recordedAt: '2025-12-31T07:00',
+        recordedAt: '2025-12-31T07:00:00+09:00',
       });
       expect(result.success).toBe(true);
     });
 
-    it('should accept full ISO datetime format', () => {
+    it('should accept full ISO datetime format with Z', () => {
       const result = createExerciseSchema.safeParse({
         exerciseType: 'スクワット',
         sets: 4,
@@ -100,14 +113,14 @@ describe('Schema datetime validation', () => {
       expect(result.success).toBe(true);
     });
 
-    it('should accept exercise without weight (bodyweight)', () => {
+    it('should REJECT datetime-local format - BREAKING CHANGE', () => {
       const result = createExerciseSchema.safeParse({
         exerciseType: '腕立て伏せ',
         sets: 3,
         reps: 20,
         recordedAt: '2025-12-31T07:00',
       });
-      expect(result.success).toBe(true);
+      expect(result.success).toBe(false);
     });
   });
 });

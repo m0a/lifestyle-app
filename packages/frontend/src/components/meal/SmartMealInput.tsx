@@ -14,6 +14,7 @@ import { PhotoCapture } from './PhotoCapture';
 import { PhotoUploadErrorBoundary } from './PhotoUploadErrorBoundary';
 import { MealChat } from './MealChat';
 import { validateNotFuture, toDateTimeLocal, getCurrentDateTimeLocal } from '../../lib/dateValidation';
+import { toLocalISOString } from '../../lib/datetime';
 
 interface SmartMealInputProps {
   onSave: (mealId: string, mealType: MealType, recordedAt?: string) => Promise<void>;
@@ -46,7 +47,7 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
   const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number } | null>(null);
 
   // Date/time state (011-meal-datetime)
-  const [recordedAt, setRecordedAt] = useState<string>(new Date().toISOString());
+  const [recordedAt, setRecordedAt] = useState<string>(toLocalISOString(new Date()));
   const [dateTimeSource, setDateTimeSource] = useState<DateTimeSource>('now');
   const [dateError, setDateError] = useState<string | null>(null);
 
@@ -158,7 +159,7 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
       setMealId(null);
       setFoodItems([]);
       setTotals(null);
-      setRecordedAt(new Date().toISOString());
+      setRecordedAt(toLocalISOString(new Date()));
       setDateTimeSource('now');
       setDateError(null);
       setInputState('idle');
@@ -178,7 +179,7 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
     setError(null);
     setPhotoKey(null);
     setShowChat(false);
-    setRecordedAt(new Date().toISOString());
+    setRecordedAt(toLocalISOString(new Date()));
     setDateTimeSource('now');
     setDateError(null);
     setInputState('idle');
@@ -340,7 +341,7 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
       photoPreviewUrls.forEach(url => URL.revokeObjectURL(url));
       setPhotoPreviewUrls([]);
       setUploadProgress(null);
-      setRecordedAt(new Date().toISOString());
+      setRecordedAt(toLocalISOString(new Date()));
       setDateTimeSource('now');
       setDateError(null);
       setInputState('idle');
