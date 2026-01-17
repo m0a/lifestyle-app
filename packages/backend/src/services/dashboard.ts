@@ -1,6 +1,9 @@
 import { eq, and, gte, lte, desc } from 'drizzle-orm';
+import { toZonedTime } from 'date-fns-tz';
 import { weights, meals, exercises } from '../db/schema';
 import type { Database } from '../db';
+
+const DEFAULT_TIMEZONE = 'UTC';
 
 interface DateRange {
   startDate: Date;
@@ -432,21 +435,41 @@ export class DashboardService {
    * Returns an array of daily activities with hasMeal, hasWeight, hasExercise flags.
    * Level is calculated as the sum of flags (0-3).
    */
-  async getDailyActivity(userId: string, days: number = 800): Promise<DailyActivityResponse> {
+  async getDailyActivity(userId: string, days: number = 800, timezone?: string): Promise<DailyActivityResponse> {
+    const tz = timezone ?? DEFAULT_TIMEZONE;
+
+    // Get current date in user's timezone
+    const userNow = toZonedTime(new Date(), tz);
     const endDate = new Date();
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - (days - 1));
 
-    // Format dates as YYYY-MM-DD
-    const formatDate = (d: Date) => d.toISOString().split('T')[0]!;
-    const startDateStr = formatDate(startDate);
-    const endDateStr = formatDate(endDate);
+    // Format dates as YYYY-MM-DD in user's timezone
+    const formatDateInTz = (d: Date) => {
+      const zonedDate = toZonedTime(d, tz);
+      const year = zonedDate.getFullYear();
+      const month = String(zonedDate.getMonth() + 1).padStart(2, '0');
+      const day = String(zonedDate.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
 
-    // Generate all dates in range
+    // Format recordedAt (ISO string) to local date in user's timezone
+    const formatRecordedAtInTz = (recordedAt: string) => {
+      const zonedDate = toZonedTime(new Date(recordedAt), tz);
+      const year = zonedDate.getFullYear();
+      const month = String(zonedDate.getMonth() + 1).padStart(2, '0');
+      const day = String(zonedDate.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    const startDateStr = formatDateInTz(startDate);
+    const endDateStr = formatDateInTz(userNow);
+
+    // Generate all dates in range (in user's timezone)
     const allDates: string[] = [];
     const current = new Date(startDate);
     while (current <= endDate) {
-      allDates.push(formatDate(current));
+      allDates.push(formatDateInTz(current));
       current.setDate(current.getDate() + 1);
     }
 
@@ -463,10 +486,10 @@ export class DashboardService {
       )
       .all();
 
-    // Map date to latest weight value
+    // Map date to latest weight value (using user's timezone)
     const weightByDate = new Map<string, number>();
     for (const r of weightRecords) {
-      const date = r.recordedAt.split('T')[0]!;
+      const date = formatRecordedAtInTz(r.recordedAt);
       weightByDate.set(date, r.weight);
     }
 
@@ -483,10 +506,10 @@ export class DashboardService {
       )
       .all();
 
-    // Map date to total calories
+    // Map date to total calories (using user's timezone)
     const caloriesByDate = new Map<string, number>();
     for (const r of mealRecords) {
-      const date = r.recordedAt.split('T')[0]!;
+      const date = formatRecordedAtInTz(r.recordedAt);
       const current = caloriesByDate.get(date) || 0;
       caloriesByDate.set(date, current + (r.calories || 0));
     }
@@ -504,10 +527,10 @@ export class DashboardService {
       )
       .all();
 
-    // Map date to total sets
+    // Map date to total sets (using user's timezone)
     const setsByDate = new Map<string, number>();
     for (const r of exerciseRecords) {
-      const date = r.recordedAt.split('T')[0]!;
+      const date = formatRecordedAtInTz(r.recordedAt);
       const current = setsByDate.get(date) || 0;
       setsByDate.set(date, current + 1);
     }
