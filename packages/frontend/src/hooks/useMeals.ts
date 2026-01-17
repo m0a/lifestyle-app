@@ -12,22 +12,16 @@ interface UseMealsOptions {
   mealType?: MealType;
 }
 
-// ユーザーのタイムゾーン名を取得（例: 'Asia/Tokyo'）
-const getUserTimezone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
-
 export function useMeals(options?: UseMealsOptions) {
   const queryClient = useQueryClient();
-  const timezone = getUserTimezone();
 
   const mealsQuery = useQuery({
-    queryKey: ['meals', options, timezone],
+    queryKey: ['meals', options],
     queryFn: async () => {
       const query: Record<string, string> = {};
       if (options?.startDate) query['startDate'] = options.startDate;
       if (options?.endDate) query['endDate'] = options.endDate;
       if (options?.mealType) query['mealType'] = options.mealType;
-      // タイムゾーン名を渡す（例: 'Asia/Tokyo'）
-      query['timezone'] = timezone;
 
       const res = await api.meals.$get({ query });
       if (!res.ok) {
@@ -40,11 +34,10 @@ export function useMeals(options?: UseMealsOptions) {
   });
 
   const todaySummaryQuery = useQuery({
-    queryKey: ['meals', 'today-summary', timezone],
+    queryKey: ['meals', 'today-summary'],
     queryFn: async () => {
-      // タイムゾーン名を渡して「今日」を正しく計算
       const res = await api.meals.today.$get({
-        query: { timezone },
+        query: {},
       });
       if (!res.ok) {
         const error = await res.json().catch(() => ({ message: 'Failed to fetch today summary' }));

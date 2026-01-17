@@ -3,6 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { createWeightSchema, type CreateWeightInput } from '@lifestyle-app/shared';
 import { useState, useEffect } from 'react';
 import { logValidationError } from '../../lib/errorLogger';
+import { toLocalISOString, fromDatetimeLocal } from '../../lib/datetime';
 
 interface WeightInputProps {
   onSubmit: (data: CreateWeightInput) => void;
@@ -22,7 +23,7 @@ export function WeightInput({ onSubmit, isLoading, error }: WeightInputProps) {
   } = useForm<CreateWeightInput>({
     resolver: zodResolver(createWeightSchema),
     defaultValues: {
-      recordedAt: new Date().toISOString(),
+      recordedAt: toLocalISOString(new Date()),
     },
   });
 
@@ -36,9 +37,14 @@ export function WeightInput({ onSubmit, isLoading, error }: WeightInputProps) {
   }, [errors, formData]);
 
   const handleFormSubmit = (data: CreateWeightInput) => {
+    // Convert datetime-local input to ISO with timezone offset
+    const recordedAt = data.recordedAt
+      ? fromDatetimeLocal(data.recordedAt)
+      : toLocalISOString(new Date());
+
     onSubmit({
       ...data,
-      recordedAt: data.recordedAt || new Date().toISOString(),
+      recordedAt,
     });
     reset();
     setSuccessMessage('体重を記録しました');
