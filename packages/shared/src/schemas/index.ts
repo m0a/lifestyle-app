@@ -1,33 +1,20 @@
 import { z } from 'zod';
 
-// Datetime schema that accepts both ISO format and datetime-local format
-// datetime-local: "2025-12-31T10:13"
-// ISO: "2025-12-31T10:13:00.000Z"
-const datetimeSchema = z.string().transform((val, ctx) => {
-  // If already ISO format with timezone, use as-is
-  if (val.includes('Z') || val.includes('+') || /[+-]\d{2}:\d{2}$/.test(val)) {
-    const date = new Date(val);
-    if (isNaN(date.getTime())) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'Invalid datetime',
-      });
-      return z.NEVER;
+// Datetime schema that REQUIRES timezone offset in ISO 8601 format
+// Valid: "2025-12-31T10:13:00+09:00", "2025-12-31T01:13:00Z"
+// Invalid: "2025-12-31T10:13" (no offset)
+const datetimeSchema = z.string().refine(
+  (val) => {
+    // Must have timezone indicator: Z or ±HH:mm
+    if (!val.includes('Z') && !/[+-]\d{2}:\d{2}$/.test(val)) {
+      return false;
     }
-    return val;
-  }
-
-  // Convert datetime-local format to ISO
-  const date = new Date(val);
-  if (isNaN(date.getTime())) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: 'Invalid datetime',
-    });
-    return z.NEVER;
-  }
-  return date.toISOString();
-});
+    // Must be a valid date
+    const date = new Date(val);
+    return !isNaN(date.getTime());
+  },
+  { message: 'Timezone offset required (e.g., +09:00 or Z)' }
+);
 
 // Enums
 export const mealTypeSchema = z.enum(['breakfast', 'lunch', 'dinner', 'snack']);
@@ -215,10 +202,10 @@ export const maxRMResponseSchema = z.object({
 });
 
 // Meal dates query schema (for calendar feature)
+// Note: timezone is no longer needed - recordedAt contains timezone offset
 export const mealDatesQuerySchema = z.object({
   year: z.coerce.number().int().min(1970).max(2100),
   month: z.coerce.number().int().min(1).max(12),
-  timezone: z.string().optional(),
 });
 
 export const mealDatesResponseSchema = z.object({
