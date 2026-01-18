@@ -62,35 +62,36 @@ describe('datetimeSchema validation (via createWeightSchema)', () => {
 });
 
 describe('toLocalISOString', () => {
-  it('should return ISO string with correct format (YYYY-MM-DDTHH:mm:ss+HH:mm)', async () => {
+  it('should return ISO string with correct format (YYYY-MM-DDTHH:mm:ss with offset or Z)', async () => {
     const { toLocalISOString } = await import('../../packages/frontend/src/lib/datetime');
     const date = new Date(2026, 0, 17, 8, 0, 0);
     const result = toLocalISOString(date);
 
-    // Format check: YYYY-MM-DDTHH:mm:ss±HH:mm
-    expect(result).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/);
+    // Format check: YYYY-MM-DDTHH:mm:ss with either ±HH:mm or Z (for UTC)
+    // Z is equivalent to +00:00 in ISO 8601
+    expect(result).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}([+-]\d{2}:\d{2}|Z)$/);
   });
 
-  it('should include timezone offset', async () => {
+  it('should include timezone offset or Z', async () => {
     const { toLocalISOString } = await import('../../packages/frontend/src/lib/datetime');
     const date = new Date();
     const result = toLocalISOString(date);
 
-    // Should have offset at the end
-    expect(result).toMatch(/[+-]\d{2}:\d{2}$/);
+    // Should have offset (±HH:mm) or Z at the end
+    expect(result).toMatch(/([+-]\d{2}:\d{2}|Z)$/);
   });
 });
 
 describe('fromDatetimeLocal', () => {
-  it('should convert datetime-local input to ISO with offset', async () => {
+  it('should convert datetime-local input to ISO with offset or Z', async () => {
     const { fromDatetimeLocal } = await import('../../packages/frontend/src/lib/datetime');
 
     const result = fromDatetimeLocal('2026-01-17T08:00');
 
-    // Should have offset
-    expect(result).toMatch(/[+-]\d{2}:\d{2}$/);
-    // Should be valid ISO format
-    expect(result).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/);
+    // Should have offset or Z
+    expect(result).toMatch(/([+-]\d{2}:\d{2}|Z)$/);
+    // Should be valid ISO format with timezone
+    expect(result).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}([+-]\d{2}:\d{2}|Z)$/);
   });
 });
 
