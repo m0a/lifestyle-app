@@ -192,10 +192,9 @@ pnpm dev:backend
 4. `stack` と `componentStack` で原因箇所を特定
 
 ## Recent Changes
+- 020-timezone-offset-storage: Added TypeScript 5.x (strict mode) + React 18+, Hono, Drizzle ORM, Zod, date-fns-tz
 - 019-email-delivery: Added TypeScript 5.x (strict mode) + Hono (backend), React 18+ (frontend), Drizzle ORM, Zod, TanStack Query, Tailwind CSS, Resend (email API), crypto (token generation)
 - 018-cleanup-deadcode: Knip integration for dead code detection
-- 017-multi-exercise-import: Added TypeScript 5.3 (strict mode) + React 18+, Hono, Drizzle ORM, TanStack Query, Zod, Tailwind CSS
-- **016-multiple-meal-photos**: ✅ COMPLETED (84.3% - 70/83 tasks)
   - Multiple photos per meal (up to 10 photos)
   - User Story 1-4 implemented (US5 deemed unnecessary)
   - PhotoCarousel with horizontal scroll
@@ -326,3 +325,5 @@ pnpm find-deadcode:ci    # JSON report + threshold check
 - TypeScript 5.x (strict mode) + Hono (backend), React 18+ (frontend), Drizzle ORM, Zod, TanStack Query, Tailwind CSS, Resend (email API), crypto (token generation) (019-email-delivery)
 - Cloudflare D1 (SQLite) for tokens/logs, R2 (if email attachments needed in future) (019-email-delivery)
 - Knip for dead code detection (018-cleanup-deadcode)
+- TypeScript 5.x (strict mode) + React 18+, Hono, Drizzle ORM, Zod, date-fns-tz (020-timezone-offset-storage)
+- Cloudflare D1 (SQLite) - recorded_atカラムの値形式のみ変更 (020-timezone-offset-storage)

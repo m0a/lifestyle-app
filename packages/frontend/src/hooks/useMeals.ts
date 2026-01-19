@@ -36,8 +36,12 @@ export function useMeals(options?: UseMealsOptions) {
   const todaySummaryQuery = useQuery({
     queryKey: ['meals', 'today-summary'],
     queryFn: async () => {
+      // クライアントのローカル日付を送信
+      const now = new Date();
+      const todayDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
       const res = await api.meals.today.$get({
-        query: {},
+        query: { todayDate },
       });
       if (!res.ok) {
         const error = await res.json().catch(() => ({ message: 'Failed to fetch today summary' }));

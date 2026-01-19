@@ -33,8 +33,10 @@ const mealQuerySchema = dateRangeSchema.extend({
   mealType: mealTypeSchema.optional(),
 });
 
-// Query schema for today endpoint (no parameters needed)
-const todayQuerySchema = z.object({});
+// Query schema for today endpoint - client sends local today date
+const todayQuerySchema = z.object({
+  todayDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+});
 
 // Chain format for RPC type inference
 // All meal routes require authentication
@@ -267,11 +269,12 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
     return c.json({ summary });
   })
   .get('/today', zValidator('query', todayQuerySchema), async (c) => {
+    const { todayDate } = c.req.valid('query');
     const db = c.get('db');
     const user = c.get('user');
 
     const mealService = new MealService(db);
-    const summary = await mealService.getTodaysSummary(user.id);
+    const summary = await mealService.getTodaysSummary(user.id, todayDate);
 
     return c.json({ summary });
   })

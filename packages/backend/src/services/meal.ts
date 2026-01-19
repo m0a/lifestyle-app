@@ -224,7 +224,7 @@ export class MealService {
    * Since recordedAt now contains the timezone offset (e.g., +09:00),
    * we simply extract the local date using slice(0, 10).
    */
-  async getTodaysSummary(userId: string) {
+  async getTodaysSummary(userId: string, clientTodayDate?: string) {
     // 全ての食事を取得し、今日のローカル日付でフィルタ
     const records = await this.db
       .select()
@@ -232,20 +232,15 @@ export class MealService {
       .where(eq(schema.mealRecords.userId, userId))
       .all();
 
-    // 今日の日付を取得（フロントエンドと同じロジック）
-    // 注: サーバー側では正確な「今日」を判定するのが難しいため、
-    // フロントエンドから今日の日付を渡すことを検討すべき
-    // 暫定的に、recordedAtのローカル日付で最新の日を「今日」とする
-    // または、全期間のサマリーを返す
-
-    // recordedAtから今日の日付を取得できないため、
-    // クライアントが今日の日付を指定する新しいアプローチに変更
-    // 今は全てのレコードを取得し、クライアントが渡したtodayDateでフィルタする
-    // TODO: この関数はクライアントからの todayDate パラメータを受け取るように変更すべき
-
-    // 暫定対応: 現在の日時から今日の日付を取得（サーバーのタイムゾーンに依存）
-    const now = new Date();
-    const todayDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    // クライアントから渡された「今日」の日付を使用
+    // フォールバック: サーバーの日付（UTCなので不正確だが後方互換性のため）
+    let todayDate: string;
+    if (clientTodayDate) {
+      todayDate = clientTodayDate;
+    } else {
+      const now = new Date();
+      todayDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    }
 
     const todayMeals = records.filter((r) => extractLocalDate(r.recordedAt) === todayDate);
 
