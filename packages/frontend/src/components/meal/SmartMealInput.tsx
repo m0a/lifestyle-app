@@ -14,7 +14,7 @@ import { PhotoCapture } from './PhotoCapture';
 import { PhotoUploadErrorBoundary } from './PhotoUploadErrorBoundary';
 import { MealChat } from './MealChat';
 import { validateNotFuture, toDateTimeLocal, getCurrentDateTimeLocal } from '../../lib/dateValidation';
-import { toLocalISOString } from '../../lib/datetime';
+import { toLocalISOString, fromDatetimeLocal } from '../../lib/datetime';
 
 interface SmartMealInputProps {
   onSave: (mealId: string, mealType: MealType, recordedAt?: string) => Promise<void>;
@@ -193,7 +193,7 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
 
   // Handle date/time change (011-meal-datetime)
   const handleDateTimeChange = useCallback((newDateTime: string) => {
-    const isoDateTime = new Date(newDateTime).toISOString();
+    const isoDateTime = fromDatetimeLocal(newDateTime);
     const validationError = validateNotFuture(isoDateTime);
     if (validationError) {
       setDateError(validationError);
@@ -542,7 +542,7 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
                       value={toDateTimeLocal(recordedAt)}
                       max={getCurrentDateTimeLocal()}
                       onChange={(e) => {
-                        const newDateTime = new Date(e.target.value).toISOString();
+                        const newDateTime = fromDatetimeLocal(e.target.value);
                         setRecordedAt(newDateTime);
                         setDateTimeSource('now');
                       }}

@@ -6,6 +6,7 @@ import { PhotoUploadErrorBoundary } from './PhotoUploadErrorBoundary';
 import { mealAnalysisApi, api } from '../../lib/api';
 import { useToast } from '../ui/Toast';
 import { validateNotFuture, toDateTimeLocal, getCurrentDateTimeLocal } from '../../lib/dateValidation';
+import { fromDatetimeLocal } from '../../lib/datetime';
 import { useMealPhotos } from '../../hooks/useMealPhotos';
 import type { FoodItem, NutritionTotals, MealRecord, MealType } from '@lifestyle-app/shared';
 
@@ -165,7 +166,7 @@ export function MealEditMode({
   const handleDateTimeChange = useCallback(
     async (newDateTime: string) => {
       // Validate not future (FR-005)
-      const isoDateTime = new Date(newDateTime).toISOString();
+      const isoDateTime = fromDatetimeLocal(newDateTime);
       const validationError = validateNotFuture(isoDateTime);
       if (validationError) {
         setDateError(validationError);
