@@ -96,7 +96,7 @@ export type FoodItemChange = z.infer<typeof foodItemChangeSchema>;
 // Date/time change (from chat)
 export const dateTimeChangeSchema = z.object({
   action: z.literal('set_datetime'),
-  recordedAt: z.string().datetime(),
+  recordedAt: z.string().datetime({ offset: true }),
 });
 export type DateTimeChange = z.infer<typeof dateTimeChangeSchema>;
 
@@ -128,7 +128,7 @@ export const chatChangeSchema = z.discriminatedUnion('action', [
   }),
   z.object({
     action: z.literal('set_datetime'),
-    recordedAt: z.string().datetime(),
+    recordedAt: z.string().datetime({ offset: true }),
   }),
   z.object({
     action: z.literal('set_meal_type'),
@@ -143,14 +143,14 @@ export const chatMessageSchema = z.object({
   role: chatRoleSchema,
   content: z.string().min(1).max(5000),
   appliedChanges: z.array(foodItemChangeSchema).optional(),
-  createdAt: z.string().datetime(),
+  createdAt: z.string().datetime({ offset: true }),
 });
 export type ChatMessage = z.infer<typeof chatMessageSchema>;
 
 // Save meal request
 export const saveMealAnalysisSchema = z.object({
   mealType: z.enum(['breakfast', 'lunch', 'dinner', 'snack']),
-  recordedAt: z.string().datetime().optional(),
+  recordedAt: z.string().datetime({ offset: true }).optional(),
 });
 export type SaveMealAnalysis = z.infer<typeof saveMealAnalysisSchema>;
 
@@ -169,7 +169,7 @@ export type ApplyChatSuggestion = z.infer<typeof applyChatSuggestionSchema>;
 // Text analysis request (T001, T003)
 export const textAnalysisRequestSchema = z.object({
   text: z.string().min(1, 'テキストを入力してください').max(500),
-  currentTime: z.string().datetime().optional(),
+  currentTime: z.string().datetime({ offset: true }).optional(),
 });
 export type TextAnalysisRequest = z.infer<typeof textAnalysisRequestSchema>;
 
@@ -188,7 +188,7 @@ export const textAnalysisResponseSchema = z.object({
   totals: nutritionTotalsSchema,
   inferredMealType: z.enum(['breakfast', 'lunch', 'dinner', 'snack']),
   mealTypeSource: mealTypeSourceSchema,
-  inferredRecordedAt: z.string().datetime(),
+  inferredRecordedAt: z.string().datetime({ offset: true }),
   dateTimeSource: dateTimeSourceSchema,
 });
 export type TextAnalysisResponse = z.infer<typeof textAnalysisResponseSchema>;
