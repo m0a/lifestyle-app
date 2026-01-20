@@ -473,18 +473,19 @@ export class DashboardService {
       current.setDate(current.getDate() + 1);
     }
 
-    // Get weight records with values
-    const weightRecords = await this.db
+    // Get all weight records for user, then filter by local date
+    // This avoids string comparison issues with mixed timezone formats
+    const allWeightRecords = await this.db
       .select({ recordedAt: weights.recordedAt, weight: weights.weight })
       .from(weights)
-      .where(
-        and(
-          eq(weights.userId, userId),
-          gte(weights.recordedAt, startDate.toISOString()),
-          lte(weights.recordedAt, endDate.toISOString())
-        )
-      )
+      .where(eq(weights.userId, userId))
       .all();
+
+    // Filter by local date range
+    const weightRecords = allWeightRecords.filter((r) => {
+      const localDate = extractLocalDate(r.recordedAt);
+      return localDate >= startDateStr && localDate <= endDateStr;
+    });
 
     // Map date to latest weight value using extractLocalDate
     const weightByDate = new Map<string, number>();
@@ -493,18 +494,18 @@ export class DashboardService {
       weightByDate.set(date, r.weight);
     }
 
-    // Get meal records with calories
-    const mealRecords = await this.db
+    // Get all meal records for user, then filter by local date
+    const allMealRecords = await this.db
       .select({ recordedAt: meals.recordedAt, calories: meals.calories })
       .from(meals)
-      .where(
-        and(
-          eq(meals.userId, userId),
-          gte(meals.recordedAt, startDate.toISOString()),
-          lte(meals.recordedAt, endDate.toISOString())
-        )
-      )
+      .where(eq(meals.userId, userId))
       .all();
+
+    // Filter by local date range
+    const mealRecords = allMealRecords.filter((r) => {
+      const localDate = extractLocalDate(r.recordedAt);
+      return localDate >= startDateStr && localDate <= endDateStr;
+    });
 
     // Map date to total calories using extractLocalDate
     const caloriesByDate = new Map<string, number>();
@@ -514,18 +515,18 @@ export class DashboardService {
       caloriesByDate.set(date, current + (r.calories || 0));
     }
 
-    // Get exercise records with set count
-    const exerciseRecords = await this.db
+    // Get all exercise records for user, then filter by local date
+    const allExerciseRecords = await this.db
       .select({ recordedAt: exercises.recordedAt })
       .from(exercises)
-      .where(
-        and(
-          eq(exercises.userId, userId),
-          gte(exercises.recordedAt, startDate.toISOString()),
-          lte(exercises.recordedAt, endDate.toISOString())
-        )
-      )
+      .where(eq(exercises.userId, userId))
       .all();
+
+    // Filter by local date range
+    const exerciseRecords = allExerciseRecords.filter((r) => {
+      const localDate = extractLocalDate(r.recordedAt);
+      return localDate >= startDateStr && localDate <= endDateStr;
+    });
 
     // Map date to total sets using extractLocalDate
     const setsByDate = new Map<string, number>();
