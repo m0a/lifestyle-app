@@ -13,6 +13,34 @@ import type {
   DateTimeSource,
 } from '@lifestyle-app/shared';
 
+// Helper to format date with timezone offset from original ISO string
+// If originalIsoString has offset (e.g., +09:00), apply it to the date
+function formatDateWithOffset(date: Date, originalIsoString?: string): string {
+  if (originalIsoString) {
+    // Extract offset from original string (e.g., +09:00 or Z)
+    const offsetMatch = originalIsoString.match(/([+-]\d{2}:\d{2})$/);
+    if (offsetMatch) {
+      const offsetStr = offsetMatch[1]!;
+      const sign = offsetStr[0] === '+' ? 1 : -1;
+      const hours = parseInt(offsetStr.slice(1, 3), 10);
+      const minutes = parseInt(offsetStr.slice(4, 6), 10);
+      const offsetMinutes = sign * (hours * 60 + minutes);
+
+      // Convert UTC date to local time with offset
+      const localTime = new Date(date.getTime() + offsetMinutes * 60 * 1000);
+      const year = localTime.getUTCFullYear();
+      const month = String(localTime.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(localTime.getUTCDate()).padStart(2, '0');
+      const hour = String(localTime.getUTCHours()).padStart(2, '0');
+      const minute = String(localTime.getUTCMinutes()).padStart(2, '0');
+      const second = String(localTime.getUTCSeconds()).padStart(2, '0');
+
+      return `${year}-${month}-${day}T${hour}:${minute}:${second}${offsetStr}`;
+    }
+  }
+  return date.toISOString();
+}
+
 // Token usage (normalized from AI SDK's inputTokens/outputTokens)
 export interface TokenUsage {
   promptTokens: number;
@@ -361,10 +389,11 @@ export class AIAnalysisService {
           }
         }
 
-        inferredRecordedAt = targetDate.toISOString();
+        inferredRecordedAt = formatDateWithOffset(targetDate, currentTime);
         dateTimeSource = 'text';
       } else {
-        inferredRecordedAt = now.toISOString();
+        // If currentTime was provided with offset, use it directly
+        inferredRecordedAt = currentTime || formatDateWithOffset(now);
         dateTimeSource = 'now';
       }
 

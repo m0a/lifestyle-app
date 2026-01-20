@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
 import { v4 as uuidv4 } from 'uuid';
 import { eq, and } from 'drizzle-orm';
@@ -69,6 +70,8 @@ mealAnalysis.use('*', async (c, next) => {
 mealAnalysis.post('/analyze', async (c) => {
   const formData = await c.req.formData();
   const photo = formData.get('photo') as File | null;
+  // Optional: client can send recordedAt with timezone offset
+  const clientRecordedAt = formData.get('recordedAt') as string | null;
 
   if (!photo) {
     return c.json({ error: 'invalid_request', message: '写真が必要です' }, 400);
@@ -107,6 +110,8 @@ mealAnalysis.post('/analyze', async (c) => {
     // Create meal record
     const mealId = uuidv4();
     const now = new Date().toISOString();
+    // Use client-provided recordedAt if available (with timezone offset)
+    const recordedAt = clientRecordedAt || now;
 
     await db.insert(mealRecords).values({
       id: mealId,
@@ -119,7 +124,7 @@ mealAnalysis.post('/analyze', async (c) => {
       totalFat: analysisResult.result.totals.fat,
       totalCarbs: analysisResult.result.totals.carbs,
       analysisSource: 'ai',
-      recordedAt: now,
+      recordedAt,
       createdAt: now,
       updatedAt: now,
     });
@@ -239,13 +244,21 @@ mealAnalysis.post(
   }
 );
 
+// Schema for create-empty endpoint
+const createEmptySchema = z.object({
+  recordedAt: z.string().regex(/^.+([+-]\d{2}:\d{2}|Z)$/).optional(),
+});
+
 // POST /api/meals/create-empty - Create empty meal for manual input
-mealAnalysis.post('/create-empty', async (c) => {
+mealAnalysis.post('/create-empty', zValidator('json', createEmptySchema), async (c) => {
   const db = c.get('db');
   const userId = c.get('user').id;
+  const data = c.req.valid('json');
 
   const mealId = uuidv4();
   const now = new Date().toISOString();
+  // Use client-provided recordedAt if available (with timezone offset)
+  const recordedAt = data.recordedAt || now;
 
   await db.insert(mealRecords).values({
     id: mealId,
@@ -258,7 +271,7 @@ mealAnalysis.post('/create-empty', async (c) => {
     totalFat: 0,
     totalCarbs: 0,
     analysisSource: 'manual',
-    recordedAt: now,
+    recordedAt,
     createdAt: now,
     updatedAt: now,
   });

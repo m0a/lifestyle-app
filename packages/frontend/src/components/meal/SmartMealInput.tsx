@@ -74,7 +74,11 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
     setError(null);
 
     try {
-      const result = await mealAnalysisApi.analyzeText({ text: text.trim() });
+      // クライアントのローカル時刻をオフセット付きで送信
+      const result = await mealAnalysisApi.analyzeText({
+        text: text.trim(),
+        currentTime: toLocalISOString(new Date()),
+      });
 
       // Check if it's an error response
       if ('error' in result) {
