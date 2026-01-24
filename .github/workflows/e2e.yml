@@ -1,6 +1,7 @@
 name: E2E Tests
 
 # Run E2E tests after CI completes on main branch, or manually via workflow_dispatch
+# Re-register workflow to fix GitHub Actions metadata cache (see Issue #50)
 on:
   workflow_run:
     workflows: ["CI"]
