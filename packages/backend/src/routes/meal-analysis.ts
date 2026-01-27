@@ -4,7 +4,7 @@ import { zValidator } from '@hono/zod-validator';
 import { v4 as uuidv4 } from 'uuid';
 import { eq, and } from 'drizzle-orm';
 import { authMiddleware } from '../middleware/auth';
-import { mealRecords, mealFoodItems } from '../db/schema';
+import { mealRecords, mealFoodItems, mealPhotos } from '../db/schema';
 import { PhotoStorageService } from '../services/photo-storage';
 import { MealPhotoService } from '../services/meal-photo.service';
 import { AIAnalysisService } from '../services/ai-analysis';
@@ -539,6 +539,24 @@ mealAnalysis.post('/:mealId/photo', async (c) => {
     })
     .where(eq(mealRecords.id, mealId));
 
+  // Update or create meal_photos record
+  const photoService = new MealPhotoService(db);
+  const existingPhotos = await photoService.getMealPhotos(mealId);
+
+  if (existingPhotos.length > 0) {
+    // Update existing photo record with new key
+    await db
+      .update(mealPhotos)
+      .set({ photoKey: permanentPhotoKey })
+      .where(eq(mealPhotos.mealId, mealId));
+  } else {
+    // Create new photo record
+    await photoService.addPhoto({
+      mealId,
+      photoKey: permanentPhotoKey,
+    });
+  }
+
   return c.json({
     success: true,
     photoKey: permanentPhotoKey,
@@ -570,6 +588,14 @@ mealAnalysis.post(
     let permanentPhotoKey = meal.photoKey;
     if (meal.photoKey && meal.photoKey.startsWith('temp/')) {
       permanentPhotoKey = await photoStorage.saveForRecord(meal.photoKey, mealId);
+
+      // Also update meal_photos table with permanent key
+      await db
+        .update(mealPhotos)
+        .set({ photoKey: permanentPhotoKey })
+        .where(
+          and(eq(mealPhotos.mealId, mealId), eq(mealPhotos.photoKey, meal.photoKey))
+        );
     }
 
     const now = new Date().toISOString();
