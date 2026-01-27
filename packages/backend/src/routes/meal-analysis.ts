@@ -119,7 +119,6 @@ mealAnalysis.post('/analyze', async (c) => {
       mealType: 'lunch', // Default, will be set when saving
       content: analysisResult.result.foodItems.map((f) => f.name).join(', '),
       calories: analysisResult.result.totals.calories,
-      photoKey: tempPhotoKey,
       totalProtein: analysisResult.result.totals.protein,
       totalFat: analysisResult.result.totals.fat,
       totalCarbs: analysisResult.result.totals.carbs,
@@ -201,7 +200,6 @@ mealAnalysis.post(
       mealType: analysisResult.result.inferredMealType,
       content: analysisResult.result.foodItems.map((f) => f.name).join(', '),
       calories: analysisResult.result.totals.calories,
-      photoKey: null,
       totalProtein: analysisResult.result.totals.protein,
       totalFat: analysisResult.result.totals.fat,
       totalCarbs: analysisResult.result.totals.carbs,
@@ -266,7 +264,6 @@ mealAnalysis.post('/create-empty', zValidator('json', createEmptySchema), async 
     mealType: 'lunch', // Default, will be set when saving
     content: '',
     calories: 0,
-    photoKey: null,
     totalProtein: 0,
     totalFat: 0,
     totalCarbs: 0,
@@ -439,11 +436,14 @@ mealAnalysis.delete('/:mealId/food-items/:foodItemId', async (c) => {
 });
 
 // DELETE /api/meals/:mealId/photo - Delete meal photo (T032)
+// Note: This is a legacy endpoint for single-photo deletion.
+// For multi-photo support, use DELETE /api/meals/:mealId/photos/:photoId instead.
 mealAnalysis.delete('/:mealId/photo', async (c) => {
   const mealId = c.req.param('mealId');
   const db = c.get('db');
   const userId = c.get('user').id;
   const photoStorage = new PhotoStorageService(c.env.PHOTOS);
+  const photoService = new MealPhotoService(db);
 
   // Verify meal belongs to user
   const meal = await db.query.mealRecords.findFirst({
@@ -454,37 +454,35 @@ mealAnalysis.delete('/:mealId/photo', async (c) => {
     return c.json({ error: 'not_found', message: '食事記録が見つかりません' }, 404);
   }
 
-  if (!meal.photoKey) {
+  // Get photos from meal_photos table
+  const photos = await photoService.getMealPhotos(mealId);
+  if (photos.length === 0) {
     return c.json({ error: 'not_found', message: '写真が設定されていません' }, 404);
   }
 
-  // Delete photo from storage
-  try {
-    await photoStorage.deletePhoto(meal.photoKey);
-  } catch (error) {
-    console.error('Failed to delete photo from storage:', error);
-    // Continue even if storage deletion fails
+  // Delete all photos for this meal
+  for (const photo of photos) {
+    try {
+      await photoStorage.deletePhoto(photo.photoKey);
+    } catch (error) {
+      console.error('Failed to delete photo from storage:', error);
+      // Continue even if storage deletion fails
+    }
+    await db.delete(mealPhotos).where(eq(mealPhotos.id, photo.id));
   }
-
-  // Update meal record
-  const now = new Date().toISOString();
-  await db
-    .update(mealRecords)
-    .set({
-      photoKey: null,
-      updatedAt: now,
-    })
-    .where(eq(mealRecords.id, mealId));
 
   return c.json({ success: true, message: '写真を削除しました' });
 });
 
 // POST /api/meals/:mealId/photo - Add/replace meal photo (T033)
+// Note: This is a legacy endpoint for single-photo replacement.
+// For multi-photo support, use POST /api/meals/:mealId/photos instead.
 mealAnalysis.post('/:mealId/photo', async (c) => {
   const mealId = c.req.param('mealId');
   const db = c.get('db');
   const userId = c.get('user').id;
   const photoStorage = new PhotoStorageService(c.env.PHOTOS);
+  const photoService = new MealPhotoService(db);
 
   // Verify meal belongs to user
   const meal = await db.query.mealRecords.findFirst({
@@ -512,14 +510,16 @@ mealAnalysis.post('/:mealId/photo', async (c) => {
     return c.json({ error: 'invalid_request', message: 'ファイルサイズは10MB以下にしてください' }, 400);
   }
 
-  // Delete old photo if exists
-  if (meal.photoKey) {
+  // Delete old photos if exist (legacy single-photo replacement behavior)
+  const existingPhotos = await photoService.getMealPhotos(mealId);
+  for (const existingPhoto of existingPhotos) {
     try {
-      await photoStorage.deletePhoto(meal.photoKey);
+      await photoStorage.deletePhoto(existingPhoto.photoKey);
     } catch (error) {
       console.error('Failed to delete old photo:', error);
       // Continue even if old photo deletion fails
     }
+    await db.delete(mealPhotos).where(eq(mealPhotos.id, existingPhoto.id));
   }
 
   // Upload new photo directly as permanent (not temp)
@@ -529,33 +529,11 @@ mealAnalysis.post('/:mealId/photo', async (c) => {
     mealId
   );
 
-  // Update meal record
-  const now = new Date().toISOString();
-  await db
-    .update(mealRecords)
-    .set({
-      photoKey: permanentPhotoKey,
-      updatedAt: now,
-    })
-    .where(eq(mealRecords.id, mealId));
-
-  // Update or create meal_photos record
-  const photoService = new MealPhotoService(db);
-  const existingPhotos = await photoService.getMealPhotos(mealId);
-
-  if (existingPhotos.length > 0) {
-    // Update existing photo record with new key
-    await db
-      .update(mealPhotos)
-      .set({ photoKey: permanentPhotoKey })
-      .where(eq(mealPhotos.mealId, mealId));
-  } else {
-    // Create new photo record
-    await photoService.addPhoto({
-      mealId,
-      photoKey: permanentPhotoKey,
-    });
-  }
+  // Create meal_photos record
+  await photoService.addPhoto({
+    mealId,
+    photoKey: permanentPhotoKey,
+  });
 
   return c.json({
     success: true,
@@ -574,6 +552,7 @@ mealAnalysis.post(
     const db = c.get('db');
     const userId = c.get('user').id;
     const photoStorage = new PhotoStorageService(c.env.PHOTOS);
+    const photoService = new MealPhotoService(db);
 
     // Verify meal belongs to user
     const meal = await db.query.mealRecords.findFirst({
@@ -584,18 +563,16 @@ mealAnalysis.post(
       return c.json({ error: 'not_found', message: '食事記録が見つかりません' }, 404);
     }
 
-    // Move photo from temp to permanent storage
-    let permanentPhotoKey = meal.photoKey;
-    if (meal.photoKey && meal.photoKey.startsWith('temp/')) {
-      permanentPhotoKey = await photoStorage.saveForRecord(meal.photoKey, mealId);
-
-      // Also update meal_photos table with permanent key
-      await db
-        .update(mealPhotos)
-        .set({ photoKey: permanentPhotoKey })
-        .where(
-          and(eq(mealPhotos.mealId, mealId), eq(mealPhotos.photoKey, meal.photoKey))
-        );
+    // Move photos from temp to permanent storage
+    const photos = await photoService.getMealPhotos(mealId);
+    for (const photo of photos) {
+      if (photo.photoKey.startsWith('temp/')) {
+        const permanentPhotoKey = await photoStorage.saveForRecord(photo.photoKey, mealId);
+        await db
+          .update(mealPhotos)
+          .set({ photoKey: permanentPhotoKey })
+          .where(eq(mealPhotos.id, photo.id));
+      }
     }
 
     const now = new Date().toISOString();
@@ -612,7 +589,6 @@ mealAnalysis.post(
       .set({
         mealType: data.mealType,
         content,
-        photoKey: permanentPhotoKey,
         recordedAt,
         updatedAt: now,
       })
@@ -622,13 +598,18 @@ mealAnalysis.post(
       where: eq(mealRecords.id, mealId),
     });
 
+    // Get first photo key for response
+    const updatedPhotos = await photoService.getMealPhotos(mealId);
+    const firstPhoto = updatedPhotos[0];
+    const firstPhotoKey = firstPhoto ? firstPhoto.photoKey : null;
+
     return c.json({
       meal: {
         id: updatedMeal!.id,
         mealType: updatedMeal!.mealType,
         content: updatedMeal!.content,
         calories: updatedMeal!.calories,
-        photoKey: updatedMeal!.photoKey,
+        photoKey: firstPhotoKey,
         totalProtein: updatedMeal!.totalProtein,
         totalFat: updatedMeal!.totalFat,
         totalCarbs: updatedMeal!.totalCarbs,

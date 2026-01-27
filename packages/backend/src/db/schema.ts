@@ -39,7 +39,6 @@ export const mealRecords = sqliteTable(
     content: text('content').notNull(),
     calories: integer('calories'),
     // AI analysis fields
-    photoKey: text('photo_key'),
     totalProtein: real('total_protein'),
     totalFat: real('total_fat'),
     totalCarbs: real('total_carbs'),

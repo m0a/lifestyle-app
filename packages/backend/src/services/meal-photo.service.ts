@@ -114,24 +114,4 @@ export class MealPhotoService {
       analyzedPhotoCount: analyzed.length,
     };
   }
-
-  // T074: Lazy migration for legacy photo_key meals
-  async migrateLegacyPhoto(mealId: string, photoKey: string): Promise<MealPhoto | null> {
-    // Check if meal already has photos in meal_photos table
-    const existingPhotos = await this.getMealPhotos(mealId);
-
-    if (existingPhotos.length > 0) {
-      // Already migrated
-      return null;
-    }
-
-    // Create meal_photos record from legacy photo_key
-    const photo = await this.addPhoto({
-      mealId,
-      photoKey,
-      displayOrder: 0,
-    });
-
-    return photo;
-  }
 }

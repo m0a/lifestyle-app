@@ -147,22 +147,6 @@ export class MealService {
     return filtered.map((record) => {
       const photos = photosArrays.get(record.id) || [];
 
-      // Fallback: If no meal_photos but legacy photo_key exists, use it
-      if (photos.length === 0 && record.photoKey) {
-        return {
-          ...record,
-          photoCount: 1,
-          firstPhotoKey: record.photoKey,
-          photos: [
-            {
-              id: `legacy-${record.id}`,
-              photoKey: record.photoKey,
-              photoUrl: `/api/meals/photos/${encodeURIComponent(record.photoKey)}`,
-            },
-          ],
-        };
-      }
-
       return {
         ...record,
         photoCount: photoCounts.get(record.id) || 0,

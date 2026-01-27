@@ -338,25 +338,7 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
     const photoStorage = new PhotoStorageService(c.env.PHOTOS);
 
     // Get all photos from meal_photos table
-    let photos = await photoService.getMealPhotos(mealId);
-
-    // Fallback: If no meal_photos but legacy photo_key exists, use it
-    if (photos.length === 0 && meal.photoKey) {
-      photos = [
-        {
-          id: `legacy-${mealId}`,
-          mealId,
-          photoKey: meal.photoKey,
-          displayOrder: 0,
-          analysisStatus: 'complete',
-          calories: meal.calories,
-          protein: meal.totalProtein,
-          fat: meal.totalFat,
-          carbs: meal.totalCarbs,
-          createdAt: meal.createdAt,
-        },
-      ];
-    }
+    const photos = await photoService.getMealPhotos(mealId);
 
     // Calculate totals from food items, not photos
     const foodItems = await db.query.mealFoodItems.findMany({
