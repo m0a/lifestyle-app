@@ -526,7 +526,8 @@ mealAnalysis.post('/:mealId/photo', async (c) => {
   const photoData = await photo.arrayBuffer();
   const permanentPhotoKey = await photoStorage.saveForRecord(
     await photoStorage.uploadForAnalysis(photoData, photo.type),
-    mealId
+    mealId,
+    userId
   );
 
   // Create meal_photos record
@@ -567,7 +568,7 @@ mealAnalysis.post(
     const photos = await photoService.getMealPhotos(mealId);
     for (const photo of photos) {
       if (photo.photoKey.startsWith('temp/')) {
-        const permanentPhotoKey = await photoStorage.saveForRecord(photo.photoKey, mealId);
+        const permanentPhotoKey = await photoStorage.saveForRecord(photo.photoKey, mealId, userId);
         await db
           .update(mealPhotos)
           .set({ photoKey: permanentPhotoKey })

@@ -81,18 +81,19 @@ describe('PhotoStorageService', () => {
   });
 
   describe('saveForRecord', () => {
-    it('should copy photo from temp to permanent location', async () => {
+    it('should copy photo from temp to permanent location with standardized path', async () => {
       const mockData = new ArrayBuffer(100);
       mockR2.get.mockResolvedValueOnce({
         arrayBuffer: vi.fn().mockResolvedValue(mockData),
         httpMetadata: { contentType: 'image/jpeg' },
       });
 
-      const permanentKey = await service.saveForRecord('temp/temp-key', 'meal-123');
+      const permanentKey = await service.saveForRecord('temp/temp-key', 'meal-123', 'user-456');
 
-      expect(permanentKey).toBe('meals/meal-123/photo.jpg');
+      // New path format: photos/{userId}/{mealId}/{photoId}.jpg
+      expect(permanentKey).toMatch(/^photos\/user-456\/meal-123\/[A-Za-z0-9_-]+\.jpg$/);
       expect(mockR2.put).toHaveBeenCalledWith(
-        'meals/meal-123/photo.jpg',
+        expect.stringMatching(/^photos\/user-456\/meal-123\/[A-Za-z0-9_-]+\.jpg$/),
         mockData,
         { httpMetadata: { contentType: 'image/jpeg' } }
       );
@@ -104,7 +105,7 @@ describe('PhotoStorageService', () => {
         httpMetadata: { contentType: 'image/jpeg' },
       });
 
-      await service.saveForRecord('temp/temp-key', 'meal-123');
+      await service.saveForRecord('temp/temp-key', 'meal-123', 'user-456');
 
       expect(mockR2.delete).toHaveBeenCalledWith('temp/temp-key');
     });
@@ -112,16 +113,8 @@ describe('PhotoStorageService', () => {
     it('should throw error if temp photo not found', async () => {
       mockR2.get.mockResolvedValueOnce(null);
 
-      await expect(service.saveForRecord('temp/missing', 'meal-123'))
+      await expect(service.saveForRecord('temp/missing', 'meal-123', 'user-456'))
         .rejects.toThrow('Temporary photo not found');
-    });
-  });
-
-  describe('deleteForRecord', () => {
-    it('should delete photo at meal location', async () => {
-      await service.deleteForRecord('meal-123');
-
-      expect(mockR2.delete).toHaveBeenCalledWith('meals/meal-123/photo.jpg');
     });
   });
 

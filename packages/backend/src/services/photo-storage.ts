@@ -1,4 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
+import { nanoid } from 'nanoid';
 
 export class PhotoStorageService {
   constructor(private r2: R2Bucket) {}
@@ -32,9 +33,9 @@ export class PhotoStorageService {
 
   /**
    * Save photo permanently for meal record.
-   * The photo is stored at a permanent location.
+   * The photo is stored at: photos/{userId}/{mealId}/{photoId}.jpg
    */
-  async saveForRecord(tempKey: string, mealId: string): Promise<string> {
+  async saveForRecord(tempKey: string, mealId: string, userId: string): Promise<string> {
     const tempObject = await this.r2.get(tempKey);
     if (!tempObject) {
       throw new Error('Temporary photo not found');
@@ -42,7 +43,8 @@ export class PhotoStorageService {
 
     const data = await tempObject.arrayBuffer();
     const mimeType = tempObject.httpMetadata?.contentType || 'image/jpeg';
-    const permanentKey = `meals/${mealId}/photo.jpg`;
+    const photoId = nanoid();
+    const permanentKey = `photos/${userId}/${mealId}/${photoId}.jpg`;
 
     await this.r2.put(permanentKey, data, {
       httpMetadata: {
@@ -54,13 +56,6 @@ export class PhotoStorageService {
     await this.r2.delete(tempKey);
 
     return permanentKey;
-  }
-
-  /**
-   * Delete photo for a meal record.
-   */
-  async deleteForRecord(mealId: string): Promise<void> {
-    await this.r2.delete(`meals/${mealId}/photo.jpg`);
   }
 
   /**
