@@ -5,7 +5,7 @@ test.describe('User Settings - Export and Delete', () => {
     // Login before each test
     await page.goto('/login');
     await page.fill('input[name="email"]', 'test@example.com');
-    await page.fill('input[name="password"]', 'password123');
+    await page.fill('input[name="password"]', 'test1234');
     await page.click('button[type="submit"]');
     await page.waitForURL(/\/(dashboard|weight|meals|exercises)/);
   });
@@ -100,7 +100,7 @@ test.describe('User Settings - Export and Delete', () => {
       await page.goto('/register');
       const uniqueEmail = `delete-test-${Date.now()}@example.com`;
       await page.fill('input[name="email"]', uniqueEmail);
-      await page.fill('input[name="password"]', 'password123');
+      await page.fill('input[name="password"]', 'test1234');
       await page.fill('input[name="name"]', 'Delete Test');
       await page.click('button[type="submit"]');
       await page.waitForURL(/\/(dashboard|weight)/);
