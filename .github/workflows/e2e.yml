@@ -16,6 +16,10 @@ on:
     types: [completed]
     branches: [main]
 
+permissions:
+  contents: read
+  issues: write
+
 jobs:
   e2e:
     name: E2E Tests
