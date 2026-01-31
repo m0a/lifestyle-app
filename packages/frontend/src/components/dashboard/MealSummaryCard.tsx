@@ -66,7 +66,7 @@ export function MealSummaryCard({
               <p className="font-medium text-gray-900">{mealCount}回</p>
             </div>
             <div>
-              <p className="text-gray-500">平均カロリー</p>
+              <p className="text-gray-500">1日あたり</p>
               <p className="font-medium text-gray-900">
                 {Math.round(averageCalories).toLocaleString()} kcal
               </p>
