@@ -57,6 +57,7 @@ interface MealRecord {
   totalProtein: number | null;
   totalFat: number | null;
   totalCarbs: number | null;
+  recordedAt: string;
 }
 
 interface ExerciseRecord {
@@ -226,6 +227,11 @@ export class DashboardService {
     const caloriesWithValue = records.filter((r) => r.calories != null);
     const totalCalories = caloriesWithValue.reduce((sum, r) => sum + (r.calories ?? 0), 0);
 
+    // Count unique days with meal records (for daily average calculation)
+    const daysWithMeals = new Set(
+      records.map((r) => extractLocalDate(r.recordedAt))
+    ).size;
+
     // Calculate nutrient totals (null values are treated as 0)
     const totalProtein = records.reduce((sum, r) => sum + (r.totalProtein ?? 0), 0);
     const totalFat = records.reduce((sum, r) => sum + (r.totalFat ?? 0), 0);
@@ -244,7 +250,8 @@ export class DashboardService {
     return {
       totalCalories,
       mealCount: records.length,
-      averageCalories: caloriesWithValue.length > 0 ? totalCalories / caloriesWithValue.length : 0,
+      // Daily average: total calories / days with meal records
+      averageCalories: daysWithMeals > 0 ? totalCalories / daysWithMeals : 0,
       byType,
       totalProtein,
       totalFat,
