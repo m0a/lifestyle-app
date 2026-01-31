@@ -31,9 +31,9 @@ describe('DashboardService', () => {
 
       // Mock meal data
       mockDb.all.mockResolvedValueOnce([
-        { calories: 2000 },
-        { calories: 1800 },
-        { calories: 2200 },
+        { calories: 2000, mealType: 'breakfast', recordedAt: '2025-01-01T08:00:00+09:00' },
+        { calories: 1800, mealType: 'lunch', recordedAt: '2025-01-01T12:00:00+09:00' },
+        { calories: 2200, mealType: 'dinner', recordedAt: '2025-01-02T19:00:00+09:00' },
       ]);
 
       // Mock exercise data (each record = 1 set)
@@ -77,11 +77,12 @@ describe('DashboardService', () => {
       const endDate = new Date('2025-01-03');
 
       mockDb.all.mockResolvedValueOnce([]);
+      // All meals on same day (2025-01-01) = 1 day
       mockDb.all.mockResolvedValueOnce([
-        { calories: 2000, mealType: 'breakfast', totalProtein: 30, totalFat: 20, totalCarbs: 200 },
-        { calories: 500, mealType: 'lunch', totalProtein: 25, totalFat: 15, totalCarbs: 50 },
-        { calories: 800, mealType: 'dinner', totalProtein: 40, totalFat: 30, totalCarbs: 80 },
-        { calories: null, mealType: 'snack', totalProtein: null, totalFat: null, totalCarbs: null },
+        { calories: 2000, mealType: 'breakfast', totalProtein: 30, totalFat: 20, totalCarbs: 200, recordedAt: '2025-01-01T08:00:00+09:00' },
+        { calories: 500, mealType: 'lunch', totalProtein: 25, totalFat: 15, totalCarbs: 50, recordedAt: '2025-01-01T12:00:00+09:00' },
+        { calories: 800, mealType: 'dinner', totalProtein: 40, totalFat: 30, totalCarbs: 80, recordedAt: '2025-01-01T19:00:00+09:00' },
+        { calories: null, mealType: 'snack', totalProtein: null, totalFat: null, totalCarbs: null, recordedAt: '2025-01-01T15:00:00+09:00' },
       ]);
       mockDb.all.mockResolvedValueOnce([]);
 
@@ -89,7 +90,8 @@ describe('DashboardService', () => {
 
       expect(result.meals.totalCalories).toBe(3300);
       expect(result.meals.mealCount).toBe(4);
-      expect(result.meals.averageCalories).toBeCloseTo(1100, 0);
+      // Daily average: 3300 / 1 day = 3300
+      expect(result.meals.averageCalories).toBeCloseTo(3300, 0);
       // New nutrient assertions
       expect(result.meals.totalProtein).toBe(95); // 30+25+40+0
       expect(result.meals.totalFat).toBe(65); // 20+15+30+0
@@ -103,8 +105,8 @@ describe('DashboardService', () => {
 
       mockDb.all.mockResolvedValueOnce([]);
       mockDb.all.mockResolvedValueOnce([
-        { calories: 500, mealType: 'breakfast', totalProtein: null, totalFat: null, totalCarbs: null },
-        { calories: 600, mealType: 'lunch', totalProtein: 20, totalFat: 10, totalCarbs: 50 },
+        { calories: 500, mealType: 'breakfast', totalProtein: null, totalFat: null, totalCarbs: null, recordedAt: '2025-01-01T08:00:00+09:00' },
+        { calories: 600, mealType: 'lunch', totalProtein: 20, totalFat: 10, totalCarbs: 50, recordedAt: '2025-01-02T12:00:00+09:00' },
       ]);
       mockDb.all.mockResolvedValueOnce([]);
 
