@@ -4,7 +4,6 @@ import type {
   CreateExerciseSetsInput,
   UpdateExerciseInput,
   ExerciseRecord,
-  ExerciseImportSummary,
   RecentExerciseItem,
 } from '@lifestyle-app/shared';
 
@@ -141,32 +140,6 @@ export function useExercises(options?: UseExercisesOptions) {
     fetchLastRecord,
     fetchLastSession,
   };
-}
-
-// Hook for fetching exercises by specific date
-export function useExercisesByDate(date: string | null) {
-  return useQuery({
-    queryKey: ['exercises', 'by-date', date],
-    queryFn: async () => {
-      if (!date) {
-        return { exercises: [], count: 0 };
-      }
-
-      const res = await api.exercises['by-date'].$get({
-        query: { date },
-      });
-
-      if (!res.ok) {
-        const error = await res.json().catch(() => ({ message: 'Failed to fetch exercises' }));
-        throw new Error((error as { message?: string }).message || 'Failed to fetch exercises');
-      }
-
-      return res.json();
-    },
-    select: (data) => data.exercises as ExerciseImportSummary[],
-    enabled: !!date,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
 }
 
 // Hook for fetching recent unique exercises

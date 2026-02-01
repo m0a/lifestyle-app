@@ -50,37 +50,3 @@ export async function generateImageBlob(
   throw new Error(`Image generation failed after ${MAX_RETRIES} attempts: ${lastError?.message}`);
 }
 
-/**
- * Generate a PNG image as a data URL from an HTML element
- * Useful for preview purposes
- *
- * @param element - The HTML element to capture
- * @param pixelRatio - Resolution multiplier (default: 2 for retina)
- * @returns Promise resolving to data URL string
- */
-export async function generateImageDataUrl(
-  element: HTMLElement,
-  pixelRatio = 2
-): Promise<string> {
-  let lastError: Error | null = null;
-
-  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-    try {
-      const dataUrl = await toPng(element, {
-        pixelRatio,
-        backgroundColor: '#ffffff',
-        cacheBust: true,
-      });
-
-      return dataUrl;
-    } catch (error) {
-      lastError = error instanceof Error ? error : new Error(String(error));
-
-      if (attempt < MAX_RETRIES - 1) {
-        await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
-      }
-    }
-  }
-
-  throw new Error(`Image generation failed after ${MAX_RETRIES} attempts: ${lastError?.message}`);
-}

@@ -48,7 +48,7 @@ export async function loginAsTestUser(
 /**
  * Logout from the application
  */
-export async function logout(page: Page): Promise<void> {
+async function logout(page: Page): Promise<void> {
   // Click on user menu or logout button
   // Adjust selector based on your UI
   const logoutButton = page.getByRole('button', { name: /ログアウト|logout/i });
@@ -61,7 +61,7 @@ export async function logout(page: Page): Promise<void> {
 /**
  * Register a new user (for test setup)
  */
-export async function registerTestUser(
+async function registerTestUser(
   page: Page,
   email: string,
   password: string
@@ -96,21 +96,3 @@ export async function ensureTestUserExists(
   }
 }
 
-/**
- * Navigate to meals page (assumes already logged in)
- */
-export async function navigateToMeals(page: Page): Promise<void> {
-  await page.goto('/meals');
-  await page.waitForLoadState('networkidle');
-}
-
-/**
- * Wait for loading state to complete
- */
-export async function waitForLoadingComplete(page: Page): Promise<void> {
-  // Wait for any loading spinners to disappear
-  const loadingIndicator = page.locator('[data-testid="loading"], .loading, [aria-busy="true"]');
-  if (await loadingIndicator.isVisible().catch(() => false)) {
-    await loadingIndicator.waitFor({ state: 'hidden', timeout: 10000 });
-  }
-}

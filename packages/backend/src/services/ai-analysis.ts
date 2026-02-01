@@ -435,7 +435,7 @@ export class AIAnalysisService {
  * Infer meal type from current time (T006).
  * 6-10 → breakfast, 11-14 → lunch, 17-21 → dinner, else → snack
  */
-export function inferMealType(currentTime?: string): 'breakfast' | 'lunch' | 'dinner' | 'snack' {
+function inferMealType(currentTime?: string): 'breakfast' | 'lunch' | 'dinner' | 'snack' {
   const date = currentTime ? new Date(currentTime) : new Date();
   const hour = date.getHours();
 
@@ -449,3 +449,4 @@ export function inferMealType(currentTime?: string): 'breakfast' | 'lunch' | 'di
     return 'snack';
   }
 }
+
