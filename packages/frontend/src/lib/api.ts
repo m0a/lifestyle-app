@@ -89,7 +89,7 @@ class ApiClient {
   }
 }
 
-export class ApiRequestError extends Error {
+class ApiRequestError extends Error {
   constructor(
     message: string,
     public status: number,

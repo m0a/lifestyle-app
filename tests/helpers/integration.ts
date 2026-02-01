@@ -129,37 +129,3 @@ export async function ensureTestUser(email: string, password: string): Promise<v
   }
 }
 
-/**
- * Helper to clean up test data
- * WARNING: Only use in test environment
- */
-export async function cleanupTestData(session: TestSession, userId?: string): Promise<void> {
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error('Cannot cleanup in production');
-  }
-
-  // TODO: Implement cleanup endpoints if needed
-  // For now, test database should be reset between test runs
-}
-
-/**
- * Wait for backend to be ready
- * Uses root endpoint (/) which returns { status: 'ok' }
- */
-export async function waitForBackend(maxAttempts = 30, delayMs = 1000): Promise<boolean> {
-  for (let i = 0; i < maxAttempts; i++) {
-    try {
-      const response = await fetch(`${API_BASE}/`, { signal: AbortSignal.timeout(5000) });
-      if (response.ok) {
-        const data = await response.json() as { status?: string };
-        if (data.status === 'ok') {
-          return true;
-        }
-      }
-    } catch {
-      // Backend not ready yet
-    }
-    await new Promise(resolve => setTimeout(resolve, delayMs));
-  }
-  return false;
-}

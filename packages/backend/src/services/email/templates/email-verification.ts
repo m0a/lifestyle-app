@@ -25,7 +25,7 @@ export interface EmailVerificationTemplateData {
  * @param data - Template data
  * @returns HTML email content
  */
-export function generateEmailVerificationEmail(
+function generateEmailVerificationEmail(
   data: EmailVerificationTemplateData
 ): string {
   const { verificationUrl, expirationHours = 48 } = data;
