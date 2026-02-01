@@ -26,8 +26,6 @@
     "@lifestyle-app/shared": "workspace:*",
     "ai": "^6.0.5",
     "bcryptjs": "^2.4.3",
-    "date-fns": "^4.1.0",
-    "date-fns-tz": "^3.2.0",
     "drizzle-orm": "^0.30.0",
     "hono": "^4.0.0",
     "nanoid": "^5.1.6",
