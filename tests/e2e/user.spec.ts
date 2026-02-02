@@ -1,13 +1,10 @@
 import { test, expect } from '@playwright/test';
+import { loginAsTestUser } from '../helpers/e2e';
 
 test.describe('User Settings - Export and Delete', () => {
   test.beforeEach(async ({ page }) => {
-    // Login before each test
-    await page.goto('/login');
-    await page.fill('input[name="email"]', 'test@example.com');
-    await page.fill('input[name="password"]', 'test1234');
-    await page.click('button[type="submit"]');
-    await page.waitForURL(/\/(dashboard|weight|meals|exercises)/);
+    // Login before each test using the test helper
+    await loginAsTestUser(page);
   });
 
   test('should navigate to settings page', async ({ page }) => {

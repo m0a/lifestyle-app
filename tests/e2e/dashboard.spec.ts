@@ -1,13 +1,12 @@
 import { test, expect } from '@playwright/test';
+import { loginAsTestUser } from '../helpers/e2e';
 
 test.describe('Dashboard Flow', () => {
   test.beforeEach(async ({ page }) => {
-    // Login before each test
-    await page.goto('/login');
-    await page.fill('input[name="email"]', 'test@example.com');
-    await page.fill('input[name="password"]', 'test1234');
-    await page.click('button[type="submit"]');
-    await page.waitForURL('/dashboard');
+    // Login before each test using the test helper
+    await loginAsTestUser(page);
+    await page.goto('/dashboard');
+    await page.waitForLoadState('networkidle');
   });
 
   test('should display dashboard with all summary cards', async ({ page }) => {
