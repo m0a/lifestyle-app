@@ -57,8 +57,6 @@ const TrainingImagePage = lazy(() => import('./pages/exercise/TrainingImagePage'
 // Home component - shows activity dots for logged-in users
 function Home() {
   const { isAuthenticated } = useAuthStore();
-  const dotsCount = useDotsCount();
-  const { data: activityData, isLoading } = useActivityDots(dotsCount);
 
   if (!isAuthenticated) {
     return (
@@ -82,6 +80,14 @@ function Home() {
       </div>
     );
   }
+
+  return <AuthenticatedHome />;
+}
+
+// Separate component to avoid hook calls when not authenticated
+function AuthenticatedHome() {
+  const dotsCount = useDotsCount();
+  const { data: activityData, isLoading } = useActivityDots(dotsCount);
 
   return (
     <ActivityDotGrid
