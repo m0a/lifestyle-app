@@ -102,8 +102,8 @@ app.use('*', async (c, next) => {
   await next();
 });
 
-// Health check
-app.get('/', (c) => {
+// Health check - API endpoint for monitoring
+app.get('/api/health', (c) => {
   return c.json({
     status: 'ok',
     environment: c.env.ENVIRONMENT,
