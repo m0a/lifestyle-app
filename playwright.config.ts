@@ -40,7 +40,9 @@ export default defineConfig({
     {
       command: 'pnpm dev:backend',
       url: 'http://localhost:8787/api/health',
-      reuseExistingServer: !isCI, // Local: reuse, CI: start new
+      // CI: servers are started by CI workflow, so reuse existing
+      // Local: start if not running, reuse if already running
+      reuseExistingServer: true,
       timeout: 120000,
       env: {
         NODE_ENV: 'test',
@@ -50,7 +52,7 @@ export default defineConfig({
     {
       command: isCI ? 'pnpm --filter @lifestyle-app/frontend preview' : 'pnpm dev',
       url: isCI ? 'http://localhost:4173' : 'http://localhost:5173',
-      reuseExistingServer: !isCI,
+      reuseExistingServer: true,
       timeout: 60000,
     },
   ],
