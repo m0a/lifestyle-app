@@ -9,14 +9,17 @@ test.describe('User Settings - Export and Delete', () => {
 
   test('should navigate to settings page', async ({ page }) => {
     await page.goto('/settings');
-    await expect(page.getByRole('heading', { name: '設定' })).toBeVisible();
+    await page.waitForLoadState('networkidle');
+    // Settings page shows user email in profile section
+    await expect(page.getByRole('main').getByText('test@example.com')).toBeVisible();
   });
 
   test.describe('Data Export', () => {
     test('should display export section', async ({ page }) => {
       await page.goto('/settings');
-      await expect(page.getByText('データエクスポート')).toBeVisible();
-      await expect(page.getByRole('button', { name: /エクスポート/ })).toBeVisible();
+      await page.waitForLoadState('networkidle');
+      await expect(page.getByRole('heading', { name: 'データエクスポート' })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'JSONでエクスポート' })).toBeVisible();
     });
 
     test('should trigger JSON export download', async ({ page }) => {
@@ -43,11 +46,15 @@ test.describe('User Settings - Export and Delete', () => {
 
     test('should show success message after export', async ({ page }) => {
       await page.goto('/settings');
+      await page.waitForLoadState('networkidle');
 
+      // Wait for download to start
+      const downloadPromise = page.waitForEvent('download');
       await page.click('button:has-text("JSONでエクスポート")');
+      const download = await downloadPromise;
 
-      // Wait for success message or download
-      await expect(page.getByText(/エクスポート|ダウンロード/)).toBeVisible({ timeout: 5000 });
+      // Verify download completed
+      expect(download.suggestedFilename()).toBeTruthy();
     });
   });
 

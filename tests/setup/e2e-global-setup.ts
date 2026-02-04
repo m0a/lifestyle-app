@@ -23,7 +23,7 @@ const TEST_USER = {
   id: 'e2e-test-user-00000000-0000-0000-0000-000000000001',
   email: 'test@example.com',
   // bcrypt hash for 'test1234' with cost factor 10
-  passwordHash: '$2a$10$8H6bb2j4r7FsSTvZmOxMmeGLA8yWqnr/zGnCaqdQBqGxHRymX510.',
+  passwordHash: '$2a$10$rNb.lauAzHAvpfZ0xxXd7uWpi4tfKv1qRpdeJ1lKVskLosJq86mlu',
   emailVerified: 1,
 };
 
@@ -44,21 +44,24 @@ export default async function globalSetup() {
     console.log(`[E2E Setup] Found database: ${dbFile}`);
 
     // Reset the test user with the correct password hash
+    // Use heredoc to avoid shell variable interpolation of $ in bcrypt hash
     const sql = `
-      DELETE FROM users WHERE email = '${TEST_USER.email}';
-      INSERT INTO users (id, email, password_hash, created_at, updated_at, email_verified, goal_calories)
-      VALUES (
-        '${TEST_USER.id}',
-        '${TEST_USER.email}',
-        '${TEST_USER.passwordHash}',
-        datetime('now'),
-        datetime('now'),
-        ${TEST_USER.emailVerified},
-        2000
-      );
-    `;
+DELETE FROM users WHERE email = '${TEST_USER.email}';
+INSERT INTO users (id, email, password_hash, created_at, updated_at, email_verified, goal_calories)
+VALUES (
+  '${TEST_USER.id}',
+  '${TEST_USER.email}',
+  '${TEST_USER.passwordHash}',
+  datetime('now'),
+  datetime('now'),
+  ${TEST_USER.emailVerified},
+  2000
+);`;
 
-    execSync(`sqlite3 "${dbFile}" "${sql}"`, { encoding: 'utf-8' });
+    // Use heredoc (<<'EOF') with single quotes to prevent shell variable expansion
+    execSync(`sqlite3 "${dbFile}" <<'EOF'
+${sql}
+EOF`, { encoding: 'utf-8', shell: '/bin/bash' });
 
     // Verify the user was created correctly
     const verifyCommand = `sqlite3 "${dbFile}" "SELECT email, email_verified FROM users WHERE email = '${TEST_USER.email}';"`;
