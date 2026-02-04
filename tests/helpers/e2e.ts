@@ -28,8 +28,12 @@ export async function loginAsTestUser(
   email: string = TEST_USERS.default.email,
   password: string = TEST_USERS.default.password
 ): Promise<void> {
-  // Navigate to login page
+  // Navigate to login page and wait for it to be ready
   await page.goto('/login');
+  await page.waitForLoadState('networkidle');
+
+  // Wait for the login form to be visible
+  await page.waitForSelector('input[name="email"], input[type="email"]', { timeout: 5000 });
 
   // Fill in credentials
   await page.getByLabel(/メールアドレス/i).fill(email);
@@ -37,7 +41,7 @@ export async function loginAsTestUser(
 
   // Click login button and wait for navigation
   await Promise.all([
-    page.waitForURL('/', { timeout: 10000 }),
+    page.waitForURL('/', { timeout: 15000 }),
     page.getByRole('button', { name: /ログイン/i }).click(),
   ]);
 

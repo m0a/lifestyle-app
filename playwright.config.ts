@@ -1,6 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const isCI = !!process.env.CI;
+const isCI = !!process.env['CI'];
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -10,10 +10,14 @@ export default defineConfig({
   workers: isCI ? 2 : undefined,
   reporter: isCI ? 'list' : 'html',
   timeout: 30000,
-  // Global setup disabled - test user is created via migration 0010_add_test_user.sql
-  // globalSetup: './tests/setup/global-setup.ts',
+  // Global setup ensures test user is properly configured before tests run
+  // In CI, we rely on migrations alone since they run on a fresh database
+  // Locally, global setup helps fix stale test user data
+  // Before running E2E tests locally, ensure migrations are applied:
+  //   pnpm --filter @lifestyle-app/backend db:migrate:local
+  globalSetup: isCI ? undefined : './tests/setup/e2e-global-setup.ts',
   use: {
-    baseURL: isCI ? 'http://localhost:4173' : 'http://localhost:5173',
+    baseURL: isCI ? 'http://localhost:4174' : 'http://localhost:5174',
     trace: 'on-first-retry',
   },
   projects: isCI
@@ -37,8 +41,10 @@ export default defineConfig({
     // Backend server (Wrangler)
     {
       command: 'pnpm dev:backend',
-      url: 'http://localhost:8787/health',
-      reuseExistingServer: !isCI, // Local: reuse, CI: start new
+      url: 'http://localhost:8787/api/health',
+      // CI: servers are started by CI workflow, so reuse existing
+      // Local: start if not running, reuse if already running
+      reuseExistingServer: true,
       timeout: 120000,
       env: {
         NODE_ENV: 'test',
@@ -47,8 +53,8 @@ export default defineConfig({
     // Frontend server (Vite)
     {
       command: isCI ? 'pnpm --filter @lifestyle-app/frontend preview' : 'pnpm dev',
-      url: isCI ? 'http://localhost:4173' : 'http://localhost:5173',
-      reuseExistingServer: !isCI,
+      url: isCI ? 'http://localhost:4174' : 'http://localhost:5174',
+      reuseExistingServer: true,
       timeout: 60000,
     },
   ],
