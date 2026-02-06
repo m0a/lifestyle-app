@@ -293,6 +293,62 @@ jobs:
           path: knip-report.json
           retention-days: 30
 
+  bundle-size-check:
+    name: Bundle Size Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check bundle size
+        run: bash packages/backend/scripts/check-bundle-size.sh
+
+      - name: Comment PR with results
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            try {
+              const report = JSON.parse(fs.readFileSync('bundle-size-report.json', 'utf8'));
+              const { gzip_kb, max_kb, percentage } = report;
+              const passed = percentage <= 100;
+              const warning = percentage > 80;
+
+              let status = passed ? '✅ **PASSED**' : '❌ **FAILED**: Exceeds 1MB limit';
+              if (passed && warning) status = '⚠️ **WARNING**: Over 80% of limit';
+
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `## 📦 Bundle Size Check\n\n| Metric | Value |\n|--------|-------|\n| Raw | ${report.raw_kb} KB |\n| Gzip | ${gzip_kb} KB |\n| Limit | ${max_kb} KB |\n| Usage | ${percentage}% |\n\n${status}\n\n_Cloudflare Workers Free plan limit: 1MB after gzip compression_`
+              });
+            } catch (error) {
+              console.error('Failed to post bundle size comment:', error);
+            }
+
+      - name: Upload bundle size report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-size-report
+          path: bundle-size-report.json
+          retention-days: 30
+
   build:
     name: Build
     runs-on: ubuntu-latest
