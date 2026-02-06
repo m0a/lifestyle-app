@@ -54,3 +54,6 @@ test-results/
 
 # Dead code detection
 knip-report.json
+
+# Bundle size check
+bundle-size-report.json

@@ -21,6 +21,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "pnpm -r typecheck",
+    "check:bundle-size": "bash packages/backend/scripts/check-bundle-size.sh",
     "find-deadcode": "knip",
     "find-deadcode:fix": "knip --fix",
     "find-deadcode:ci": "knip --reporter json --no-exit-code > knip-report.json && node scripts/check-deadcode-threshold.js",
