@@ -236,6 +236,8 @@ jobs:
   deadcode-check:
     name: Dead Code Analysis
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
 
@@ -296,6 +298,8 @@ jobs:
   bundle-size-check:
     name: Bundle Size Check
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
 
