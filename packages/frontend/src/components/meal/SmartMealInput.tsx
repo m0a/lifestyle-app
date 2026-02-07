@@ -274,6 +274,7 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
                 onClick={photoFlow.openSelector}
                 className="shrink-0 rounded-lg border border-gray-300 px-3 py-3 text-xl hover:bg-gray-50"
                 title="写真で分析"
+                aria-label="写真で分析"
               >
                 📷
               </button>
