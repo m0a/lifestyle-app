@@ -257,6 +257,7 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
             initialTotals={photoFlow.result.totals}
             photoUrl={photoFlow.result.photoKey ? getPhotoUrl(photoFlow.result.photoKey) ?? undefined : undefined}
             photoUrls={photoFlow.result.photoUrls}
+            photoInfos={photoFlow.result.photoInfos}
             onSave={handlePhotoFlowSave}
             onCancel={photoFlow.reset}
             onRefresh={onRefresh}

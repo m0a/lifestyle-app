@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import type {
   FoodItem,
   NutritionTotals,
@@ -11,6 +11,7 @@ import { AnalysisResult } from './AnalysisResult';
 import { MealChat } from './MealChat';
 import { validateNotFuture, toDateTimeLocal, getCurrentDateTimeLocal } from '../../lib/dateValidation';
 import { fromDatetimeLocal, toLocalISOString } from '../../lib/datetime';
+import type { PhotoInfo } from '../../hooks/usePhotoMealFlow';
 
 interface PhotoAnalysisReviewProps {
   mealId: string;
@@ -18,6 +19,7 @@ interface PhotoAnalysisReviewProps {
   initialTotals: NutritionTotals;
   photoUrl?: string;
   photoUrls?: string[];
+  photoInfos?: PhotoInfo[];
   onSave: (mealId: string, mealType: MealType, recordedAt?: string) => Promise<void>;
   onCancel: () => void;
   onRefresh?: () => void;
@@ -29,6 +31,7 @@ export function PhotoAnalysisReview({
   initialTotals,
   photoUrl,
   photoUrls,
+  photoInfos: initialPhotoInfos,
   onSave,
   onCancel,
   onRefresh,
@@ -36,6 +39,7 @@ export function PhotoAnalysisReview({
   // Local food items state (owned by this component)
   const [foodItems, setFoodItems] = useState<FoodItem[]>(initialFoodItems);
   const [totals, setTotals] = useState<NutritionTotals>(initialTotals);
+  const [photoInfos, setPhotoInfos] = useState<PhotoInfo[]>(initialPhotoInfos ?? []);
 
   const [mealType, setMealType] = useState<MealType>('lunch');
   const [recordedAt, setRecordedAt] = useState<string>(toLocalISOString(new Date()));
@@ -43,6 +47,15 @@ export function PhotoAnalysisReview({
   const [dateError, setDateError] = useState<string | null>(null);
   const [showChat, setShowChat] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [reanalyzingIds, setReanalyzingIds] = useState<Set<string>>(new Set());
+  const pollTimersRef = useRef<Map<string, ReturnType<typeof setInterval>>>(new Map());
+
+  // Cleanup poll timers on unmount
+  useEffect(() => {
+    return () => {
+      pollTimersRef.current.forEach(timer => clearInterval(timer));
+    };
+  }, []);
 
   // Food item edit callbacks (same pattern as text flow in SmartMealInput)
   const handleUpdateItem = useCallback(async (itemId: string, updates: Partial<FoodItem>) => {
@@ -102,6 +115,75 @@ export function PhotoAnalysisReview({
     }
   }, []);
 
+  // Refresh food items and totals from server
+  const refreshFromServer = useCallback(async () => {
+    try {
+      const [foodItemsResult, photosResult] = await Promise.all([
+        mealAnalysisApi.getFoodItems(mealId),
+        mealAnalysisApi.getMealPhotos(mealId),
+      ]);
+      setFoodItems(foodItemsResult.foodItems);
+      setTotals(photosResult.totals);
+      setPhotoInfos(photosResult.photos.map(p => ({
+        id: p.id,
+        photoUrl: p.photoUrl,
+        analysisStatus: p.analysisStatus as PhotoInfo['analysisStatus'],
+      })));
+    } catch (err) {
+      console.error('Failed to refresh from server:', err);
+    }
+  }, [mealId]);
+
+  // Re-analyze a failed photo
+  const handleReanalyze = useCallback(async (photoId: string) => {
+    try {
+      setReanalyzingIds(prev => new Set(prev).add(photoId));
+      setPhotoInfos(prev => prev.map(p =>
+        p.id === photoId ? { ...p, analysisStatus: 'analyzing' as const } : p
+      ));
+
+      await mealAnalysisApi.reanalyzePhoto(mealId, photoId);
+
+      // Poll for completion
+      const timer = setInterval(async () => {
+        try {
+          const status = await mealAnalysisApi.getPhotoStatus(mealId, photoId);
+          if (status.status === 'complete' || status.status === 'failed') {
+            clearInterval(timer);
+            pollTimersRef.current.delete(photoId);
+            setReanalyzingIds(prev => {
+              const next = new Set(prev);
+              next.delete(photoId);
+              return next;
+            });
+            // Refresh all data from server
+            await refreshFromServer();
+          }
+        } catch {
+          clearInterval(timer);
+          pollTimersRef.current.delete(photoId);
+          setReanalyzingIds(prev => {
+            const next = new Set(prev);
+            next.delete(photoId);
+            return next;
+          });
+        }
+      }, 3000);
+
+      pollTimersRef.current.set(photoId, timer);
+    } catch (err) {
+      console.error('Failed to re-analyze photo:', err);
+      setReanalyzingIds(prev => {
+        const next = new Set(prev);
+        next.delete(photoId);
+        return next;
+      });
+      setPhotoInfos(prev => prev.map(p =>
+        p.id === photoId ? { ...p, analysisStatus: 'failed' as const } : p
+      ));
+    }
+  }, [mealId, refreshFromServer]);
+
   const handleSave = useCallback(async () => {
     const validationError = validateNotFuture(recordedAt);
     if (validationError) {
@@ -120,11 +202,45 @@ export function PhotoAnalysisReview({
 
   // Pick photo URL for display
   const displayPhotoUrl = photoUrl || (photoUrls && photoUrls.length > 0 ? photoUrls[0] : undefined);
+  const hasMultiplePhotos = (photoInfos.length > 1) || (photoUrls && photoUrls.length > 1);
+  const hasFailedPhotos = photoInfos.some(p => p.analysisStatus === 'failed');
 
   return (
     <div className="space-y-4">
-      {/* Photo thumbnails for multiple photos */}
-      {photoUrls && photoUrls.length > 1 && (
+      {/* Photo thumbnails with analysis status */}
+      {hasMultiplePhotos && photoInfos.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto py-1">
+          {photoInfos.map((info) => (
+            <div key={info.id} className="relative shrink-0">
+              <img
+                src={info.photoUrl}
+                alt={`写真`}
+                className={`h-20 w-20 rounded-lg object-cover ${
+                  info.analysisStatus === 'failed' ? 'opacity-60 ring-2 ring-red-400' :
+                  info.analysisStatus === 'analyzing' ? 'opacity-60 ring-2 ring-blue-400' :
+                  ''
+                }`}
+              />
+              {info.analysisStatus === 'failed' && !reanalyzingIds.has(info.id) && (
+                <button
+                  onClick={() => handleReanalyze(info.id)}
+                  className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/40 text-xs font-medium text-white hover:bg-black/50"
+                  title="再分析"
+                >
+                  再分析
+                </button>
+              )}
+              {(info.analysisStatus === 'analyzing' || reanalyzingIds.has(info.id)) && (
+                <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/40">
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+      {/* Fallback: show photoUrls when no photoInfos */}
+      {hasMultiplePhotos && photoInfos.length === 0 && photoUrls && photoUrls.length > 1 && (
         <div className="flex gap-2 overflow-x-auto py-1">
           {photoUrls.map((url, index) => (
             <img
@@ -137,9 +253,28 @@ export function PhotoAnalysisReview({
         </div>
       )}
 
+      {/* Re-analyze all failed button */}
+      {hasFailedPhotos && !reanalyzingIds.size && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+          <p className="text-sm text-amber-800">
+            分析に失敗した写真があります。
+            <button
+              onClick={() => {
+                photoInfos
+                  .filter(p => p.analysisStatus === 'failed')
+                  .forEach(p => handleReanalyze(p.id));
+              }}
+              className="ml-1 font-medium text-amber-700 underline hover:text-amber-900"
+            >
+              すべて再分析
+            </button>
+          </p>
+        </div>
+      )}
+
       {/* Analysis result */}
       <AnalysisResult
-        photoUrl={photoUrls && photoUrls.length > 1 ? undefined : displayPhotoUrl}
+        photoUrl={hasMultiplePhotos ? undefined : displayPhotoUrl}
         foodItems={foodItems}
         totals={totals}
         onUpdateItem={handleUpdateItem}
@@ -214,10 +349,10 @@ export function PhotoAnalysisReview({
         </button>
         <button
           onClick={handleSave}
-          disabled={isSaving}
+          disabled={isSaving || reanalyzingIds.size > 0}
           className="flex-1 rounded-lg bg-green-500 px-4 py-2 font-medium text-white hover:bg-green-600 disabled:opacity-50"
         >
-          {isSaving ? '保存中...' : '記録する'}
+          {isSaving ? '保存中...' : reanalyzingIds.size > 0 ? '再分析中...' : '記録する'}
         </button>
       </div>
     </div>

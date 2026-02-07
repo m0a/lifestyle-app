@@ -526,7 +526,10 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
       // Generate presigned URL
       const photoUrl = await photoStorage.getPresignedUrl(photoKey);
 
-      return c.json({ photo: { ...photo, photoUrl } }, 201);
+      return c.json({
+        photo: { ...photo, photoUrl },
+        meal: { calories: totalCalories, totalProtein, totalFat, totalCarbs },
+      }, 201);
     } catch (error) {
       if (error instanceof Error && error.message.includes('Maximum 10 photos')) {
         return c.json({ message: error.message, code: 'PHOTO_LIMIT_EXCEEDED' }, 400);

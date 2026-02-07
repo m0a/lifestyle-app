@@ -19,12 +19,19 @@ export interface AnalysisProgress {
   statuses: Array<'pending' | 'analyzing' | 'done' | 'error'>;
 }
 
+export interface PhotoInfo {
+  id: string;
+  photoUrl: string;
+  analysisStatus: 'pending' | 'analyzing' | 'complete' | 'failed';
+}
+
 export interface PhotoMealFlowResult {
   mealId: string;
   foodItems: FoodItem[];
   totals: NutritionTotals;
   photoKey: string | null;
   photoUrls: string[];
+  photoInfos: PhotoInfo[];
 }
 
 export interface UsePhotoMealFlowReturn {
@@ -205,22 +212,42 @@ export function usePhotoMealFlow(): UsePhotoMealFlowReturn {
         setAnalysisProgress({ current: i + 1, total: photos.length, statuses: [...statuses] });
       }
 
-      // Refresh food items from server to get complete list
+      // Fetch authoritative photo list and food items from server
+      let photoInfos: PhotoInfo[] = [];
       try {
-        const foodItemsResult = await mealAnalysisApi.getFoodItems(firstResult.mealId);
+        const [foodItemsResult, photosResult] = await Promise.all([
+          mealAnalysisApi.getFoodItems(firstResult.mealId),
+          mealAnalysisApi.getMealPhotos(firstResult.mealId),
+        ]);
         currentFoodItems = foodItemsResult.foodItems;
+        currentTotals = photosResult.totals;
+        photoInfos = photosResult.photos.map(p => ({
+          id: p.id,
+          photoUrl: p.photoUrl,
+          analysisStatus: p.analysisStatus as PhotoInfo['analysisStatus'],
+        }));
+        // Use server photo URLs (presigned) instead of the ones collected during upload
+        const serverPhotoUrls = photoInfos.map(p => p.photoUrl).filter(Boolean);
+        if (serverPhotoUrls.length > 0) {
+          allPhotoUrls.length = 0;
+          allPhotoUrls.push(...serverPhotoUrls);
+        }
       } catch {
-        // Use the first photo's food items as fallback
+        // Use food items/URLs collected during upload as fallback
       }
 
-      // Provide user feedback for partial analysis failures
-      const failedCount = statuses.filter(s => s === 'error').length;
-      const successCount = statuses.filter(s => s === 'done').length;
-      if (failedCount > 0 && successCount === 0) {
-        // All additional photos failed (1st photo succeeded since we're here)
-        setError('追加写真の分析にすべて失敗しました。最初の写真の結果のみ表示します。');
-      } else if (failedCount > 0) {
-        setError(`${successCount}枚の分析に成功、${failedCount}枚は失敗しました。成功した写真の結果を表示します。`);
+      // Check for failed analyses (server-side AI failures)
+      const serverFailedCount = photoInfos.filter(p => p.analysisStatus === 'failed').length;
+      const uploadFailedCount = statuses.filter(s => s === 'error').length;
+      const totalFailedCount = serverFailedCount + uploadFailedCount;
+
+      if (totalFailedCount > 0) {
+        const totalSuccess = photoInfos.filter(p => p.analysisStatus === 'complete').length;
+        if (totalSuccess === 0) {
+          setError('写真の分析にすべて失敗しました。再分析をお試しください。');
+        } else {
+          setError(`${totalFailedCount}枚の分析に失敗しました。失敗した写真は再分析できます。`);
+        }
       }
 
       setResult({
@@ -229,6 +256,7 @@ export function usePhotoMealFlow(): UsePhotoMealFlowReturn {
         totals: currentTotals,
         photoKey: firstResult.photoKey,
         photoUrls: allPhotoUrls,
+        photoInfos,
       });
 
       setFlowState('reviewing');
