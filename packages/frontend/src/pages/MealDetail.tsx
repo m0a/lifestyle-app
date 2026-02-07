@@ -66,23 +66,21 @@ export default function MealDetailPage() {
           setPhotos([]);
         }
 
-        // Load food items if this is an AI-analyzed meal
-        if (mealResponse.meal.analysisSource === 'ai') {
-          try {
-            const { foodItems: items } = await mealAnalysisApi.getFoodItems(mealId);
-            setFoodItems(items);
-          } catch {
-            // Food items might not exist for older records
-            setFoodItems([]);
-          }
+        // Load food items
+        try {
+          const { foodItems: items } = await mealAnalysisApi.getFoodItems(mealId);
+          setFoodItems(items);
+        } catch {
+          // Food items might not exist for older records
+          setFoodItems([]);
+        }
 
-          // Load chat history
-          try {
-            const { messages } = await mealAnalysisApi.getChatHistory(mealId);
-            setChatHistory(messages);
-          } catch {
-            setChatHistory([]);
-          }
+        // Load chat history
+        try {
+          const { messages } = await mealAnalysisApi.getChatHistory(mealId);
+          setChatHistory(messages);
+        } catch {
+          setChatHistory([]);
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'データの読み込みに失敗しました');
@@ -109,9 +107,11 @@ export default function MealDetailPage() {
         setPhotos([]);
       }
 
-      if (mealResponse.meal.analysisSource === 'ai') {
+      try {
         const { foodItems: items } = await mealAnalysisApi.getFoodItems(mealId);
         setFoodItems(items);
+      } catch {
+        setFoodItems([]);
       }
     } catch (err) {
       console.error('Failed to reload meal data:', err);

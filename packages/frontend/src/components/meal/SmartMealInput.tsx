@@ -190,10 +190,24 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
   }, []);
 
   // Fallback to manual input (T017)
-  const handleManualFallback = useCallback(() => {
+  const handleManualFallback = useCallback(async () => {
     setError(null);
-    setInputState('idle');
-  }, []);
+    setInputState('analyzing');
+
+    try {
+      const { mealId: newMealId } = await mealAnalysisApi.createEmptyMeal({
+        content: text.trim() || undefined,
+        recordedAt: toLocalISOString(new Date()),
+      });
+      setMealId(newMealId);
+      setFoodItems([]);
+      setTotals({ calories: 0, protein: 0, fat: 0, carbs: 0 });
+      setInputState('result');
+    } catch {
+      setError('手動入力の作成に失敗しました');
+      setInputState('error');
+    }
+  }, [text]);
 
   // Handle date/time change (011-meal-datetime)
   const handleDateTimeChange = useCallback((newDateTime: string) => {

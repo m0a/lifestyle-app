@@ -245,6 +245,8 @@ mealAnalysis.post(
 // Schema for create-empty endpoint
 const createEmptySchema = z.object({
   recordedAt: z.string().regex(/^.+([+-]\d{2}:\d{2}|Z)$/).optional(),
+  mealType: z.enum(['breakfast', 'lunch', 'dinner', 'snack']).optional(),
+  content: z.string().optional(),
 });
 
 // POST /api/meals/create-empty - Create empty meal for manual input
@@ -261,8 +263,8 @@ mealAnalysis.post('/create-empty', zValidator('json', createEmptySchema), async 
   await db.insert(mealRecords).values({
     id: mealId,
     userId,
-    mealType: 'lunch', // Default, will be set when saving
-    content: '',
+    mealType: data.mealType || 'lunch',
+    content: data.content || '',
     calories: 0,
     totalProtein: 0,
     totalFat: 0,

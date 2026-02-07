@@ -192,8 +192,8 @@ export const mealAnalysisApi = {
   },
 
   // Create empty meal for manual input
-  async createEmptyMeal(): Promise<{ mealId: string }> {
-    return api.post('/api/meals/create-empty');
+  async createEmptyMeal(options?: { mealType?: string; content?: string; recordedAt?: string }): Promise<{ mealId: string }> {
+    return api.post('/api/meals/create-empty', options || {});
   },
 
   // Get food items for a meal
