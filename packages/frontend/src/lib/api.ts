@@ -381,6 +381,33 @@ export const mealAnalysisApi = {
     return response.json();
   },
 
+  // Get meal photos with analysis status (GET /api/meals/:id/photos)
+  async getMealPhotos(mealId: string): Promise<{
+    photos: Array<{
+      id: string;
+      photoKey: string;
+      analysisStatus: string;
+      photoUrl: string;
+    }>;
+    totals: NutritionTotals;
+  }> {
+    return api.get(`/api/meals/${mealId}/photos`);
+  },
+
+  // Re-analyze a photo (POST /api/meals/:id/photos/:photoId/analyze)
+  async reanalyzePhoto(mealId: string, photoId: string): Promise<{ success: boolean; photoId: string; status: string }> {
+    return api.post(`/api/meals/${mealId}/photos/${photoId}/analyze`);
+  },
+
+  // Get photo analysis status (GET /api/meals/:id/photos/:photoId/status)
+  async getPhotoStatus(mealId: string, photoId: string): Promise<{
+    photoId: string;
+    status: string;
+    foodItems: Array<{ name: string; calories: number; protein: number; fat: number; carbs: number }>;
+  }> {
+    return api.get(`/api/meals/${mealId}/photos/${photoId}/status`);
+  },
+
   // Create meal with single photo (for first photo in multi-photo mode)
   async createMealWithPhoto(data: {
     mealType: MealType;
