@@ -7,14 +7,14 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 /**
- * E2E tests for Multi-Photo Meal Creation (User Story 4 - T054)
+ * E2E tests for Unified Photo Meal Flow (Issue #82)
  *
- * Tests the complete flow of creating a meal with multiple photos:
- * - Selecting multiple photos before saving
- * - Displaying photo previews
- * - Removing photos from preview list
- * - Sequential upload with progress indicator
- * - Saving meal with all photos
+ * Tests the unified photo selection → AI analysis → review → save flow:
+ * - Opening photo selector modal via 📷 button
+ * - Selecting multiple photos with preview
+ * - Removing photos from preview
+ * - Starting analysis
+ * - Canceling the flow
  *
  * Prerequisites:
  * - Backend running with AI API key
@@ -23,7 +23,7 @@ const __dirname = path.dirname(__filename);
  * - Test image files in tests/fixtures/
  */
 
-test.describe('Multi-Photo Meal Creation', () => {
+test.describe('Unified Photo Meal Flow', () => {
   test.describe('Unauthenticated User', () => {
     test('should redirect to login when accessing meals page', async ({ page }) => {
       await page.goto('/meals');
@@ -31,43 +31,38 @@ test.describe('Multi-Photo Meal Creation', () => {
     });
   });
 
-  test.describe('Authenticated User - Multi-Photo Mode', () => {
+  test.describe('Authenticated User - Photo Selector', () => {
     test.beforeEach(async ({ page }) => {
-      // Ensure test user exists
       await ensureTestUserExists(page);
-
-      // Login as test user
       await loginAsTestUser(page);
-
-      // Navigate to meals page
       await page.goto('/meals');
-
-      // Wait for page to load
       await page.waitForLoadState('networkidle');
     });
 
-    test('should show multi-photo button', async ({ page }) => {
-      // Verify the "複数写真で記録する" button is visible
-      const multiPhotoButton = page.getByRole('button', { name: /複数写真|📸/ });
-      await expect(multiPhotoButton).toBeVisible();
+    test('should show photo button', async ({ page }) => {
+      // The unified 📷 button should be visible
+      const photoButton = page.getByRole('button', { name: /写真で分析/ });
+      await expect(photoButton).toBeVisible();
     });
 
-    test('should enter multi-photo mode when button clicked', async ({ page }) => {
-      // Click multi-photo button
-      await page.getByRole('button', { name: /複数写真|📸/ }).click();
+    test('should open photo selector modal when photo button clicked', async ({ page }) => {
+      // Click the 📷 button
+      await page.getByRole('button', { name: /写真で分析/ }).click();
 
-      // Should show multi-photo UI
-      await expect(page.getByText(/複数写真で記録/)).toBeVisible();
-      await expect(page.getByText(/写真を選択.*最大10枚/)).toBeVisible();
+      // Should show photo selector modal
+      await expect(page.getByText('食事の写真を追加')).toBeVisible();
+      await expect(page.getByRole('button', { name: /カメラで撮影/ })).toBeVisible();
+      await expect(page.getByRole('button', { name: /ライブラリ/ })).toBeVisible();
 
-      // Should show cancel button
+      // Should show cancel and analysis buttons
       await expect(page.getByRole('button', { name: /キャンセル/ })).toBeVisible();
+      await expect(page.getByRole('button', { name: /分析へ進む/ })).toBeVisible();
     });
 
-    test('should allow selecting multiple photos', async ({ page }) => {
-      await page.getByRole('button', { name: /複数写真|📸/ }).click();
+    test('should allow selecting multiple photos in modal', async ({ page }) => {
+      await page.getByRole('button', { name: /写真で分析/ }).click();
 
-      // Locate file input and select 3 test images
+      // Find the file input (multiple) in the modal
       const fileInput = page.locator('input[type="file"][multiple]');
       await fileInput.setInputFiles([
         path.join(__dirname, '../fixtures/meal-photo-1.jpg'),
@@ -76,12 +71,15 @@ test.describe('Multi-Photo Meal Creation', () => {
       ]);
 
       // Should show 3 photo previews
-      const photoPreviews = page.locator('[data-testid="photo-preview"]');
-      await expect(photoPreviews).toHaveCount(3);
+      const previewImages = page.locator('.aspect-square img');
+      await expect(previewImages).toHaveCount(3);
+
+      // Should show photo count
+      await expect(page.getByText(/3\/10 枚選択中/)).toBeVisible();
     });
 
     test('should display photo preview thumbnails', async ({ page }) => {
-      await page.getByRole('button', { name: /複数写真|📸/ }).click();
+      await page.getByRole('button', { name: /写真で分析/ }).click();
 
       const fileInput = page.locator('input[type="file"][multiple]');
       await fileInput.setInputFiles([
@@ -89,18 +87,17 @@ test.describe('Multi-Photo Meal Creation', () => {
         path.join(__dirname, '../fixtures/meal-photo-2.jpg'),
       ]);
 
-      // Each preview should have an image
-      const previewImages = page.locator('[data-testid="photo-preview"] img');
+      // Each preview should have a visible image
+      const previewImages = page.locator('.aspect-square img');
       await expect(previewImages).toHaveCount(2);
 
-      // Each preview should be visible
       for (let i = 0; i < 2; i++) {
         await expect(previewImages.nth(i)).toBeVisible();
       }
     });
 
     test('should show remove button for each photo', async ({ page }) => {
-      await page.getByRole('button', { name: /複数写真|📸/ }).click();
+      await page.getByRole('button', { name: /写真で分析/ }).click();
 
       const fileInput = page.locator('input[type="file"][multiple]');
       await fileInput.setInputFiles([
@@ -108,13 +105,13 @@ test.describe('Multi-Photo Meal Creation', () => {
         path.join(__dirname, '../fixtures/meal-photo-2.jpg'),
       ]);
 
-      // Each photo should have a remove button
-      const removeButtons = page.locator('[data-testid="remove-photo-button"]');
+      // Each photo should have a remove button (✕)
+      const removeButtons = page.locator('.aspect-square button');
       await expect(removeButtons).toHaveCount(2);
     });
 
     test('should allow removing photos from preview', async ({ page }) => {
-      await page.getByRole('button', { name: /複数写真|📸/ }).click();
+      await page.getByRole('button', { name: /写真で分析/ }).click();
 
       const fileInput = page.locator('input[type="file"][multiple]');
       await fileInput.setInputFiles([
@@ -124,162 +121,43 @@ test.describe('Multi-Photo Meal Creation', () => {
       ]);
 
       // Should have 3 photos
-      let photoPreviews = page.locator('[data-testid="photo-preview"]');
-      await expect(photoPreviews).toHaveCount(3);
+      let previewImages = page.locator('.aspect-square img');
+      await expect(previewImages).toHaveCount(3);
 
       // Click remove on first photo
-      await page.locator('[data-testid="remove-photo-button"]').first().click();
+      await page.locator('.aspect-square button').first().click();
 
       // Should now have 2 photos
-      photoPreviews = page.locator('[data-testid="photo-preview"]');
-      await expect(photoPreviews).toHaveCount(2);
+      previewImages = page.locator('.aspect-square img');
+      await expect(previewImages).toHaveCount(2);
     });
 
-    test('should show meal type and datetime selectors', async ({ page }) => {
-      await page.getByRole('button', { name: /複数写真|📸/ }).click();
+    test('should disable analysis button when no photos selected', async ({ page }) => {
+      await page.getByRole('button', { name: /写真で分析/ }).click();
 
-      // Select some photos first (selectors only appear when photos.length > 0)
-      const fileInput = page.locator('input[type="file"][multiple]');
-      await fileInput.setInputFiles([
-        path.join(__dirname, '../fixtures/meal-photo-1.jpg'),
-      ]);
-
-      // Wait for photo preview to appear
-      await expect(page.locator('[data-testid="photo-preview"]')).toHaveCount(1);
-
-      // Meal type selector should be visible (first select without an id is the one in multi-photo mode)
-      const mealTypeSelect = page.locator('select').nth(0);
-      await expect(mealTypeSelect).toBeVisible();
-      await expect(mealTypeSelect).toContainText('朝食');
-
-      // Datetime selector should be visible
-      await expect(page.locator('input[type="datetime-local"]')).toBeVisible();
+      // Analysis button should be disabled
+      const analysisButton = page.getByRole('button', { name: /分析へ進む/ });
+      await expect(analysisButton).toBeDisabled();
     });
 
-    test('should disable save button when no photos selected', async ({ page }) => {
-      await page.getByRole('button', { name: /複数写真|📸/ }).click();
-
-      // Save button should be disabled (button doesn't exist when no photos)
-      const saveButton = page.getByRole('button', { name: /保存/ });
-      await expect(saveButton).toHaveCount(0);
-    });
-
-    test('should enable save button when photos selected', async ({ page }) => {
-      await page.getByRole('button', { name: /複数写真|📸/ }).click();
+    test('should enable analysis button when photos selected', async ({ page }) => {
+      await page.getByRole('button', { name: /写真で分析/ }).click();
 
       const fileInput = page.locator('input[type="file"][multiple]');
       await fileInput.setInputFiles([
         path.join(__dirname, '../fixtures/meal-photo-1.jpg'),
       ]);
 
-      // Save button should be visible and enabled
-      const saveButton = page.getByRole('button', { name: /保存/ });
-      await expect(saveButton).toBeVisible();
-      await expect(saveButton).toBeEnabled();
+      // Analysis button should be enabled
+      const analysisButton = page.getByRole('button', { name: /分析へ進む/ });
+      await expect(analysisButton).toBeEnabled();
     });
 
-    test.skip('should show upload progress during save', async ({ page }) => {
-      // Note: This test is skipped because upload progress is too fast to catch in local development
-      // Upload progress modal appears briefly but completes before test can verify it
-      // In production with real AI API and network latency, progress would be visible
+    test('should allow canceling photo selection', async ({ page }) => {
+      await page.getByRole('button', { name: /写真で分析/ }).click();
 
-      await page.getByRole('button', { name: /複数写真|📸/ }).click();
-
-      const fileInput = page.locator('input[type="file"][multiple]');
-      await fileInput.setInputFiles([
-        path.join(__dirname, '../fixtures/meal-photo-1.jpg'),
-        path.join(__dirname, '../fixtures/meal-photo-2.jpg'),
-      ]);
-
-      // Click save
-      await page.getByRole('button', { name: /保存|記録/ }).click();
-
-      // Should show upload progress modal (may be too fast in local env)
-      await expect(page.getByText(/アップロード中|写真をアップロード中/)).toBeVisible({ timeout: 1000 });
-
-      // Should show progress counter (e.g., "1/2 枚完了")
-      await expect(page.getByText(/\d+\/\d+.*枚/)).toBeVisible();
-
-      // Should show progress bar
-      await expect(page.locator('[role="progressbar"], .bg-blue-600')).toBeVisible();
-    });
-
-    test('should block interactions during upload', async ({ page }) => {
-      await page.getByRole('button', { name: /複数写真|📸/ }).click();
-
-      const fileInput = page.locator('input[type="file"][multiple]');
-      await fileInput.setInputFiles([
-        path.join(__dirname, '../fixtures/meal-photo-1.jpg'),
-        path.join(__dirname, '../fixtures/meal-photo-2.jpg'),
-      ]);
-
-      await page.getByRole('button', { name: /保存|記録/ }).click();
-
-      // Modal overlay should be visible
-      const overlay = page.locator('.fixed.inset-0.z-50');
-      await expect(overlay).toBeVisible({ timeout: 1000 });
-
-      // Background should not be clickable (overlay blocks it)
-      // Use .first() to avoid strict mode violation on mobile (desktop nav + mobile bottom nav)
-      const isClickable = await page.getByRole('navigation').first().isEnabled();
-      expect(isClickable).toBeTruthy(); // Navigation exists but overlay blocks clicks
-    });
-
-    test('should redirect to meals list after successful save', async ({ page }) => {
-      await page.getByRole('button', { name: /複数写真|📸/ }).click();
-
-      const fileInput = page.locator('input[type="file"][multiple]');
-      await fileInput.setInputFiles([
-        path.join(__dirname, '../fixtures/meal-photo-1.jpg'),
-      ]);
-
-      await page.getByRole('button', { name: /保存|記録/ }).click();
-
-      // Wait for upload to complete (may take 10-15 seconds per photo)
-      await page.waitForURL('/meals', { timeout: 30000 });
-
-      // Should be back at meals list
-      await expect(page).toHaveURL('/meals');
-    });
-
-    test.skip('should show newly created meal with photos in list', async ({ page }) => {
-      // Note: This test is skipped because it requires AI API key to process photos
-      // Without AI API, photo upload will fail with 500 error
-
-      await page.getByRole('button', { name: /複数写真|📸/ }).click();
-
-      const fileInput = page.locator('input[type="file"][multiple]');
-      await fileInput.setInputFiles([
-        path.join(__dirname, '../fixtures/meal-photo-1.jpg'),
-        path.join(__dirname, '../fixtures/meal-photo-2.jpg'),
-      ]);
-
-      // Wait for photos to be previewed
-      await expect(page.locator('[data-testid="photo-preview"]')).toHaveCount(2);
-
-      // Set meal type using the first select (multi-photo mode select)
-      await page.locator('select').nth(0).selectOption('lunch');
-
-      await page.getByRole('button', { name: /保存/ }).click();
-
-      // Wait for redirect
-      await page.waitForURL('/meals', { timeout: 30000 });
-
-      // First meal in list should show photos in carousel
-      const firstMeal = page.locator('[data-testid="meal-item"]').first();
-      await expect(firstMeal).toBeVisible();
-
-      // Should show photo carousel with 2 photos
-      const carousel = firstMeal.locator('[data-testid="photo-carousel"]');
-      await expect(carousel).toBeVisible();
-
-      // Check that carousel contains images
-      const carouselImages = carousel.locator('img');
-      await expect(carouselImages).toHaveCount(2);
-    });
-
-    test('should allow canceling multi-photo mode', async ({ page }) => {
-      await page.getByRole('button', { name: /複数写真|📸/ }).click();
+      // Modal should be visible
+      await expect(page.getByText('食事の写真を追加')).toBeVisible();
 
       // Select some photos
       const fileInput = page.locator('input[type="file"][multiple]');
@@ -287,25 +165,20 @@ test.describe('Multi-Photo Meal Creation', () => {
         path.join(__dirname, '../fixtures/meal-photo-1.jpg'),
       ]);
 
-      // Verify we're in multi-photo mode by checking for heading
-      await expect(page.locator('h3', { hasText: '複数写真で記録' })).toBeVisible();
-
       // Click cancel
-      await page.getByRole('button', { name: /キャンセル/ }).click();
+      await page.getByRole('button', { name: /キャンセル/ }).first().click();
 
-      // Should exit multi-photo mode (heading should not be visible)
-      await expect(page.locator('h3', { hasText: '複数写真で記録' })).not.toBeVisible();
-
-      // Should show normal input mode (button should be visible)
-      await expect(page.getByRole('button', { name: /複数写真|📸/ })).toBeVisible();
+      // Modal should close, back to normal input
+      await expect(page.getByText('食事の写真を追加')).not.toBeVisible();
+      await expect(page.getByRole('button', { name: /写真で分析/ })).toBeVisible();
     });
 
     test('should handle maximum 10 photos limit', async ({ page }) => {
-      await page.getByRole('button', { name: /複数写真|📸/ }).click();
+      await page.getByRole('button', { name: /写真で分析/ }).click();
 
       const fileInput = page.locator('input[type="file"][multiple]');
 
-      // Test 1: Successfully add 10 photos
+      // Add 10 photos
       const files10 = Array.from({ length: 10 }, (_, i) =>
         path.join(__dirname, `../fixtures/meal-photo-${(i % 3) + 1}.jpg`)
       );
@@ -313,49 +186,45 @@ test.describe('Multi-Photo Meal Creation', () => {
       await fileInput.setInputFiles(files10);
 
       // Should show 10 photos
-      const photoPreviews = page.locator('[data-testid="photo-preview"]');
-      await expect(photoPreviews).toHaveCount(10);
+      const previewImages = page.locator('.aspect-square img');
+      await expect(previewImages).toHaveCount(10);
 
-      // Should show limit reached message
-      await expect(page.getByText(/最大10枚|10枚まで/)).toBeVisible();
+      // Should show 10/10 count
+      await expect(page.getByText(/10\/10 枚選択中/)).toBeVisible();
+
+      // Camera/library buttons should be hidden (at max)
+      await expect(page.getByRole('button', { name: /カメラで撮影/ })).not.toBeVisible();
     });
 
-    test('should show error message on upload failure', async ({ page }) => {
-      // TODO: Mock backend to simulate upload failure
-      await page.getByRole('button', { name: /複数写真|📸/ }).click();
+    test('should not show old multi-photo button', async ({ page }) => {
+      // The old "📸 複数写真で記録する" link should NOT exist
+      const oldButton = page.getByText(/複数写真で記録する/);
+      await expect(oldButton).not.toBeVisible();
+    });
 
-      const fileInput = page.locator('input[type="file"][multiple]');
-      await fileInput.setInputFiles([
-        path.join(__dirname, '../fixtures/meal-photo-1.jpg'),
-      ]);
+    test('should keep text input working alongside photo button', async ({ page }) => {
+      // Text input should still be visible and functional
+      const textInput = page.getByPlaceholder(/食事内容を入力/);
+      await expect(textInput).toBeVisible();
 
-      // Mock network failure
-      await page.route('**/api/meals', (route) => route.abort('failed'));
-
-      await page.getByRole('button', { name: /保存|記録/ }).click();
-
-      // Should show error message
-      await expect(page.getByText(/アップロード.*失敗|エラー/)).toBeVisible({ timeout: 5000 });
+      const submitButton = page.getByRole('button', { name: /記録推論/ });
+      await expect(submitButton).toBeVisible();
     });
   });
 
   test.describe('Photo Detail View', () => {
     test.beforeEach(async ({ page }) => {
-      // Ensure test user exists and login
       await ensureTestUserExists(page);
       await loginAsTestUser(page);
     });
 
     test.skip('should show all photos in carousel on detail page', async ({ page }) => {
       // TODO: Create a meal with multiple photos first, then test detail view
-      // Navigate to a meal created with multiple photos
-      await page.goto('/meals/[meal-id]'); // TODO: Use actual meal ID
+      await page.goto('/meals/[meal-id]');
 
-      // Should show photo carousel
       const carousel = page.locator('[data-testid="photo-carousel"]');
       await expect(carousel).toBeVisible();
 
-      // Should be able to swipe between photos
       const photos = carousel.locator('img');
       await expect(photos).toHaveCount.greaterThan(1);
     });
