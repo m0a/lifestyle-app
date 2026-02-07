@@ -33,7 +33,7 @@ export class MealPhotoService {
         mealId: data.mealId,
         photoKey: data.photoKey,
         displayOrder,
-        analysisStatus: 'pending',
+        analysisStatus: 'analyzing',
         createdAt: new Date().toISOString(),
       })
       .returning();
