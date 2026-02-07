@@ -180,36 +180,30 @@ export function usePhotoMealFlow(): UsePhotoMealFlowReturn {
         if (url) allPhotoUrls.push(url);
       }
 
-      // 2. Add remaining photos one by one
-      for (let i = 1; i < photos.length; i++) {
-        const photo = photos[i];
-        if (!photo) continue;
+      // 2. Add remaining photos in parallel
+      if (photos.length > 1) {
+        const remainingPhotos = photos.slice(1);
+        remainingPhotos.forEach((_, i) => { statuses[i + 1] = 'analyzing'; });
+        setAnalysisProgress({ current: 1, total: photos.length, statuses: [...statuses] });
 
-        statuses[i] = 'analyzing';
-        setAnalysisProgress({ current: i, total: photos.length, statuses: [...statuses] });
-
-        try {
-          const addResult = await mealAnalysisApi.addPhotoToMeal(firstResult.mealId, photo);
-          statuses[i] = 'done';
-
-          // Update totals from addPhotoToMeal response
-          currentTotals = {
-            calories: addResult.meal.calories,
-            protein: addResult.meal.totalProtein,
-            fat: addResult.meal.totalFat,
-            carbs: addResult.meal.totalCarbs,
-          };
-
-          if (addResult.photo.photoUrl) {
-            allPhotoUrls.push(addResult.photo.photoUrl);
+        let doneCount = 1; // first photo already done
+        const promises = remainingPhotos.map(async (photo, idx) => {
+          const i = idx + 1;
+          try {
+            const addResult = await mealAnalysisApi.addPhotoToMeal(firstResult.mealId, photo);
+            statuses[i] = 'done';
+            if (addResult.photo.photoUrl) {
+              allPhotoUrls.push(addResult.photo.photoUrl);
+            }
+          } catch (err) {
+            statuses[i] = 'error';
+            console.error(`Failed to analyze photo ${i + 1}:`, err);
           }
-        } catch (err) {
-          statuses[i] = 'error';
-          // Continue with partial success
-          console.error(`Failed to analyze photo ${i + 1}:`, err);
-        }
+          doneCount++;
+          setAnalysisProgress({ current: doneCount, total: photos.length, statuses: [...statuses] });
+        });
 
-        setAnalysisProgress({ current: i + 1, total: photos.length, statuses: [...statuses] });
+        await Promise.all(promises);
       }
 
       // Fetch authoritative photo list and food items from server
