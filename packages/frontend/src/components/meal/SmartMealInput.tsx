@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import type {
   FoodItem,
   NutritionTotals,
@@ -8,13 +8,15 @@ import type {
 } from '@lifestyle-app/shared';
 import { MEAL_TYPE_LABELS } from '@lifestyle-app/shared';
 import { mealAnalysisApi, getPhotoUrl } from '../../lib/api';
-import { resizeImages } from '../../lib/imageResize';
 import { AnalysisResult } from './AnalysisResult';
-import { PhotoCapture } from './PhotoCapture';
+import { UnifiedPhotoSelector } from './UnifiedPhotoSelector';
+import { PhotoAnalysisReview } from './PhotoAnalysisReview';
 import { PhotoUploadErrorBoundary } from './PhotoUploadErrorBoundary';
 import { MealChat } from './MealChat';
 import { validateNotFuture, toDateTimeLocal, getCurrentDateTimeLocal } from '../../lib/dateValidation';
 import { toLocalISOString, fromDatetimeLocal } from '../../lib/datetime';
+import { usePhotoMealFlow } from '../../hooks/usePhotoMealFlow';
+import type { AnalysisProgress } from '../../hooks/usePhotoMealFlow';
 
 interface SmartMealInputProps {
   onSave: (mealId: string, mealType: MealType, recordedAt?: string) => Promise<void>;
@@ -28,43 +30,24 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
   const [text, setText] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  // Analysis result state
+  // Analysis result state (for text flow)
   const [mealId, setMealId] = useState<string | null>(null);
   const [foodItems, setFoodItems] = useState<FoodItem[]>([]);
   const [totals, setTotals] = useState<NutritionTotals | null>(null);
   const [mealType, setMealType] = useState<MealType>('lunch');
   const [mealTypeSource, setMealTypeSource] = useState<'text' | 'time'>('time');
 
-  // Photo and chat state (T024-T028)
-  const [showPhotoCapture, setShowPhotoCapture] = useState(false);
+  // Chat state (for text flow result)
   const [showChat, setShowChat] = useState(false);
   const [photoKey, setPhotoKey] = useState<string | null>(null);
 
-  // Multi-photo mode state (T058-T061 - User Story 4)
-  const [multiPhotoMode, setMultiPhotoMode] = useState(false);
-  const [photos, setPhotos] = useState<File[]>([]);
-  const [photoPreviewUrls, setPhotoPreviewUrls] = useState<string[]>([]);
-  const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number } | null>(null);
-
-  // Date/time state (011-meal-datetime)
+  // Date/time state (011-meal-datetime) - for text flow
   const [recordedAt, setRecordedAt] = useState<string>(toLocalISOString(new Date()));
   const [dateTimeSource, setDateTimeSource] = useState<DateTimeSource>('now');
   const [dateError, setDateError] = useState<string | null>(null);
 
-  // Disable body scroll during upload
-  useEffect(() => {
-    if (uploadProgress) {
-      // Save original overflow value
-      const originalOverflow = document.body.style.overflow;
-      // Disable scroll
-      document.body.style.overflow = 'hidden';
-
-      // Restore on cleanup
-      return () => {
-        document.body.style.overflow = originalOverflow;
-      };
-    }
-  }, [uploadProgress]);
+  // Unified photo flow
+  const photoFlow = usePhotoMealFlow();
 
   // Submit text for analysis (T012)
   const handleSubmit = useCallback(async () => {
@@ -74,20 +57,17 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
     setError(null);
 
     try {
-      // クライアントのローカル時刻をオフセット付きで送信
       const result = await mealAnalysisApi.analyzeText({
         text: text.trim(),
         currentTime: toLocalISOString(new Date()),
       });
 
-      // Check if it's an error response
       if ('error' in result) {
         setError(result.message);
         setInputState('error');
         return;
       }
 
-      // Success - update state with analysis result
       const response = result as TextAnalysisResponse;
       setMealId(response.mealId);
       setFoodItems(response.foodItems);
@@ -103,7 +83,7 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
     }
   }, [text]);
 
-  // Update food item (T015)
+  // Update food item (T015) - for text flow
   const handleUpdateItem = useCallback(async (itemId: string, updates: Partial<FoodItem>) => {
     if (!mealId) return;
 
@@ -118,7 +98,7 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
     }
   }, [mealId]);
 
-  // Delete food item
+  // Delete food item - for text flow
   const handleDeleteItem = useCallback(async (itemId: string) => {
     if (!mealId) return;
 
@@ -131,7 +111,7 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
     }
   }, [mealId]);
 
-  // Add food item
+  // Add food item - for text flow
   const handleAddItem = useCallback(async (item: Omit<FoodItem, 'id'>) => {
     if (!mealId) return;
 
@@ -144,11 +124,10 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
     }
   }, [mealId]);
 
-  // Save meal (T016)
+  // Save meal (T016) - for text flow
   const handleSave = useCallback(async () => {
     if (!mealId) return;
 
-    // Validate date before saving
     const validationError = validateNotFuture(recordedAt);
     if (validationError) {
       setDateError(validationError);
@@ -158,7 +137,6 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
     setInputState('saving');
     try {
       await onSave(mealId, mealType, recordedAt);
-      // Reset state
       setText('');
       setMealId(null);
       setFoodItems([]);
@@ -209,7 +187,7 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
     }
   }, [text]);
 
-  // Handle date/time change (011-meal-datetime)
+  // Handle date/time change (011-meal-datetime) - for text flow
   const handleDateTimeChange = useCallback((newDateTime: string) => {
     const isoDateTime = fromDatetimeLocal(newDateTime);
     const validationError = validateNotFuture(isoDateTime);
@@ -219,372 +197,103 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
     }
     setDateError(null);
     setRecordedAt(isoDateTime);
-    setDateTimeSource('now'); // Once manually changed, it's no longer from text
+    setDateTimeSource('now');
   }, []);
 
-  // Handle photo capture (T024-T026)
-  const handlePhotoCapture = useCallback(async (photo: Blob) => {
-    setShowPhotoCapture(false);
-    setInputState('analyzing');
-    setError(null);
-
-    try {
-      const result = await mealAnalysisApi.analyzeMealPhoto(photo);
-
-      // Check if it's an error response
-      if ('error' in result) {
-        setError(result.message);
-        setInputState('error');
-        return;
-      }
-
-      // Success - update state with analysis result
-      setMealId(result.mealId);
-      setFoodItems(result.foodItems);
-      setTotals(result.totals);
-      setPhotoKey(result.photoKey);
-      // Default to lunch since photo analysis doesn't infer meal type
-      setMealType('lunch');
-      setMealTypeSource('time');
-      setInputState('result');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'エラーが発生しました');
-      setInputState('error');
-    }
-  }, []);
-
-  // Handle chat updates (T027-T028) - now includes date/time changes
+  // Handle chat updates (T027-T028) - for text flow
   const handleChatUpdate = useCallback((updatedFoodItems: FoodItem[], updatedTotals: NutritionTotals, newRecordedAt?: string) => {
     setFoodItems(updatedFoodItems);
     setTotals(updatedTotals);
     if (newRecordedAt) {
       setRecordedAt(newRecordedAt);
-      setDateTimeSource('text'); // Changed via chat, show as 'from text'
+      setDateTimeSource('text');
       setDateError(null);
     }
   }, []);
 
-  // Multi-photo handlers (T058-T061)
-  const handleAddPhotos = useCallback(async (newFiles: FileList | null) => {
-    if (!newFiles) return;
+  // Photo flow: handle save from PhotoAnalysisReview
+  const handlePhotoFlowSave = useCallback(async (photoMealId: string, photoMealType: MealType, photoRecordedAt?: string) => {
+    await onSave(photoMealId, photoMealType, photoRecordedAt);
+    photoFlow.reset();
+    onRefresh?.();
+  }, [onSave, photoFlow, onRefresh]);
 
-    const filesArray = Array.from(newFiles);
-    const validFiles = filesArray.filter(file => {
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
-        setError('画像ファイルのみ選択できます');
-        return false;
-      }
-      // Validate file size (10MB)
-      if (file.size > 10 * 1024 * 1024) {
-        setError('ファイルサイズは10MB以下にしてください');
-        return false;
-      }
-      return true;
-    });
-
-    // Check total count (max 10 photos)
-    if (photos.length + validFiles.length > 10) {
-      setError('写真は最大10枚までです');
-      return;
-    }
-
-    // Resize images before adding to state
-    const resizedFiles = await resizeImages(validFiles);
-
-    // Create preview URLs from resized images
-    const newPreviewUrls = resizedFiles.map(file => URL.createObjectURL(file));
-
-    setPhotos(prev => [...prev, ...resizedFiles]);
-    setPhotoPreviewUrls(prev => [...prev, ...newPreviewUrls]);
-    setError(null);
-  }, [photos.length]);
-
-  const handleRemovePhoto = useCallback((index: number) => {
-    // Revoke object URL to free memory
-    const url = photoPreviewUrls[index];
-    if (url) {
-      URL.revokeObjectURL(url);
-    }
-
-    setPhotos(prev => prev.filter((_, i) => i !== index));
-    setPhotoPreviewUrls(prev => prev.filter((_, i) => i !== index));
-  }, [photoPreviewUrls]);
-
-  // Save meal with multiple photos (T061) - Upload one by one
-  const handleSaveMultiPhoto = useCallback(async () => {
-    if (photos.length === 0) {
-      setError('少なくとも1枚の写真を選択してください');
-      return;
-    }
-
-    // Validate date
-    const validationError = validateNotFuture(recordedAt);
-    if (validationError) {
-      setDateError(validationError);
-      return;
-    }
-
-    setInputState('saving');
-    setUploadProgress({ current: 0, total: photos.length });
-    setError(null);
-
-    try {
-      // 1. Create meal with first photo
-      const firstPhoto = photos[0];
-      if (!firstPhoto) {
-        throw new Error('写真が選択されていません');
-      }
-
-      const firstResult = await mealAnalysisApi.createMealWithPhoto({
-        mealType,
-        content: '写真から記録',
-        recordedAt,
-        photo: firstPhoto,
-      });
-
-      setUploadProgress({ current: 1, total: photos.length });
-
-      // 2. Add remaining photos one by one
-      for (let i = 1; i < photos.length; i++) {
-        const photo = photos[i];
-        if (!photo) continue;
-        await mealAnalysisApi.addPhotoToMeal(firstResult.meal.id, photo);
-        setUploadProgress({ current: i + 1, total: photos.length });
-      }
-
-      // Reset state
-      setMultiPhotoMode(false);
-      setPhotos([]);
-      photoPreviewUrls.forEach(url => URL.revokeObjectURL(url));
-      setPhotoPreviewUrls([]);
-      setUploadProgress(null);
-      setRecordedAt(toLocalISOString(new Date()));
-      setDateTimeSource('now');
-      setDateError(null);
-      setInputState('idle');
-      onRefresh?.();
-    } catch (err) {
-      const currentPhoto = uploadProgress ? uploadProgress.current + 1 : 1;
-      setError(
-        err instanceof Error
-          ? `写真${currentPhoto}/${photos.length}のアップロードに失敗しました: ${err.message}`
-          : `写真${currentPhoto}/${photos.length}のアップロードに失敗しました`
-      );
-      setUploadProgress(null);
-      setInputState('error');
-    }
-  }, [photos, photoPreviewUrls, mealType, recordedAt, onRefresh, uploadProgress]);
+  // Determine if we're in photo flow mode
+  const isPhotoFlowActive = photoFlow.flowState !== 'idle';
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-4">
-      {/* Upload progress overlay - Block all interactions during upload */}
-      {uploadProgress && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-lg">
-            <div className="space-y-4">
-              <h3 className="text-center text-lg font-medium text-gray-900">
-                写真をアップロード中...
-              </h3>
-              <div className="space-y-2">
-                <div className="text-center text-sm text-gray-600">
-                  {uploadProgress.current}/{uploadProgress.total} 枚完了
-                </div>
-                <div className="h-3 w-full overflow-hidden rounded-full bg-gray-200">
-                  <div
-                    className="h-full bg-blue-600 transition-all duration-300"
-                    style={{
-                      width: `${(uploadProgress.current / uploadProgress.total) * 100}%`,
-                    }}
-                  />
-                </div>
-              </div>
-              <p className="text-center text-xs text-gray-500">
-                アップロード中は他の操作ができません
-              </p>
+      {/* Photo selector modal */}
+      {photoFlow.flowState === 'selecting' && (
+        <PhotoUploadErrorBoundary>
+          <UnifiedPhotoSelector
+            photos={photoFlow.photos}
+            photoPreviewUrls={photoFlow.photoPreviewUrls}
+            error={photoFlow.error}
+            onAddPhotos={photoFlow.addPhotos}
+            onRemovePhoto={photoFlow.removePhoto}
+            onStartAnalysis={photoFlow.startAnalysis}
+            onCancel={photoFlow.closeSelector}
+          />
+        </PhotoUploadErrorBoundary>
+      )}
+
+      {/* Photo analysis progress */}
+      {photoFlow.flowState === 'analyzing' && photoFlow.analysisProgress && (
+        <AnalysisProgressOverlay progress={photoFlow.analysisProgress} />
+      )}
+
+      {/* Photo flow: reviewing state */}
+      {photoFlow.flowState === 'reviewing' && photoFlow.result && (
+        <>
+          {photoFlow.error && (
+            <div className="mb-4 rounded-lg bg-yellow-50 p-3">
+              <p className="text-sm text-yellow-700">{photoFlow.error}</p>
             </div>
-          </div>
-        </div>
+          )}
+          <PhotoAnalysisReview
+            mealId={photoFlow.result.mealId}
+            initialFoodItems={photoFlow.result.foodItems}
+            initialTotals={photoFlow.result.totals}
+            photoUrl={photoFlow.result.photoKey ? getPhotoUrl(photoFlow.result.photoKey) ?? undefined : undefined}
+            photoUrls={photoFlow.result.photoUrls}
+            onSave={handlePhotoFlowSave}
+            onCancel={photoFlow.reset}
+            onRefresh={onRefresh}
+          />
+        </>
       )}
 
-      {/* Photo capture modal (T024-T025) */}
-      {showPhotoCapture && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-lg bg-white p-4">
-            <PhotoUploadErrorBoundary>
-              <PhotoCapture
-                onCapture={handlePhotoCapture}
-                onCancel={() => setShowPhotoCapture(false)}
-              />
-            </PhotoUploadErrorBoundary>
-          </div>
-        </div>
-      )}
-
-      {/* Input State: idle, error, or saving with multi-photo mode */}
-      {(inputState === 'idle' || inputState === 'error' || (inputState === 'saving' && multiPhotoMode)) && (
+      {/* Text input flow: idle/error state */}
+      {!isPhotoFlowActive && (inputState === 'idle' || inputState === 'error') && (
         <div className="space-y-3">
-          {/* Mode toggle (T058) */}
-          {!multiPhotoMode && (
-            <>
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <div className="flex flex-1 gap-2">
-                  {/* Photo button (T024) */}
-                  <button
-                    onClick={() => setShowPhotoCapture(true)}
-                    className="shrink-0 rounded-lg border border-gray-300 px-3 py-3 text-xl hover:bg-gray-50"
-                    title="写真で分析"
-                  >
-                    📷
-                  </button>
-                  <input
-                    type="text"
-                    value={text}
-                    onChange={(e) => setText(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
-                    placeholder="食事内容を入力 (例: カレーライス)"
-                    className="min-w-0 flex-1 rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  />
-                </div>
-                <button
-                  onClick={handleSubmit}
-                  disabled={!text.trim()}
-                  className="shrink-0 rounded-lg bg-blue-500 px-6 py-3 font-medium text-white hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
-                >
-                  記録推論
-                </button>
-              </div>
-
-              {/* Multi-photo mode button */}
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <div className="flex flex-1 gap-2">
+              {/* Unified photo button */}
               <button
-                onClick={() => setMultiPhotoMode(true)}
-                className="text-sm text-blue-600 hover:text-blue-700 underline"
+                onClick={photoFlow.openSelector}
+                className="shrink-0 rounded-lg border border-gray-300 px-3 py-3 text-xl hover:bg-gray-50"
+                title="写真で分析"
               >
-                📸 複数写真で記録する
+                📷
               </button>
-            </>
-          )}
-
-          {/* Multi-photo mode UI (T058-T061) */}
-          {multiPhotoMode && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="font-medium text-gray-900">複数写真で記録</h3>
-                <button
-                  onClick={() => {
-                    setMultiPhotoMode(false);
-                    setPhotos([]);
-                    photoPreviewUrls.forEach(url => URL.revokeObjectURL(url));
-                    setPhotoPreviewUrls([]);
-                  }}
-                  disabled={uploadProgress !== null}
-                  className="text-sm text-gray-600 hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  キャンセル
-                </button>
-              </div>
-
-              {/* Photo preview list (T059) */}
-              {photos.length > 0 && (
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                  {photoPreviewUrls.map((url, index) => (
-                    <div key={index} className="relative aspect-square" data-testid="photo-preview">
-                      <img
-                        src={url}
-                        alt={`写真 ${index + 1}`}
-                        className="h-full w-full rounded-lg object-cover"
-                      />
-                      {/* Remove button (T060) */}
-                      <button
-                        onClick={() => handleRemovePhoto(index)}
-                        disabled={uploadProgress !== null}
-                        className="absolute right-1 top-1 rounded-full bg-red-500 p-1.5 text-white hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
-                        title="削除"
-                        data-testid="remove-photo-button"
-                      >
-                        ✕
-                      </button>
-                      <div className="absolute bottom-1 left-1 rounded bg-black/50 px-2 py-0.5 text-xs text-white">
-                        {index + 1}/{photos.length}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Add photo button (T058) */}
-              {photos.length < 10 && !uploadProgress && (
-                <label className="block">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={(e) => handleAddPhotos(e.target.files)}
-                    className="hidden"
-                  />
-                  <div className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 p-4 hover:border-blue-500 hover:bg-blue-50">
-                    <span className="text-2xl">📷</span>
-                    <span className="text-sm text-gray-600">
-                      {photos.length === 0 ? '写真を選択（最大10枚）' : '写真を追加'}
-                    </span>
-                  </div>
-                </label>
-              )}
-
-              {photos.length >= 10 && (
-                <p className="text-sm text-gray-500">最大10枚まで選択できます</p>
-              )}
-
-              {/* Meal type and date/time */}
-              {photos.length > 0 && (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3">
-                    <label className="text-sm font-medium text-gray-700">食事タイプ:</label>
-                    <select
-                      value={mealType}
-                      onChange={(e) => setMealType(e.target.value as MealType)}
-                      disabled={uploadProgress !== null}
-                      className="rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      <option value="breakfast">朝食</option>
-                      <option value="lunch">昼食</option>
-                      <option value="dinner">夕食</option>
-                      <option value="snack">間食</option>
-                    </select>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <label className="text-sm font-medium text-gray-700">記録日時:</label>
-                    <input
-                      type="datetime-local"
-                      value={toDateTimeLocal(recordedAt)}
-                      max={getCurrentDateTimeLocal()}
-                      onChange={(e) => {
-                        const newDateTime = fromDatetimeLocal(e.target.value);
-                        setRecordedAt(newDateTime);
-                        setDateTimeSource('now');
-                      }}
-                      disabled={uploadProgress !== null}
-                      className="rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
-                    />
-                  </div>
-
-                  {dateError && (
-                    <p className="text-sm text-red-600">{dateError}</p>
-                  )}
-
-                  {/* Save button */}
-                  <button
-                    onClick={handleSaveMultiPhoto}
-                    disabled={photos.length === 0 || uploadProgress !== null}
-                    className="w-full rounded-lg bg-blue-500 px-6 py-3 font-medium text-white hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {uploadProgress ? 'アップロード中...' : `保存して分析（${photos.length}枚の写真）`}
-                  </button>
-                </div>
-              )}
+              <input
+                type="text"
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+                placeholder="食事内容を入力 (例: カレーライス)"
+                className="min-w-0 flex-1 rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
             </div>
-          )}
+            <button
+              onClick={handleSubmit}
+              disabled={!text.trim()}
+              className="shrink-0 rounded-lg bg-blue-500 px-6 py-3 font-medium text-white hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+            >
+              記録推論
+            </button>
+          </div>
 
           {/* Error message (T017) */}
           {inputState === 'error' && error && (
@@ -601,16 +310,16 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
         </div>
       )}
 
-      {/* Loading State (T011) */}
-      {inputState === 'analyzing' && (
+      {/* Text flow: Loading State (T011) */}
+      {!isPhotoFlowActive && inputState === 'analyzing' && (
         <div className="flex flex-col items-center gap-4 py-8">
           <div className="h-12 w-12 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
           <p className="text-gray-600">食事を分析中...</p>
         </div>
       )}
 
-      {/* Result State (T014) */}
-      {(inputState === 'result' || inputState === 'saving') && totals && (
+      {/* Text flow: Result State (T014) */}
+      {!isPhotoFlowActive && (inputState === 'result' || inputState === 'saving') && totals && (
         <div className="space-y-4">
           {/* Input text display */}
           {text && (
@@ -711,6 +420,43 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/** Progress overlay for multi-photo analysis */
+function AnalysisProgressOverlay({ progress }: { progress: AnalysisProgress }) {
+  return (
+    <div className="flex flex-col items-center gap-4 py-8">
+      <div className="h-12 w-12 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
+      <p className="text-gray-600">
+        写真 {Math.min(progress.current + 1, progress.total)}/{progress.total} を分析中...
+      </p>
+      <div className="w-full max-w-xs">
+        <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
+          <div
+            className="h-full bg-blue-600 transition-all duration-300"
+            style={{
+              width: `${(progress.current / progress.total) * 100}%`,
+            }}
+          />
+        </div>
+        {/* Per-photo status */}
+        <div className="mt-2 flex justify-center gap-1">
+          {progress.statuses.map((status, i) => (
+            <div
+              key={i}
+              className={`h-2 w-2 rounded-full ${
+                status === 'done' ? 'bg-green-500' :
+                status === 'analyzing' ? 'animate-pulse bg-blue-500' :
+                status === 'error' ? 'bg-red-500' :
+                'bg-gray-300'
+              }`}
+              title={`写真${i + 1}: ${status}`}
+            />
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
