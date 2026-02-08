@@ -128,7 +128,7 @@ export function ExerciseList({
             {dateGroups.map((group) => (
               <div
                 key={`${group.exerciseType}-${group.date}`}
-                className="rounded-lg border border-gray-200 bg-white overflow-hidden"
+                className="rounded-lg border border-gray-200 bg-white overflow-hidden max-w-2xl"
               >
                 {/* Group Header */}
                 <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-100">

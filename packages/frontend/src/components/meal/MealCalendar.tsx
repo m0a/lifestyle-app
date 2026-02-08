@@ -96,7 +96,7 @@ export function MealCalendar({ selectedDate, onDateSelect }: MealCalendarProps) 
   };
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-4">
+    <div className="rounded-lg border border-gray-200 bg-white p-4 md:max-w-lg md:mx-auto">
       {/* Header with month navigation */}
       <div className="mb-4 flex items-center justify-between">
         <button
