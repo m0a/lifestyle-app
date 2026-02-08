@@ -67,7 +67,7 @@ export function MealList({
       {Object.entries(groupedMeals).map(([date, dateMeals]) => (
         <div key={date}>
           <h3 className="mb-3 text-sm font-medium text-gray-500">{date}</h3>
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             {dateMeals.map((meal) => (
               <div
                 key={meal.id}
