@@ -2,6 +2,21 @@ import { hc } from 'hono/client';
 import type { AppType } from '@lifestyle-app/backend';
 import { generateRequestId } from './requestId';
 import { setCurrentRequestId } from './errorLogger';
+import { useAuthStore } from '../stores/authStore';
+
+let isLoggingOut = false;
+
+function handleUnauthorized(requestUrl: string) {
+  const authPaths = ['/api/auth/login', '/api/auth/register', '/api/auth/me', '/api/auth/password-reset'];
+  if (authPaths.some((path) => requestUrl.includes(path))) {
+    return;
+  }
+  if (isLoggingOut) return;
+  isLoggingOut = true;
+
+  useAuthStore.getState().logout();
+  window.location.href = '/login';
+}
 
 // In production (empty VITE_API_URL), use same origin
 // In development, use localhost:8787
@@ -40,6 +55,9 @@ export const client = hc<AppType>(API_BASE_URL, {
         headers,
       });
       console.log('[RPC] Response:', response.status, response.statusText);
+      if (response.status === 401) {
+        handleUnauthorized(typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url);
+      }
       return response;
     } catch (error) {
       console.error('[RPC] Fetch error:', error);
