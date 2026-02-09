@@ -93,6 +93,16 @@ export const user = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
     return c.json(summary);
   })
+  .get('/ai-usage/daily', async (c) => {
+    const currentUser = c.get('user');
+    const db = c.get('db');
+    const environment = c.env?.ENVIRONMENT ?? 'production';
+    const service = new AIUsageService(db, environment);
+
+    const dailyUsage = await service.getDailyUsage(currentUser.id);
+
+    return c.json(dailyUsage);
+  })
   .patch('/goals', zValidator('json', updateGoalsSchema), async (c) => {
     const currentUser = c.get('user');
     const db = c.get('db');

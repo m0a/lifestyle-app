@@ -5,6 +5,8 @@ import { useMeals } from '../hooks/useMeals';
 import { MealList } from '../components/meal/MealList';
 import { CalorieSummary } from '../components/meal/CalorieSummary';
 import { SmartMealInput } from '../components/meal/SmartMealInput';
+import { AIUsageBanner } from '../components/meal/AIUsageBanner';
+import { useAIDailyUsage } from '../hooks/useAIDailyUsage';
 import { mealAnalysisApi } from '../lib/api';
 import { api } from '../lib/client';
 import { getTodayDateString } from '../lib/dateValidation';
@@ -13,6 +15,7 @@ import { MEAL_TYPE_LABELS } from '@lifestyle-app/shared';
 
 export function Meal() {
   const [filterType, setFilterType] = useState<MealType | ''>('');
+  const { dailyUsage, isLoading: isUsageLoading } = useAIDailyUsage();
 
   // Get today's date string for filtering
   const todayDate = useMemo(() => getTodayDateString(), []);
@@ -89,6 +92,9 @@ export function Meal() {
       {/* Smart Meal Input (T018) */}
       <div>
         <h2 className="mb-3 text-lg font-semibold text-gray-900">食事記録</h2>
+        <div className="mb-3">
+          <AIUsageBanner dailyUsage={dailyUsage} isLoading={isUsageLoading} />
+        </div>
         <SmartMealInput onSave={handleSmartSave} onRefresh={refresh} />
       </div>
 

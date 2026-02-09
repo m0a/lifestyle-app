@@ -8,6 +8,7 @@ import { mealRecords, mealFoodItems, mealChatMessages } from '../db/schema';
 import * as schema from '../db/schema';
 import { AIChatService } from '../services/ai-chat';
 import { AIUsageService } from '../services/ai-usage';
+import { aiUsageLimitCheck } from '../middleware/ai-usage-limit';
 import { AIAnalysisService } from '../services/ai-analysis';
 import { MealPhotoService } from '../services/meal-photo.service';
 import { PhotoStorageService } from '../services/photo-storage';
@@ -75,6 +76,10 @@ mealChat.post(
   '/:mealId/chat',
   zValidator('json', sendChatMessageSchema),
   async (c) => {
+    // Check AI usage limit
+    const limitCheck = await aiUsageLimitCheck(c);
+    if (limitCheck) return limitCheck;
+
     const mealId = c.req.param('mealId');
     const { message } = c.req.valid('json');
     const db = c.get('db');
@@ -354,6 +359,10 @@ mealChat.post(
 
 // POST /api/meals/:mealId/chat/add-photo - Add photo via chat interface
 mealChat.post('/:mealId/chat/add-photo', async (c) => {
+  // Check AI usage limit
+  const limitCheck = await aiUsageLimitCheck(c);
+  if (limitCheck) return limitCheck;
+
   const mealId = c.req.param('mealId');
   const db = c.get('db');
   const user = c.get('user');

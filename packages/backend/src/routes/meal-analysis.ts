@@ -9,6 +9,7 @@ import { PhotoStorageService } from '../services/photo-storage';
 import { MealPhotoService } from '../services/meal-photo.service';
 import { AIAnalysisService } from '../services/ai-analysis';
 import { AIUsageService } from '../services/ai-usage';
+import { aiUsageLimitCheck } from '../middleware/ai-usage-limit';
 import { getAIConfigFromEnv } from '../lib/ai-provider';
 import type { Database } from '../db';
 import {
@@ -68,6 +69,10 @@ mealAnalysis.use('*', async (c, next) => {
 
 // POST /api/meals/analyze - Analyze meal photo
 mealAnalysis.post('/analyze', async (c) => {
+  // Check AI usage limit
+  const limitCheck = await aiUsageLimitCheck(c);
+  if (limitCheck) return limitCheck;
+
   const formData = await c.req.formData();
   const photo = formData.get('photo') as File | null;
   // Optional: client can send recordedAt with timezone offset
@@ -177,6 +182,10 @@ mealAnalysis.post(
   '/analyze-text',
   zValidator('json', textAnalysisRequestSchema),
   async (c) => {
+    // Check AI usage limit
+    const limitCheck = await aiUsageLimitCheck(c);
+    if (limitCheck) return limitCheck;
+
     const data = c.req.valid('json');
     const db = c.get('db');
     const userId = c.get('user').id;

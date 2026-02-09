@@ -63,6 +63,13 @@ export const EXERCISE_PRESETS: ExercisePreset[] = [
   { name: 'レッグレイズ', muscleGroup: 'core' },
 ];
 
+// AI usage limits
+export const AI_USAGE_LIMITS = {
+  dailyTokenLimit: 50_000,
+  devDailyTokenLimit: 5_000,
+  warningThresholdPercent: 80,
+} as const;
+
 // Validation limits
 export const VALIDATION_LIMITS = {
   weight: {

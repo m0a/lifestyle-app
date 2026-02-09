@@ -157,3 +157,14 @@ export const AIUsageSummarySchema = z.object({
   monthlyTokens: z.number().int().min(0),
 });
 export type AIUsageSummary = z.infer<typeof AIUsageSummarySchema>;
+
+// AI Daily Usage (for daily limit tracking)
+export interface AIDailyUsage {
+  dailyTokensUsed: number;
+  dailyTokenLimit: number;
+  remainingTokens: number;
+  usagePercentage: number;
+  isLimitExceeded: boolean;
+  isWarning: boolean;
+  resetsAt: string;
+}

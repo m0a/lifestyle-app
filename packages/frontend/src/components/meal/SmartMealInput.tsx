@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import type {
   FoodItem,
   NutritionTotals,
@@ -26,6 +27,7 @@ interface SmartMealInputProps {
 type InputState = 'idle' | 'analyzing' | 'result' | 'saving' | 'error';
 
 export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
+  const queryClient = useQueryClient();
   const [inputState, setInputState] = useState<InputState>('idle');
   const [text, setText] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -77,11 +79,17 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
       setRecordedAt(response.inferredRecordedAt);
       setDateTimeSource(response.dateTimeSource);
       setInputState('result');
+      queryClient.invalidateQueries({ queryKey: ['ai-usage', 'daily'] });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'エラーが発生しました');
+      if (err instanceof Error && 'status' in err && (err as { status: number }).status === 429) {
+        setError('本日のAI使用上限に達しました。明日以降に再度お試しください。');
+        queryClient.invalidateQueries({ queryKey: ['ai-usage', 'daily'] });
+      } else {
+        setError(err instanceof Error ? err.message : 'エラーが発生しました');
+      }
       setInputState('error');
     }
-  }, [text]);
+  }, [text, queryClient]);
 
   // Update food item (T015) - for text flow
   const handleUpdateItem = useCallback(async (itemId: string, updates: Partial<FoodItem>) => {
