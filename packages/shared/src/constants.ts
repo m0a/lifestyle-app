@@ -65,7 +65,7 @@ export const EXERCISE_PRESETS: ExercisePreset[] = [
 
 // AI usage limits
 export const AI_USAGE_LIMITS = {
-  dailyTokenLimit: 10_000, // TEMPORARY: for production testing, revert to 50_000
+  dailyTokenLimit: 50_000,
   devDailyTokenLimit: 50_000,
   warningThresholdPercent: 80,
 } as const;
