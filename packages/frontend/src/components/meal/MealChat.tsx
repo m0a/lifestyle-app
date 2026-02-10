@@ -134,17 +134,21 @@ export function MealChat({ mealId, currentFoodItems, onUpdate }: MealChatProps) 
       }
     } catch (error) {
       console.error('Chat error:', error);
+      const is429 = error instanceof Error && 'status' in error && (error as { status: number }).status === 429;
       setMessages((prev) =>
         prev.map((msg) =>
           msg.id === assistantMsgId
-            ? { ...msg, content: 'エラーが発生しました', isStreaming: false }
+            ? { ...msg, content: is429 ? '本日のAI使用上限に達しました。明日以降に再度お試しください。' : 'エラーが発生しました', isStreaming: false }
             : msg
         )
       );
+      if (is429) {
+        queryClient.invalidateQueries({ queryKey: ['ai-usage', 'daily'] });
+      }
     } finally {
       setIsLoading(false);
     }
-  }, [input, isLoading, mealId]);
+  }, [input, isLoading, mealId, queryClient]);
 
   const handleApplyChanges = useCallback(async () => {
     if (pendingChanges.length === 0) return;
@@ -205,6 +209,11 @@ export function MealChat({ mealId, currentFoodItems, onUpdate }: MealChatProps) 
       });
 
       if (!response.ok) {
+        if (response.status === 429) {
+          toast.error('本日のAI使用上限に達しました。明日以降に再度お試しください。');
+          queryClient.invalidateQueries({ queryKey: ['ai-usage', 'daily'] });
+          return;
+        }
         const errorData = await response.json() as { message?: string };
         throw new Error(errorData.message || '写真のアップロードに失敗しました');
       }

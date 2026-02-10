@@ -130,7 +130,7 @@ test.describe('User Settings - Export and Delete', () => {
   test.describe('Profile Settings', () => {
     test('should display user email', async ({ page }) => {
       await page.goto('/settings');
-      await expect(page.getByText('test@example.com')).toBeVisible();
+      await expect(page.getByText('test@example.com').first()).toBeVisible();
     });
 
     test('should display user name if set', async ({ page }) => {

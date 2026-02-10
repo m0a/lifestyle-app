@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import type {
   FoodItem,
   NutritionTotals,
@@ -63,6 +64,7 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const MAX_PHOTOS = 10;
 
 export function usePhotoMealFlow(): UsePhotoMealFlowReturn {
+  const queryClient = useQueryClient();
   const [flowState, setFlowState] = useState<PhotoFlowState>('idle');
   const [photos, setPhotos] = useState<File[]>([]);
   const [photoPreviewUrls, setPhotoPreviewUrls] = useState<string[]>([]);
@@ -254,13 +256,19 @@ export function usePhotoMealFlow(): UsePhotoMealFlowReturn {
       });
 
       setFlowState('reviewing');
+      queryClient.invalidateQueries({ queryKey: ['ai-usage', 'daily'] });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'エラーが発生しました');
+      if (err instanceof Error && 'status' in err && (err as { status: number }).status === 429) {
+        setError('本日のAI使用上限に達しました。明日以降に再度お試しください。');
+        queryClient.invalidateQueries({ queryKey: ['ai-usage', 'daily'] });
+      } else {
+        setError(err instanceof Error ? err.message : 'エラーが発生しました');
+      }
       setFlowState('selecting');
     } finally {
       setAnalysisProgress(null);
     }
-  }, [photos]);
+  }, [photos, queryClient]);
 
   const reset = useCallback(() => {
     photoPreviewUrls.forEach(url => URL.revokeObjectURL(url));

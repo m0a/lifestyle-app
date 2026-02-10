@@ -8,6 +8,7 @@ import { MealPhotoService } from '../services/meal-photo.service';
 import { PhotoStorageService } from '../services/photo-storage';
 import { AIAnalysisService } from '../services/ai-analysis';
 import { AIUsageService } from '../services/ai-usage';
+import { aiUsageLimitCheck } from '../middleware/ai-usage-limit';
 import { getAIConfigFromEnv } from '../lib/ai-provider';
 import { authMiddleware } from '../middleware/auth';
 import { eq, and } from 'drizzle-orm';
@@ -47,6 +48,10 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
     // Support both JSON (legacy) and multipart/form-data (User Story 4)
     if (contentType.includes('multipart/form-data')) {
+      // Check AI usage limit for photo meal creation
+      const limitCheck = await aiUsageLimitCheck(c);
+      if (limitCheck) return limitCheck;
+
       // T055-T057: Multi-photo meal creation
       const formData = await c.req.formData();
       const db = c.get('db');
@@ -363,6 +368,10 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
     return c.json({ photos: photosWithUrls, totals });
   })
   .post('/:id/photos', async (c) => {
+    // Check AI usage limit
+    const limitCheck = await aiUsageLimitCheck(c);
+    if (limitCheck) return limitCheck;
+
     const mealId = c.req.param('id');
     const db = c.get('db');
     const user = c.get('user');
@@ -651,6 +660,10 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
   })
   // T072: Retry photo analysis endpoint
   .post('/:id/photos/:photoId/analyze', async (c) => {
+    // Check AI usage limit
+    const limitCheck = await aiUsageLimitCheck(c);
+    if (limitCheck) return limitCheck;
+
     const mealId = c.req.param('id');
     const photoId = c.req.param('photoId');
     const db = c.get('db');
