@@ -111,6 +111,11 @@ tests/
 
 Preview環境は別のD1データベース（`health-tracker-preview-db`）を使用。
 
+**⚠ PR Previewではマイグレーションが自動実行されない。** Main Previewデプロイ時のみ `--env preview --remote` でマイグレーションが実行される。DBスキーマ変更を含むPRをpreviewでテストするには、手動でマイグレーションを適用する必要がある：
+```bash
+pnpm --filter @lifestyle-app/backend exec wrangler d1 migrations apply DB --env preview --remote
+```
+
 ### 本番デプロイ手順
 
 1. **mainブランチにマージ**:

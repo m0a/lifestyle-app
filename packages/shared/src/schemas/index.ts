@@ -97,6 +97,7 @@ export const exerciseSetInputSchema = z.object({
   reps: z.number().int().min(1, '1回以上で入力してください').max(100, '100回以下で入力してください'),
   weight: z.number().min(0).max(500).nullable().optional(),
   variation: z.string().max(50).optional(),
+  memo: z.string().max(200).optional(),
 });
 
 // Exercise schemas (strength training optimized - per-set recording)
@@ -104,7 +105,6 @@ export const createExerciseSetsSchema = z.object({
   exerciseType: z.string().min(1, '種目を選択してください').max(100),
   muscleGroup: muscleGroupSchema.optional(),
   sets: z.array(exerciseSetInputSchema).min(1, '1セット以上入力してください'),
-  memo: z.string().max(200).optional(),
   recordedAt: datetimeSchema,
 });
 
