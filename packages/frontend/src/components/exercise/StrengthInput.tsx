@@ -10,6 +10,7 @@ interface SetInput {
   reps: number;
   weight: number | null;
   variation?: string;
+  memo?: string;
 }
 
 interface CreateExerciseSetsInput {
@@ -152,6 +153,8 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, o
       set.weight = value as number | null;
     } else if (field === 'variation') {
       set.variation = value as string;
+    } else if (field === 'memo') {
+      set.memo = value as string;
     }
     setSets(newSets);
   };
@@ -188,6 +191,7 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, o
         reps: s.reps,
         weight: s.weight,
         variation: s.variation,
+        memo: s.memo || undefined,
       })),
       recordedAt: toLocalISOString(new Date()),
     });
@@ -390,8 +394,10 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, o
               reps={set.reps}
               weight={set.weight}
               variation={set.variation}
+              memo={set.memo}
               onRepsChange={(reps) => updateSet(index, 'reps', reps)}
               onWeightChange={(weight) => updateSet(index, 'weight', weight)}
+              onMemoChange={(memo) => updateSet(index, 'memo', memo)}
               onRemove={() => removeSet(index)}
               isRemovable={sets.length > 1}
             />

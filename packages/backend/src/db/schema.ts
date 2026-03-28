@@ -125,6 +125,7 @@ export const exerciseRecords = sqliteTable(
     reps: integer('reps').notNull(),
     weight: real('weight'),
     variation: text('variation'), // バリエーション（ワイド、ナロウ等）
+    memo: text('memo'),
     recordedAt: text('recorded_at').notNull(),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),

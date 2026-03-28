@@ -94,6 +94,7 @@ export interface ExerciseRecord {
   reps: number;
   weight: number | null;
   variation: string | null;
+  memo: string | null;
   recordedAt: string;
   createdAt: string;
   updatedAt: string;

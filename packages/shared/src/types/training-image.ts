@@ -46,6 +46,8 @@ export interface SetDetailData {
   estimated1RM: number;
   /** True if this set's 1RM is a personal record */
   isMaxRM: boolean;
+  /** Optional memo for this set */
+  memo?: string | null;
 }
 
 /**

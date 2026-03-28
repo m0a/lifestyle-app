@@ -221,42 +221,49 @@ export function ExerciseList({
                           </div>
                         </div>
                       ) : (
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 text-center text-sm font-medium text-gray-500">
-                            {exercise.setNumber}
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 text-center text-sm font-medium text-gray-500">
+                              {exercise.setNumber}
+                            </div>
+                            <div className="flex-1 text-sm">
+                              {exercise.reps}回
+                              {exercise.variation && (
+                                <span className="ml-2 text-xs text-gray-500">
+                                  ({exercise.variation})
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex-1 text-sm">
+                              {exercise.weight !== null ? `${exercise.weight}kg` : '自重'}
+                            </div>
+                            <div className="w-16 text-right text-xs text-gray-500">
+                              {calculateRM(exercise.weight, exercise.reps) ? (
+                                <span>{calculateRM(exercise.weight, exercise.reps)}</span>
+                              ) : (
+                                '-'
+                              )}
+                            </div>
+                            <div className="w-20 flex justify-end gap-2">
+                              <button
+                                onClick={() => handleEdit(exercise)}
+                                className="text-xs text-orange-600 hover:text-orange-800"
+                              >
+                                編集
+                              </button>
+                              <button
+                                onClick={() => setDeleteConfirmId(exercise.id)}
+                                className="text-xs text-red-600 hover:text-red-800"
+                              >
+                                削除
+                              </button>
+                            </div>
                           </div>
-                          <div className="flex-1 text-sm">
-                            {exercise.reps}回
-                            {exercise.variation && (
-                              <span className="ml-2 text-xs text-gray-500">
-                                ({exercise.variation})
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex-1 text-sm">
-                            {exercise.weight !== null ? `${exercise.weight}kg` : '自重'}
-                          </div>
-                          <div className="w-16 text-right text-xs text-gray-500">
-                            {calculateRM(exercise.weight, exercise.reps) ? (
-                              <span>{calculateRM(exercise.weight, exercise.reps)}</span>
-                            ) : (
-                              '-'
-                            )}
-                          </div>
-                          <div className="w-20 flex justify-end gap-2">
-                            <button
-                              onClick={() => handleEdit(exercise)}
-                              className="text-xs text-orange-600 hover:text-orange-800"
-                            >
-                              編集
-                            </button>
-                            <button
-                              onClick={() => setDeleteConfirmId(exercise.id)}
-                              className="text-xs text-red-600 hover:text-red-800"
-                            >
-                              削除
-                            </button>
-                          </div>
+                          {exercise.memo && (
+                            <div className="ml-8 mt-1 text-xs text-gray-500">
+                              {exercise.memo}
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
