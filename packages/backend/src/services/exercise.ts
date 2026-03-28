@@ -33,6 +33,7 @@ export class ExerciseService {
         reps: set.reps,
         weight: set.weight ?? null,
         variation: set.variation ?? null,
+        memo: input.memo ?? null,
         recordedAt: input.recordedAt,
         createdAt: now,
         updatedAt: now,
@@ -47,6 +48,7 @@ export class ExerciseService {
         reps: set.reps,
         weight: set.weight ?? null,
         variation: set.variation ?? null,
+        memo: input.memo ?? null,
         recordedAt: input.recordedAt,
         createdAt: now,
         updatedAt: now,
@@ -293,6 +295,10 @@ export class ExerciseService {
 
     if (input.variation !== undefined) {
       updateData['variation'] = input.variation;
+    }
+
+    if (input.memo !== undefined) {
+      updateData['memo'] = input.memo;
     }
 
     if (input.recordedAt !== undefined) {

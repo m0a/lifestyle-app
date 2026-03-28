@@ -104,6 +104,7 @@ export const createExerciseSetsSchema = z.object({
   exerciseType: z.string().min(1, '種目を選択してください').max(100),
   muscleGroup: muscleGroupSchema.optional(),
   sets: z.array(exerciseSetInputSchema).min(1, '1セット以上入力してください'),
+  memo: z.string().max(200).optional(),
   recordedAt: datetimeSchema,
 });
 
@@ -123,6 +124,7 @@ export const updateExerciseSchema = z.object({
   reps: z.number().int().min(1).max(100).optional(),
   weight: z.number().min(0).max(500).nullable().optional(),
   variation: z.string().max(50).nullable().optional(),
+  memo: z.string().max(200).nullable().optional(),
   recordedAt: datetimeSchema.optional(),
 });
 

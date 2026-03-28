@@ -145,6 +145,13 @@ export function ExerciseList({
                   </div>
                 </div>
 
+                {/* Memo */}
+                {group.sets[0]?.memo && (
+                  <div className="px-4 py-2 text-sm text-gray-600 bg-orange-50 border-b border-gray-100">
+                    {group.sets[0].memo}
+                  </div>
+                )}
+
                 {/* Set Rows */}
                 <div className="divide-y divide-gray-100">
                   {/* Header Row */}

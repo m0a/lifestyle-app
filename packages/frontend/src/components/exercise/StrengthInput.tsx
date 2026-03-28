@@ -16,6 +16,7 @@ interface CreateExerciseSetsInput {
   exerciseType: string;
   muscleGroup?: MuscleGroup;
   sets: SetInput[];
+  memo?: string;
   recordedAt: string;
 }
 
@@ -63,6 +64,7 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, o
   const [exerciseType, setExerciseType] = useState('');
   const [customExerciseName, setCustomExerciseName] = useState('');
   const [sets, setSets] = useState<SetInput[]>([{ reps: 10, weight: null }]);
+  const [memo, setMemo] = useState('');
   const [validationError, setValidationError] = useState<string | null>(null);
 
   const actualExerciseType = showCustomInput ? customExerciseName : exerciseType;
@@ -189,6 +191,7 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, o
         weight: s.weight,
         variation: s.variation,
       })),
+      memo: memo || undefined,
       recordedAt: toLocalISOString(new Date()),
     });
 
@@ -196,6 +199,7 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, o
     setExerciseType('');
     setCustomExerciseName('');
     setSets([{ reps: 10, weight: null }]);
+    setMemo('');
     setShowCustomInput(false);
     setSuccessMessage('運動を記録しました');
     setTimeout(() => setSuccessMessage(null), 3000);
@@ -397,6 +401,21 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, o
             />
           ))}
         </div>
+      </div>
+
+      {/* Memo */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          メモ
+        </label>
+        <input
+          type="text"
+          value={memo}
+          onChange={(e) => setMemo(e.target.value)}
+          placeholder="例: フォーム意識、体調など"
+          maxLength={200}
+          className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
+        />
       </div>
 
       <div className="flex items-center gap-4 flex-wrap">
