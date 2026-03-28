@@ -61,6 +61,7 @@ export function transformToImageData(
         reps: record.reps,
         estimated1RM,
         isMaxRM: isMaxRM(estimated1RM, historicalMax),
+        memo: record.memo,
       });
     }
 

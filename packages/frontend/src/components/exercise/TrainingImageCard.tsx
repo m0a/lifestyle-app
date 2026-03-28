@@ -58,22 +58,24 @@ export function TrainingImageCard({ data, colorTheme = 'red' }: TrainingImageCar
       {/* Sets list */}
       <div className="px-3 py-2 space-y-1">
         {data.sets.map((set) => (
-          <div
-            key={set.setNumber}
-            className="flex items-center text-sm"
-          >
-            <span className="w-8 text-gray-500">{set.setNumber}</span>
-            <span className="flex-1">
-              <span className="font-medium">{set.weight}</span>
-              <span className="text-gray-600">kg × </span>
-              <span className="font-medium">{set.reps}</span>
-              <span className="text-gray-600"> reps</span>
-              <span className="text-gray-500 ml-2">(1RM: {set.estimated1RM})</span>
-            </span>
-            {set.isMaxRM && (
-              <span className={`${colors.badge} text-white text-xs px-2 py-0.5 rounded font-bold ml-2`}>
-                MAX RM
+          <div key={set.setNumber}>
+            <div className="flex items-center text-sm">
+              <span className="w-8 text-gray-500">{set.setNumber}</span>
+              <span className="flex-1">
+                <span className="font-medium">{set.weight}</span>
+                <span className="text-gray-600">kg × </span>
+                <span className="font-medium">{set.reps}</span>
+                <span className="text-gray-600"> reps</span>
+                <span className="text-gray-500 ml-2">(1RM: {set.estimated1RM})</span>
               </span>
+              {set.isMaxRM && (
+                <span className={`${colors.badge} text-white text-xs px-2 py-0.5 rounded font-bold ml-2`}>
+                  MAX RM
+                </span>
+              )}
+            </div>
+            {set.memo && (
+              <div className="ml-8 text-xs text-gray-400">{set.memo}</div>
             )}
           </div>
         ))}
