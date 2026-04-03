@@ -1,5 +1,6 @@
 import { createBrowserRouter, type RouteObject } from 'react-router-dom';
 import { lazy, Suspense, useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Login } from './pages/Login';
@@ -17,6 +18,7 @@ import { Settings } from './pages/Settings';
 import { useAuthStore } from './stores/authStore';
 import { useActivityDots } from './hooks/useActivityDots';
 import { ActivityDotGrid } from './components/dashboard/ActivityDotGrid';
+import { useDashboard } from './hooks/useDashboard';
 
 const COLUMNS = 25; // Must match ActivityDotGrid
 
@@ -30,13 +32,13 @@ function useDotsCount(): number {
         getComputedStyle(document.documentElement).getPropertyValue('--safe-area-inset-bottom') || '0',
         10
       ) || 0;
-      // Available height: viewport - header(56px) - main-py-6(24px) - main-pb-20(80px) - nav(64px) - safeArea
-      const availableHeight = window.innerHeight - 224 - safeAreaBottom;
+      // Available height: viewport - header(56px) - todaySummary(~120px) - main-py-6(24px) - main-pb-20(80px) - nav(64px) - safeArea
+      const availableHeight = window.innerHeight - 344 - safeAreaBottom;
       const cellSize = window.innerWidth / COLUMNS;
       const rows = Math.floor(availableHeight / cellSize);
       const dots = rows * COLUMNS;
-      // Clamp between 200 and 1000
-      setCount(Math.max(200, Math.min(1000, dots)));
+      // Clamp between 100 and 800
+      setCount(Math.max(100, Math.min(800, dots)));
     };
 
     calculateDots();
@@ -83,13 +85,55 @@ function Home() {
 // Separate component to avoid hook calls when not authenticated
 function AuthenticatedHome() {
   const dotsCount = useDotsCount();
-  const { data: activityData, isLoading } = useActivityDots(dotsCount);
+  const { data: activityData, isLoading: dotsLoading } = useActivityDots(dotsCount);
+  const { summary, isLoading: summaryLoading } = useDashboard({ period: 'week' });
+
+  const weight = summary?.weight;
+  const meals = summary?.meals;
+  const exercises = summary?.exercises;
 
   return (
-    <ActivityDotGrid
-      activities={activityData?.activities ?? []}
-      isLoading={isLoading}
-    />
+    <div className="space-y-4">
+      {/* Today's Summary */}
+      <div className="grid grid-cols-3 gap-3">
+        <Link to="/weight" className="card p-3 hover:shadow-card-hover transition-shadow">
+          <p className="text-[10px] text-gray-400 uppercase tracking-wider">体重</p>
+          {summaryLoading ? (
+            <div className="mt-1 h-6 w-16 animate-pulse rounded bg-gray-100" />
+          ) : weight?.endWeight ? (
+            <p className="mt-0.5 text-lg font-bold text-gray-900 tabular-nums">{weight.endWeight.toFixed(1)}<span className="text-xs font-normal text-gray-400 ml-0.5">kg</span></p>
+          ) : (
+            <p className="mt-0.5 text-sm text-gray-300">未記録</p>
+          )}
+        </Link>
+        <Link to="/meals" className="card p-3 hover:shadow-card-hover transition-shadow">
+          <p className="text-[10px] text-gray-400 uppercase tracking-wider">今週のカロリー</p>
+          {summaryLoading ? (
+            <div className="mt-1 h-6 w-16 animate-pulse rounded bg-gray-100" />
+          ) : meals?.totalCalories ? (
+            <p className="mt-0.5 text-lg font-bold text-gray-900 tabular-nums">{meals.totalCalories.toLocaleString()}<span className="text-xs font-normal text-gray-400 ml-0.5">kcal</span></p>
+          ) : (
+            <p className="mt-0.5 text-sm text-gray-300">未記録</p>
+          )}
+        </Link>
+        <Link to="/exercises" className="card p-3 hover:shadow-card-hover transition-shadow">
+          <p className="text-[10px] text-gray-400 uppercase tracking-wider">筋トレ</p>
+          {summaryLoading ? (
+            <div className="mt-1 h-6 w-16 animate-pulse rounded bg-gray-100" />
+          ) : exercises?.totalSets ? (
+            <p className="mt-0.5 text-lg font-bold text-gray-900 tabular-nums">{exercises.totalSets}<span className="text-xs font-normal text-gray-400 ml-0.5">set</span></p>
+          ) : (
+            <p className="mt-0.5 text-sm text-gray-300">未記録</p>
+          )}
+        </Link>
+      </div>
+
+      {/* Activity Dots */}
+      <ActivityDotGrid
+        activities={activityData?.activities ?? []}
+        isLoading={dotsLoading}
+      />
+    </div>
   );
 }
 

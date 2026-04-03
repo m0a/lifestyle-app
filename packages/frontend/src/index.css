@@ -19,9 +19,9 @@
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
-  /* Dots grid max height: 100dvh - header(56) - py-6(24) - pb-20(80) - nav(64) - safe-area */
+  /* Dots grid max height: 100dvh - header(56) - summary(~100) - gaps(32) - py-6(24) - pb-20(80) - nav(64) - safe-area */
   .max-h-dots-grid {
-    max-height: calc(100dvh - 224px - env(safe-area-inset-bottom, 0px));
+    max-height: calc(100dvh - 356px - env(safe-area-inset-bottom, 0px));
     overflow: hidden;
   }
 }

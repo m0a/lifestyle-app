@@ -46,10 +46,7 @@ export function Exercise() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">運動記録</h1>
-        <p className="mt-0.5 text-sm text-gray-500">日々の筋トレを記録して、健康的な習慣を身につけましょう</p>
-      </div>
+      <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">運動記録</h1>
 
       {/* Weekly Summary */}
       {weeklySummary && (

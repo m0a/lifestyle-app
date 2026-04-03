@@ -38,10 +38,10 @@ export function Layout({ children }: LayoutProps) {
               {isAuthenticated && (
                 <div className="hidden md:flex items-center gap-1">
                   {[
-                    { to: '/dashboard', label: 'ダッシュボード' },
                     { to: '/weight', label: '体重' },
                     { to: '/meals', label: '食事' },
                     { to: '/exercises', label: '運動' },
+                    { to: '/dashboard', label: 'レポート' },
                   ].map(({ to, label }) => (
                     <Link
                       key={to}

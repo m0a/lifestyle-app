@@ -70,10 +70,7 @@ export function Meal() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">食事記録</h1>
-        <p className="mt-0.5 text-sm text-gray-500">日々の食事を記録して、カロリー管理をしましょう</p>
-      </div>
+      <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">食事記録</h1>
 
       {/* Today's Summary */}
       {todaySummary && (

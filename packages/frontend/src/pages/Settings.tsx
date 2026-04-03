@@ -164,10 +164,7 @@ export function Settings() {
 
   return (
     <div className="space-y-6 max-w-2xl mx-auto">
-      <div>
-        <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">設定</h1>
-        <p className="mt-0.5 text-sm text-gray-500">アカウント設定とデータ管理</p>
-      </div>
+      <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">設定</h1>
 
       {/* Profile Section */}
       <div className="card p-5">

@@ -50,10 +50,7 @@ export function Weight() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">体重記録</h1>
-        <p className="mt-0.5 text-sm text-gray-500">日々の体重を記録して、推移を確認しましょう</p>
-      </div>
+      <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">体重記録</h1>
 
       {/* Stats Summary */}
       <div className="grid gap-3 grid-cols-3">

@@ -27,12 +27,7 @@ export function Dashboard() {
     <div className="space-y-6">
       {/* Page Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">ダッシュボード</h1>
-          <p className="mt-0.5 text-sm text-gray-500">
-            健康管理の状況を確認しましょう
-          </p>
-        </div>
+        <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">レポート</h1>
         <div className="flex items-center gap-2">
           <PeriodSelector value={period} onChange={setPeriod} />
           <button
@@ -97,31 +92,6 @@ export function Dashboard() {
               sessionCount={summary?.exercises.sessionCount ?? 0}
               byType={summary?.exercises.byType ?? {}}
             />
-          </div>
-
-          {/* Quick Actions */}
-          <div className="card p-5">
-            <h2 className="mb-3 text-sm font-semibold text-gray-900 uppercase tracking-wider">
-              クイックアクション
-            </h2>
-            <div className="flex flex-wrap gap-2">
-              {[
-                { href: '/weight', label: '体重を記録' },
-                { href: '/meals', label: '食事を記録' },
-                { href: '/exercises', label: '運動を記録' },
-              ].map(({ href, label }) => (
-                <a
-                  key={href}
-                  href={href}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-colors"
-                >
-                  <svg className="h-3.5 w-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                  </svg>
-                  {label}
-                </a>
-              ))}
-            </div>
           </div>
 
           {/* Period Info */}
