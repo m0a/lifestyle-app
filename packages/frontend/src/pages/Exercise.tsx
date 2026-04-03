@@ -30,26 +30,23 @@ export function Exercise() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-orange-600 border-t-transparent" />
+      <div className="flex items-center justify-center py-16">
+        <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-orange-200 border-t-orange-500" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="rounded-md bg-red-50 p-4">
-        <p className="text-red-700">データの読み込みに失敗しました</p>
+      <div className="card bg-red-50 p-4">
+        <p className="text-sm text-red-700">データの読み込みに失敗しました</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">運動記録</h1>
-        <p className="mt-1 text-gray-600">日々の筋トレを記録して、健康的な習慣を身につけましょう</p>
-      </div>
+    <div className="space-y-6">
+      <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">運動記録</h1>
 
       {/* Weekly Summary */}
       {weeklySummary && (
@@ -62,9 +59,9 @@ export function Exercise() {
       )}
 
       {/* Input Form */}
-      <div className="rounded-lg border border-gray-200 bg-white p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">筋トレを記録</h2>
+      <div className="card p-5">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold text-gray-900">筋トレを記録</h2>
           <RestTimer defaultSeconds={60} incrementSeconds={60} />
         </div>
         <StrengthInput
@@ -79,14 +76,14 @@ export function Exercise() {
 
       {/* History List */}
       <div>
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <h2 className="text-lg font-semibold text-gray-900">記録履歴</h2>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <h2 className="text-sm font-semibold text-gray-900">記録履歴</h2>
             <button
               onClick={() => navigate(`/exercises/image?date=${today}`)}
-              className="flex items-center gap-1.5 bg-orange-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-orange-700 transition-colors"
+              className="flex items-center gap-1 bg-orange-500 text-white px-2.5 py-1 rounded-lg text-xs font-medium hover:bg-orange-600 transition-colors"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
               </svg>
               共有

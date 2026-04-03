@@ -14,15 +14,15 @@ const PERIODS: { value: Period; label: string }[] = [
 
 export function PeriodSelector({ value, onChange }: PeriodSelectorProps) {
   return (
-    <div className="flex gap-2">
+    <div className="inline-flex rounded-lg bg-gray-100 p-0.5">
       {PERIODS.map((period) => (
         <button
           key={period.value}
           onClick={() => onChange(period.value)}
-          className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+          className={`rounded-md px-3 py-1 text-xs font-medium transition-all ${
             value === period.value
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              ? 'bg-white text-gray-900 shadow-sm'
+              : 'text-gray-500 hover:text-gray-700'
           }`}
         >
           {period.label}

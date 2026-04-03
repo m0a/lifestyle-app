@@ -1,5 +1,6 @@
 import { createBrowserRouter, type RouteObject } from 'react-router-dom';
 import { lazy, Suspense, useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Login } from './pages/Login';
@@ -17,6 +18,9 @@ import { Settings } from './pages/Settings';
 import { useAuthStore } from './stores/authStore';
 import { useActivityDots } from './hooks/useActivityDots';
 import { ActivityDotGrid } from './components/dashboard/ActivityDotGrid';
+import { useQuery } from '@tanstack/react-query';
+import { api } from './lib/client';
+import { getTodayDateString } from './lib/dateValidation';
 
 const COLUMNS = 25; // Must match ActivityDotGrid
 
@@ -30,13 +34,13 @@ function useDotsCount(): number {
         getComputedStyle(document.documentElement).getPropertyValue('--safe-area-inset-bottom') || '0',
         10
       ) || 0;
-      // Available height: viewport - header(64px) - main-py-8(32px) - main-pb-24(96px) - nav(80px) - safeArea
-      const availableHeight = window.innerHeight - 272 - safeAreaBottom;
+      // Available height: viewport - header(56px) - todaySummary(~120px) - main-py-6(24px) - main-pb-20(80px) - nav(64px) - safeArea
+      const availableHeight = window.innerHeight - 344 - safeAreaBottom;
       const cellSize = window.innerWidth / COLUMNS;
       const rows = Math.floor(availableHeight / cellSize);
       const dots = rows * COLUMNS;
-      // Clamp between 200 and 1000
-      setCount(Math.max(200, Math.min(1000, dots)));
+      // Clamp between 100 and 800
+      setCount(Math.max(100, Math.min(800, dots)));
     };
 
     calculateDots();
@@ -60,22 +64,18 @@ function Home() {
 
   if (!isAuthenticated) {
     return (
-      <div className="text-center">
-        <h1 className="text-3xl font-bold text-gray-900">Health Tracker</h1>
-        <p className="mt-4 text-gray-600">体重・食事・運動を記録して健康管理をしましょう</p>
-        <div className="mt-6 flex justify-center gap-4">
-          <a
-            href="/login"
-            className="rounded-lg bg-blue-600 px-6 py-2 text-white hover:bg-blue-700"
-          >
-            ログイン
-          </a>
-          <a
-            href="/register"
-            className="rounded-lg border border-gray-300 px-6 py-2 text-gray-700 hover:bg-gray-50"
-          >
-            新規登録
-          </a>
+      <div className="flex min-h-[calc(100vh-12rem)] items-center justify-center text-center">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">Health Tracker</h1>
+          <p className="mt-2 text-sm text-gray-500">体重・食事・運動を記録して健康管理をしましょう</p>
+          <div className="mt-6 flex justify-center gap-3">
+            <a href="/login" className="rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors">
+              ログイン
+            </a>
+            <a href="/register" className="rounded-lg border border-gray-200 px-5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+              新規登録
+            </a>
+          </div>
         </div>
       </div>
     );
@@ -87,13 +87,89 @@ function Home() {
 // Separate component to avoid hook calls when not authenticated
 function AuthenticatedHome() {
   const dotsCount = useDotsCount();
-  const { data: activityData, isLoading } = useActivityDots(dotsCount);
+  const { data: activityData, isLoading: dotsLoading } = useActivityDots(dotsCount);
+  const today = getTodayDateString();
+
+  // Latest weight (no date filter - gets most recent)
+  const { data: weightData, isLoading: weightLoading } = useQuery({
+    queryKey: ['weights', 'latest-for-home'],
+    queryFn: async () => {
+      const res = await api.weights.$get({ query: {} });
+      if (!res.ok) return null;
+      return res.json();
+    },
+    select: (data) => data?.weights?.[0] ?? null,
+  });
+
+  // Today's meals
+  const { data: mealsData, isLoading: mealsLoading } = useQuery({
+    queryKey: ['meals', 'today-for-home', today],
+    queryFn: async () => {
+      const res = await api.meals.$get({ query: { startDate: today, endDate: today } });
+      if (!res.ok) return null;
+      return res.json();
+    },
+  });
+
+  // Today's exercises
+  const { data: exercisesData, isLoading: exercisesLoading } = useQuery({
+    queryKey: ['exercises', 'today-for-home', today],
+    queryFn: async () => {
+      const res = await api.exercises.$get({ query: { startDate: today, endDate: today } });
+      if (!res.ok) return null;
+      return res.json();
+    },
+  });
+
+  const latestWeight = weightData?.weight ?? null;
+  const todayMeals = mealsData?.meals ?? [];
+  const todayCalories = todayMeals.reduce((sum, m) => sum + (m.calories ?? 0), 0);
+  const todayMealCount = todayMeals.length;
+  const todayExerciseSets = exercisesData?.exercises?.length ?? 0;
+  const summaryLoading = weightLoading || mealsLoading || exercisesLoading;
 
   return (
-    <ActivityDotGrid
-      activities={activityData?.activities ?? []}
-      isLoading={isLoading}
-    />
+    <div className="space-y-4">
+      {/* Today's Summary */}
+      <div className="grid grid-cols-3 gap-3">
+        <Link to="/weight" className="card p-3 hover:shadow-card-hover transition-shadow">
+          <p className="text-[10px] text-gray-400 uppercase tracking-wider">体重</p>
+          {summaryLoading ? (
+            <div className="mt-1 h-6 w-16 animate-pulse rounded bg-gray-100" />
+          ) : latestWeight !== null ? (
+            <p className="mt-0.5 text-lg font-bold text-gray-900 tabular-nums">{latestWeight.toFixed(1)}<span className="text-xs font-normal text-gray-400 ml-0.5">kg</span></p>
+          ) : (
+            <p className="mt-0.5 text-sm text-gray-300">未記録</p>
+          )}
+        </Link>
+        <Link to="/meals" className="card p-3 hover:shadow-card-hover transition-shadow">
+          <p className="text-[10px] text-gray-400 uppercase tracking-wider">今日のカロリー</p>
+          {summaryLoading ? (
+            <div className="mt-1 h-6 w-16 animate-pulse rounded bg-gray-100" />
+          ) : todayMealCount > 0 ? (
+            <p className="mt-0.5 text-lg font-bold text-gray-900 tabular-nums">{(todayCalories ?? 0).toLocaleString()}<span className="text-xs font-normal text-gray-400 ml-0.5">kcal</span></p>
+          ) : (
+            <p className="mt-0.5 text-sm text-gray-300">未記録</p>
+          )}
+        </Link>
+        <Link to="/exercises" className="card p-3 hover:shadow-card-hover transition-shadow">
+          <p className="text-[10px] text-gray-400 uppercase tracking-wider">今日の筋トレ</p>
+          {summaryLoading ? (
+            <div className="mt-1 h-6 w-16 animate-pulse rounded bg-gray-100" />
+          ) : todayExerciseSets > 0 ? (
+            <p className="mt-0.5 text-lg font-bold text-gray-900 tabular-nums">{todayExerciseSets}<span className="text-xs font-normal text-gray-400 ml-0.5">set</span></p>
+          ) : (
+            <p className="mt-0.5 text-sm text-gray-300">未記録</p>
+          )}
+        </Link>
+      </div>
+
+      {/* Activity Dots */}
+      <ActivityDotGrid
+        activities={activityData?.activities ?? []}
+        isLoading={dotsLoading}
+      />
+    </div>
   );
 }
 
