@@ -45,17 +45,19 @@ export function Register() {
     }
   };
 
+  const inputClassName = "mt-1 block w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors";
+
   return (
-    <div className="flex min-h-[calc(100vh-12rem)] items-center justify-center">
-      <div className="w-full max-w-md space-y-8">
+    <div className="flex min-h-[calc(100vh-12rem)] items-center justify-center px-4">
+      <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-900">アカウント登録</h1>
-          <p className="mt-2 text-gray-600">新しいアカウントを作成してください</p>
+          <h1 className="text-2xl font-bold text-gray-900">アカウント登録</h1>
+          <p className="mt-1 text-sm text-gray-500">新しいアカウントを作成してください</p>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
           {error && (
-            <div className="rounded-md bg-red-50 p-4">
+            <div className="card bg-red-50 p-3">
               <p className="text-sm text-red-700">{error}</p>
             </div>
           )}
@@ -70,10 +72,10 @@ export function Register() {
                 type="email"
                 id="email"
                 autoComplete="email"
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className={inputClassName}
               />
               {errors.email && (
-                <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+                <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>
               )}
             </div>
 
@@ -86,16 +88,16 @@ export function Register() {
                 type="password"
                 id="password"
                 autoComplete="new-password"
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className={inputClassName}
               />
               {errors.password && (
-                <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
+                <p className="mt-1 text-xs text-red-500">{errors.password.message}</p>
               )}
             </div>
 
             <div>
               <label htmlFor="goalWeight" className="block text-sm font-medium text-gray-700">
-                目標体重（kg、任意）
+                目標体重 <span className="text-xs text-gray-400">(kg, 任意)</span>
               </label>
               <input
                 {...register('goalWeight')}
@@ -104,16 +106,16 @@ export function Register() {
                 step="0.1"
                 min="20"
                 max="300"
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className={inputClassName}
               />
               {errors.goalWeight && (
-                <p className="mt-1 text-sm text-red-600">{errors.goalWeight.message}</p>
+                <p className="mt-1 text-xs text-red-500">{errors.goalWeight.message}</p>
               )}
             </div>
 
             <div>
               <label htmlFor="goalCalories" className="block text-sm font-medium text-gray-700">
-                1日の目標カロリー（kcal、任意）
+                1日の目標カロリー <span className="text-xs text-gray-400">(kcal, 任意)</span>
               </label>
               <input
                 {...register('goalCalories')}
@@ -123,11 +125,11 @@ export function Register() {
                 min="500"
                 max="10000"
                 placeholder="2000"
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className={inputClassName}
               />
-              <p className="mt-1 text-xs text-gray-500">未入力の場合は2000kcalが設定されます</p>
+              <p className="mt-1 text-[10px] text-gray-400">未入力の場合は2000kcalが設定されます</p>
               {errors.goalCalories && (
-                <p className="mt-1 text-sm text-red-600">{errors.goalCalories.message}</p>
+                <p className="mt-1 text-xs text-red-500">{errors.goalCalories.message}</p>
               )}
             </div>
           </div>
@@ -135,12 +137,12 @@ export function Register() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
+            className="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 transition-colors"
           >
             {isSubmitting ? '登録中...' : '登録する'}
           </button>
 
-          <p className="text-center text-sm text-gray-600">
+          <p className="text-center text-sm text-gray-500">
             すでにアカウントをお持ちですか？{' '}
             <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500">
               ログイン

@@ -30,8 +30,8 @@ function useDotsCount(): number {
         getComputedStyle(document.documentElement).getPropertyValue('--safe-area-inset-bottom') || '0',
         10
       ) || 0;
-      // Available height: viewport - header(64px) - main-py-8(32px) - main-pb-24(96px) - nav(80px) - safeArea
-      const availableHeight = window.innerHeight - 272 - safeAreaBottom;
+      // Available height: viewport - header(56px) - main-py-6(24px) - main-pb-20(80px) - nav(64px) - safeArea
+      const availableHeight = window.innerHeight - 224 - safeAreaBottom;
       const cellSize = window.innerWidth / COLUMNS;
       const rows = Math.floor(availableHeight / cellSize);
       const dots = rows * COLUMNS;
@@ -60,22 +60,18 @@ function Home() {
 
   if (!isAuthenticated) {
     return (
-      <div className="text-center">
-        <h1 className="text-3xl font-bold text-gray-900">Health Tracker</h1>
-        <p className="mt-4 text-gray-600">体重・食事・運動を記録して健康管理をしましょう</p>
-        <div className="mt-6 flex justify-center gap-4">
-          <a
-            href="/login"
-            className="rounded-lg bg-blue-600 px-6 py-2 text-white hover:bg-blue-700"
-          >
-            ログイン
-          </a>
-          <a
-            href="/register"
-            className="rounded-lg border border-gray-300 px-6 py-2 text-gray-700 hover:bg-gray-50"
-          >
-            新規登録
-          </a>
+      <div className="flex min-h-[calc(100vh-12rem)] items-center justify-center text-center">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">Health Tracker</h1>
+          <p className="mt-2 text-sm text-gray-500">体重・食事・運動を記録して健康管理をしましょう</p>
+          <div className="mt-6 flex justify-center gap-3">
+            <a href="/login" className="rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors">
+              ログイン
+            </a>
+            <a href="/register" className="rounded-lg border border-gray-200 px-5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+              新規登録
+            </a>
+          </div>
         </div>
       </div>
     );

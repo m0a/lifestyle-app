@@ -34,78 +34,81 @@ export function Weight() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
+      <div className="flex items-center justify-center py-16">
+        <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-blue-200 border-t-blue-600" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="rounded-md bg-red-50 p-4">
-        <p className="text-red-700">データの読み込みに失敗しました</p>
+      <div className="card bg-red-50 p-4">
+        <p className="text-sm text-red-700">データの読み込みに失敗しました</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">体重記録</h1>
-        <p className="mt-1 text-gray-600">日々の体重を記録して、推移を確認しましょう</p>
+        <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">体重記録</h1>
+        <p className="mt-0.5 text-sm text-gray-500">日々の体重を記録して、推移を確認しましょう</p>
       </div>
 
       {/* Stats Summary */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        <div className="rounded-lg border border-gray-200 bg-white p-4">
-          <p className="text-sm text-gray-500">現在の体重</p>
-          <p className="mt-1 text-2xl font-bold text-gray-900">
-            {latestWeight !== null ? `${latestWeight.toFixed(1)} kg` : '-'}
+      <div className="grid gap-3 grid-cols-3">
+        <div className="card p-4">
+          <p className="text-xs text-gray-400">現在</p>
+          <p className="mt-1 text-xl font-bold text-gray-900 tabular-nums sm:text-2xl">
+            {latestWeight !== null ? `${latestWeight.toFixed(1)}` : '-'}
           </p>
+          <p className="text-xs text-gray-400">kg</p>
         </div>
-        <div className="rounded-lg border border-gray-200 bg-white p-4">
-          <p className="text-sm text-gray-500">前回との差</p>
+        <div className="card p-4">
+          <p className="text-xs text-gray-400">前回比</p>
           <p
-            className={`mt-1 text-2xl font-bold ${
+            className={`mt-1 text-xl font-bold tabular-nums sm:text-2xl ${
               weightChange === null
                 ? 'text-gray-900'
                 : weightChange > 0
-                  ? 'text-red-600'
+                  ? 'text-red-500'
                   : weightChange < 0
-                    ? 'text-green-600'
+                    ? 'text-emerald-600'
                     : 'text-gray-900'
             }`}
           >
             {weightChange !== null
-              ? `${weightChange > 0 ? '+' : ''}${weightChange.toFixed(1)} kg`
+              ? `${weightChange > 0 ? '+' : ''}${weightChange.toFixed(1)}`
               : '-'}
           </p>
+          <p className="text-xs text-gray-400">kg</p>
         </div>
-        <div className="rounded-lg border border-gray-200 bg-white p-4">
-          <p className="text-sm text-gray-500">目標まで</p>
+        <div className="card p-4">
+          <p className="text-xs text-gray-400">目標まで</p>
           <p
-            className={`mt-1 text-2xl font-bold ${
+            className={`mt-1 text-xl font-bold tabular-nums sm:text-2xl ${
               goalProgress === null
                 ? 'text-gray-900'
                 : goalProgress > 0
-                  ? 'text-orange-600'
-                  : 'text-green-600'
+                  ? 'text-orange-500'
+                  : 'text-emerald-600'
             }`}
           >
             {goalProgress !== null
               ? goalProgress <= 0
-                ? '達成！'
-                : `${goalProgress.toFixed(1)} kg`
+                ? '達成!'
+                : `${goalProgress.toFixed(1)}`
               : user?.goalWeight
                 ? '-'
-                : '未設定'}
+                : '--'}
           </p>
+          <p className="text-xs text-gray-400">{user?.goalWeight ? 'kg' : '未設定'}</p>
         </div>
       </div>
 
       {/* Input Form */}
-      <div className="rounded-lg border border-gray-200 bg-white p-6">
-        <h2 className="mb-4 text-lg font-semibold text-gray-900">体重を記録</h2>
+      <div className="card p-5">
+        <h2 className="mb-3 text-sm font-semibold text-gray-900">体重を記録</h2>
         <WeightInput
           onSubmit={create}
           isLoading={isCreating}
@@ -114,13 +117,13 @@ export function Weight() {
       </div>
 
       {/* Chart */}
-      <div className="rounded-lg border border-gray-200 bg-white p-6">
+      <div className="card p-5">
         <WeightChart weights={weights} />
       </div>
 
       {/* History List */}
       <div>
-        <h2 className="mb-4 text-lg font-semibold text-gray-900">記録履歴</h2>
+        <h2 className="mb-3 text-sm font-semibold text-gray-900">記録履歴</h2>
         <WeightList
           weights={weights}
           onUpdate={update}

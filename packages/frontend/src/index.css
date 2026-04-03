@@ -7,15 +7,31 @@
   --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
 }
 
+@layer base {
+  body {
+    @apply bg-gray-50 text-gray-900 antialiased;
+  }
+}
+
 /* Custom utility for safe area bottom padding */
 @layer utilities {
   .pb-safe-bottom {
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
-  /* Dots grid max height: 100dvh - header(64) - py-8(32) - pb-24(96) - nav(80) - safe-area */
+  /* Dots grid max height: 100dvh - header(56) - py-6(24) - pb-20(80) - nav(64) - safe-area */
   .max-h-dots-grid {
-    max-height: calc(100dvh - 272px - env(safe-area-inset-bottom, 0px));
+    max-height: calc(100dvh - 224px - env(safe-area-inset-bottom, 0px));
     overflow: hidden;
+  }
+}
+
+/* Card base style */
+@layer components {
+  .card {
+    @apply rounded-xl bg-white shadow-card;
+  }
+  .card-hover {
+    @apply rounded-xl bg-white shadow-card transition-shadow hover:shadow-card-hover;
   }
 }
