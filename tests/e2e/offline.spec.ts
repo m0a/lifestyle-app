@@ -76,7 +76,7 @@ test.describe('PWA Support', () => {
       await page.waitForLoadState('networkidle');
 
       // Verify the page loaded correctly (use heading to be specific)
-      await expect(page.getByRole('heading', { name: 'ダッシュボード' })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'レポート' })).toBeVisible();
     });
 
     test('should load weight page after caching', async ({ page }) => {
@@ -104,7 +104,7 @@ test.describe('PWA Support', () => {
       await expect(page.getByRole('heading', { name: '体重記録' })).toBeVisible();
 
       await page.goBack();
-      await expect(page.getByRole('heading', { name: 'ダッシュボード' })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'レポート' })).toBeVisible();
     });
   });
 
