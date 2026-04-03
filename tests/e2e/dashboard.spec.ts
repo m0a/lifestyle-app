@@ -41,12 +41,12 @@ test.describe('Dashboard Flow', () => {
   test('should switch periods and update data', async ({ page }) => {
     await page.goto('/dashboard');
 
-    // Default is weekly
-    await expect(page.getByRole('button', { name: '週間' })).toHaveClass(/bg-blue-600/);
+    // Default is weekly (active state uses bg-white with shadow in segment control)
+    await expect(page.getByRole('button', { name: '週間' })).toHaveClass(/bg-white/);
 
     // Switch to monthly
     await page.click('button:has-text("月間")');
-    await expect(page.getByRole('button', { name: '月間' })).toHaveClass(/bg-blue-600/);
+    await expect(page.getByRole('button', { name: '月間' })).toHaveClass(/bg-white/);
 
     // Data should update (loading indicator may appear briefly)
     await page.waitForTimeout(500);
