@@ -18,7 +18,9 @@ import { Settings } from './pages/Settings';
 import { useAuthStore } from './stores/authStore';
 import { useActivityDots } from './hooks/useActivityDots';
 import { ActivityDotGrid } from './components/dashboard/ActivityDotGrid';
-import { useDashboard } from './hooks/useDashboard';
+import { useQuery } from '@tanstack/react-query';
+import { api } from './lib/client';
+import { getTodayDateString } from './lib/dateValidation';
 
 const COLUMNS = 25; // Must match ActivityDotGrid
 
@@ -86,11 +88,45 @@ function Home() {
 function AuthenticatedHome() {
   const dotsCount = useDotsCount();
   const { data: activityData, isLoading: dotsLoading } = useActivityDots(dotsCount);
-  const { summary, isLoading: summaryLoading } = useDashboard({ period: 'week' });
+  const today = getTodayDateString();
 
-  const weight = summary?.weight;
-  const meals = summary?.meals;
-  const exercises = summary?.exercises;
+  // Latest weight (no date filter - gets most recent)
+  const { data: weightData, isLoading: weightLoading } = useQuery({
+    queryKey: ['weights', 'latest-for-home'],
+    queryFn: async () => {
+      const res = await api.weights.$get({ query: {} });
+      if (!res.ok) return null;
+      return res.json();
+    },
+    select: (data) => data?.weights?.[0] ?? null,
+  });
+
+  // Today's meals
+  const { data: mealsData, isLoading: mealsLoading } = useQuery({
+    queryKey: ['meals', 'today-for-home', today],
+    queryFn: async () => {
+      const res = await api.meals.$get({ query: { startDate: today, endDate: today } });
+      if (!res.ok) return null;
+      return res.json();
+    },
+  });
+
+  // Today's exercises
+  const { data: exercisesData, isLoading: exercisesLoading } = useQuery({
+    queryKey: ['exercises', 'today-for-home', today],
+    queryFn: async () => {
+      const res = await api.exercises.$get({ query: { startDate: today, endDate: today } });
+      if (!res.ok) return null;
+      return res.json();
+    },
+  });
+
+  const latestWeight = weightData?.weight ?? null;
+  const todayMeals = mealsData?.meals ?? [];
+  const todayCalories = todayMeals.reduce((sum, m) => sum + (m.calories ?? 0), 0);
+  const todayMealCount = todayMeals.length;
+  const todayExerciseSets = exercisesData?.exercises?.length ?? 0;
+  const summaryLoading = weightLoading || mealsLoading || exercisesLoading;
 
   return (
     <div className="space-y-4">
@@ -100,28 +136,28 @@ function AuthenticatedHome() {
           <p className="text-[10px] text-gray-400 uppercase tracking-wider">体重</p>
           {summaryLoading ? (
             <div className="mt-1 h-6 w-16 animate-pulse rounded bg-gray-100" />
-          ) : weight?.endWeight ? (
-            <p className="mt-0.5 text-lg font-bold text-gray-900 tabular-nums">{weight.endWeight.toFixed(1)}<span className="text-xs font-normal text-gray-400 ml-0.5">kg</span></p>
+          ) : latestWeight !== null ? (
+            <p className="mt-0.5 text-lg font-bold text-gray-900 tabular-nums">{latestWeight.toFixed(1)}<span className="text-xs font-normal text-gray-400 ml-0.5">kg</span></p>
           ) : (
             <p className="mt-0.5 text-sm text-gray-300">未記録</p>
           )}
         </Link>
         <Link to="/meals" className="card p-3 hover:shadow-card-hover transition-shadow">
-          <p className="text-[10px] text-gray-400 uppercase tracking-wider">今週のカロリー</p>
+          <p className="text-[10px] text-gray-400 uppercase tracking-wider">今日のカロリー</p>
           {summaryLoading ? (
             <div className="mt-1 h-6 w-16 animate-pulse rounded bg-gray-100" />
-          ) : meals?.totalCalories ? (
-            <p className="mt-0.5 text-lg font-bold text-gray-900 tabular-nums">{meals.totalCalories.toLocaleString()}<span className="text-xs font-normal text-gray-400 ml-0.5">kcal</span></p>
+          ) : todayMealCount > 0 ? (
+            <p className="mt-0.5 text-lg font-bold text-gray-900 tabular-nums">{(todayCalories ?? 0).toLocaleString()}<span className="text-xs font-normal text-gray-400 ml-0.5">kcal</span></p>
           ) : (
             <p className="mt-0.5 text-sm text-gray-300">未記録</p>
           )}
         </Link>
         <Link to="/exercises" className="card p-3 hover:shadow-card-hover transition-shadow">
-          <p className="text-[10px] text-gray-400 uppercase tracking-wider">筋トレ</p>
+          <p className="text-[10px] text-gray-400 uppercase tracking-wider">今日の筋トレ</p>
           {summaryLoading ? (
             <div className="mt-1 h-6 w-16 animate-pulse rounded bg-gray-100" />
-          ) : exercises?.totalSets ? (
-            <p className="mt-0.5 text-lg font-bold text-gray-900 tabular-nums">{exercises.totalSets}<span className="text-xs font-normal text-gray-400 ml-0.5">set</span></p>
+          ) : todayExerciseSets > 0 ? (
+            <p className="mt-0.5 text-lg font-bold text-gray-900 tabular-nums">{todayExerciseSets}<span className="text-xs font-normal text-gray-400 ml-0.5">set</span></p>
           ) : (
             <p className="mt-0.5 text-sm text-gray-300">未記録</p>
           )}
