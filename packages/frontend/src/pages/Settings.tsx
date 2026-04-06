@@ -318,6 +318,18 @@ export function Settings() {
         )}
       </div>
 
+      {/* Logout */}
+      <button
+        onClick={() => {
+          api.auth.logout.$post().catch(() => {});
+          logout();
+          navigate('/login');
+        }}
+        className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+      >
+        ログアウト
+      </button>
+
       {/* Delete Account Section */}
       <div className="card border border-red-100 bg-red-50/50 p-5">
         <h2 className="mb-2 text-sm font-semibold text-red-900">アカウント削除</h2>

@@ -2,6 +2,7 @@ import { hc } from 'hono/client';
 import type { AppType } from '@lifestyle-app/backend';
 import { generateRequestId } from './requestId';
 import { setCurrentRequestId } from './errorLogger';
+import { useAuthStore } from '../stores/authStore';
 
 // In production (empty VITE_API_URL), use same origin
 // In development, use localhost:8787
@@ -18,6 +19,9 @@ function getApiBaseUrl(): string {
 }
 
 const API_BASE_URL = getApiBaseUrl();
+
+// Paths that should not trigger auto-logout on 401
+const AUTH_PATHS = ['/api/auth/login', '/api/auth/register', '/api/auth/me'];
 
 // Hono RPC client with full type safety
 export const client = hc<AppType>(API_BASE_URL, {
@@ -40,6 +44,17 @@ export const client = hc<AppType>(API_BASE_URL, {
         headers,
       });
       console.log('[RPC] Response:', response.status, response.statusText);
+
+      // Auto-logout on 401 (session expired)
+      if (response.status === 401) {
+        const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : (input as Request).url;
+        const isAuthPath = AUTH_PATHS.some(path => url.includes(path));
+        if (!isAuthPath && useAuthStore.getState().isAuthenticated) {
+          useAuthStore.getState().logout();
+          window.location.href = '/login';
+        }
+      }
+
       return response;
     } catch (error) {
       console.error('[RPC] Fetch error:', error);
