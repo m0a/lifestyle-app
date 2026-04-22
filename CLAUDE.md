@@ -6,6 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Lifestyle tracking monorepo - 体重・食事・運動を記録するPWAアプリケーション。食事写真からAIがカロリー分析を行う機能を持つ。
 
+## Workflow Rules
+
+- コミット / PR作成の前に `pnpm typecheck` を実行し、型エラーがないことを確認する（pre-commitフックは入れていないため手動運用）。
+
 ## Commands
 
 ```bash
