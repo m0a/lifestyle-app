@@ -3,7 +3,7 @@ import { getAIProvider, getModelId, type AIConfig } from '../lib/ai-provider';
 import type { FoodItem, ChatMessage, ChatChange } from '@lifestyle-app/shared';
 
 // Token usage from AI SDK
-export interface TokenUsage {
+interface TokenUsage {
   promptTokens: number;
   completionTokens: number;
   totalTokens: number;

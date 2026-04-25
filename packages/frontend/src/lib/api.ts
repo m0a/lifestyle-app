@@ -119,9 +119,9 @@ import type {
   TextAnalysisError,
 } from '@lifestyle-app/shared';
 
-export interface MealAnalysisResponse extends AnalysisResult {}
+interface MealAnalysisResponse extends AnalysisResult {}
 
-export interface MealChatEvent {
+interface MealChatEvent {
   text?: string;
   done?: boolean;
   messageId?: string;

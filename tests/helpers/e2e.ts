@@ -9,7 +9,7 @@
 
 import type { Page } from '@playwright/test';
 
-export const TEST_USERS = {
+const TEST_USERS = {
   default: {
     email: 'test@example.com',
     password: 'test1234',

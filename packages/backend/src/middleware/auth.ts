@@ -4,7 +4,7 @@ import type { Database } from '../db';
 import { schema } from '../db';
 import { eq } from 'drizzle-orm';
 
-export interface AuthUser {
+interface AuthUser {
   id: string;
   email: string;
 }

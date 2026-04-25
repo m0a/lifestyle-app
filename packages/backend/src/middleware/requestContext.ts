@@ -14,7 +14,7 @@ import type { Context } from 'hono';
 /**
  * Request context variables available throughout the request lifecycle
  */
-export interface RequestContext {
+interface RequestContext {
   requestId: string;
   userId?: string;
 }

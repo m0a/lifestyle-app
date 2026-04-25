@@ -7,7 +7,7 @@
  * - Plain text fallback
  */
 
-export interface EmailVerificationTemplateData {
+interface EmailVerificationTemplateData {
   /**
    * Email verification link with token
    */
