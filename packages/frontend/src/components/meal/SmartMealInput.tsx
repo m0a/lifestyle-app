@@ -5,7 +5,6 @@ import type {
   NutritionTotals,
   MealType,
   TextAnalysisResponse,
-  DateTimeSource,
 } from '@lifestyle-app/shared';
 import { MEAL_TYPE_LABELS } from '@lifestyle-app/shared';
 import { mealAnalysisApi, getPhotoUrl } from '../../lib/api';
@@ -14,10 +13,12 @@ import { UnifiedPhotoSelector } from './UnifiedPhotoSelector';
 import { PhotoAnalysisReview } from './PhotoAnalysisReview';
 import { PhotoUploadErrorBoundary } from './PhotoUploadErrorBoundary';
 import { MealChat } from './MealChat';
-import { validateNotFuture, toDateTimeLocal, getCurrentDateTimeLocal } from '../../lib/dateValidation';
-import { toLocalISOString, fromDatetimeLocal } from '../../lib/datetime';
+import { toDateTimeLocal, getCurrentDateTimeLocal } from '../../lib/dateValidation';
+import { toLocalISOString } from '../../lib/datetime';
 import { usePhotoMealFlow } from '../../hooks/usePhotoMealFlow';
 import type { AnalysisProgress } from '../../hooks/usePhotoMealFlow';
+import { useMealItemEditor } from '../../hooks/useMealItemEditor';
+import { useMealDateTime } from '../../hooks/useMealDateTime';
 
 interface SmartMealInputProps {
   onSave: (mealId: string, mealType: MealType, recordedAt?: string) => Promise<void>;
@@ -43,15 +44,25 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
   const [showChat, setShowChat] = useState(false);
   const [photoKey, setPhotoKey] = useState<string | null>(null);
 
-  // Date/time state (011-meal-datetime) - for text flow
-  const [recordedAt, setRecordedAt] = useState<string>(toLocalISOString(new Date()));
-  const [dateTimeSource, setDateTimeSource] = useState<DateTimeSource>('now');
-  const [dateError, setDateError] = useState<string | null>(null);
+  // Date/time - for text flow
+  const {
+    recordedAt,
+    setRecordedAt,
+    dateTimeSource,
+    setDateTimeSource,
+    dateError,
+    setDateError,
+    handleDateTimeChange,
+    validateForSave: validateDateForSave,
+    reset: resetDateTime,
+  } = useMealDateTime();
+
+  const { updateItem: handleUpdateItem, deleteItem: handleDeleteItem, addItem: handleAddItem } =
+    useMealItemEditor(mealId, setFoodItems, setTotals);
 
   // Unified photo flow
   const photoFlow = usePhotoMealFlow();
 
-  // Submit text for analysis (T012)
   const handleSubmit = useCallback(async () => {
     if (!text.trim()) return;
 
@@ -89,58 +100,11 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
       }
       setInputState('error');
     }
-  }, [text, queryClient]);
+  }, [text, queryClient, setRecordedAt, setDateTimeSource]);
 
-  // Update food item (T015) - for text flow
-  const handleUpdateItem = useCallback(async (itemId: string, updates: Partial<FoodItem>) => {
-    if (!mealId) return;
-
-    try {
-      const result = await mealAnalysisApi.updateFoodItem(mealId, itemId, updates);
-      setFoodItems(prev => prev.map(item =>
-        item.id === itemId ? result.foodItem : item
-      ));
-      setTotals(result.updatedTotals);
-    } catch (err) {
-      console.error('Failed to update food item:', err);
-    }
-  }, [mealId]);
-
-  // Delete food item - for text flow
-  const handleDeleteItem = useCallback(async (itemId: string) => {
-    if (!mealId) return;
-
-    try {
-      const result = await mealAnalysisApi.deleteFoodItem(mealId, itemId);
-      setFoodItems(prev => prev.filter(item => item.id !== itemId));
-      setTotals(result.updatedTotals);
-    } catch (err) {
-      console.error('Failed to delete food item:', err);
-    }
-  }, [mealId]);
-
-  // Add food item - for text flow
-  const handleAddItem = useCallback(async (item: Omit<FoodItem, 'id'>) => {
-    if (!mealId) return;
-
-    try {
-      const result = await mealAnalysisApi.addFoodItem(mealId, item);
-      setFoodItems(prev => [...prev, result.foodItem]);
-      setTotals(result.updatedTotals);
-    } catch (err) {
-      console.error('Failed to add food item:', err);
-    }
-  }, [mealId]);
-
-  // Save meal (T016) - for text flow
   const handleSave = useCallback(async () => {
     if (!mealId) return;
-
-    const validationError = validateNotFuture(recordedAt);
-    if (validationError) {
-      setDateError(validationError);
-      return;
-    }
+    if (!validateDateForSave()) return;
 
     setInputState('saving');
     try {
@@ -149,16 +113,14 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
       setMealId(null);
       setFoodItems([]);
       setTotals(null);
-      setRecordedAt(toLocalISOString(new Date()));
-      setDateTimeSource('now');
-      setDateError(null);
+      resetDateTime();
       setInputState('idle');
       onRefresh?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : '保存に失敗しました');
       setInputState('error');
     }
-  }, [mealId, mealType, recordedAt, onSave, onRefresh]);
+  }, [mealId, mealType, recordedAt, onSave, onRefresh, validateDateForSave, resetDateTime]);
 
   // Reset to idle state
   const handleReset = useCallback(() => {
@@ -169,13 +131,10 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
     setError(null);
     setPhotoKey(null);
     setShowChat(false);
-    setRecordedAt(toLocalISOString(new Date()));
-    setDateTimeSource('now');
-    setDateError(null);
+    resetDateTime();
     setInputState('idle');
-  }, []);
+  }, [resetDateTime]);
 
-  // Fallback to manual input (T017)
   const handleManualFallback = useCallback(async () => {
     setError(null);
     setInputState('analyzing');
@@ -195,20 +154,6 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
     }
   }, [text]);
 
-  // Handle date/time change (011-meal-datetime) - for text flow
-  const handleDateTimeChange = useCallback((newDateTime: string) => {
-    const isoDateTime = fromDatetimeLocal(newDateTime);
-    const validationError = validateNotFuture(isoDateTime);
-    if (validationError) {
-      setDateError(validationError);
-      return;
-    }
-    setDateError(null);
-    setRecordedAt(isoDateTime);
-    setDateTimeSource('now');
-  }, []);
-
-  // Handle chat updates (T027-T028) - for text flow
   const handleChatUpdate = useCallback((updatedFoodItems: FoodItem[], updatedTotals: NutritionTotals, newRecordedAt?: string) => {
     setFoodItems(updatedFoodItems);
     setTotals(updatedTotals);
@@ -217,7 +162,7 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
       setDateTimeSource('text');
       setDateError(null);
     }
-  }, []);
+  }, [setRecordedAt, setDateTimeSource, setDateError]);
 
   // Photo flow: handle save from PhotoAnalysisReview
   const handlePhotoFlowSave = useCallback(async (photoMealId: string, photoMealType: MealType, photoRecordedAt?: string) => {
@@ -305,7 +250,6 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
             </button>
           </div>
 
-          {/* Error message (T017) */}
           {inputState === 'error' && error && (
             <div className="rounded-lg bg-red-50 p-3">
               <p className="text-sm text-red-600">{error}</p>
@@ -320,7 +264,6 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
         </div>
       )}
 
-      {/* Text flow: Loading State (T011) */}
       {!isPhotoFlowActive && inputState === 'analyzing' && (
         <div className="flex flex-col items-center gap-4 py-8">
           <div className="h-12 w-12 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
@@ -328,7 +271,6 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
         </div>
       )}
 
-      {/* Text flow: Result State (T014) */}
       {!isPhotoFlowActive && (inputState === 'result' || inputState === 'saving') && totals && (
         <div className="space-y-4">
           {/* Input text display */}
@@ -339,7 +281,6 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
             </div>
           )}
 
-          {/* Analysis result with photo (T026) */}
           <AnalysisResult
             photoUrl={photoKey ? getPhotoUrl(photoKey) ?? undefined : undefined}
             foodItems={foodItems}
@@ -349,7 +290,6 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
             onAddItem={handleAddItem}
           />
 
-          {/* Chat toggle and panel (T027-T028) */}
           {mealId && (
             <div>
               <button
@@ -371,7 +311,6 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
             </div>
           )}
 
-          {/* Date/time selector (011-meal-datetime) */}
           <div className="space-y-2">
             <div className="flex items-center gap-3">
               <label className="text-sm font-medium text-gray-700">記録日時:</label>
@@ -391,7 +330,6 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
             )}
           </div>
 
-          {/* Meal type selector (T016) */}
           <div className="flex items-center gap-3">
             <label className="text-sm font-medium text-gray-700">食事タイプ:</label>
             <select
@@ -405,7 +343,6 @@ export function SmartMealInput({ onSave, onRefresh }: SmartMealInputProps) {
                 </option>
               ))}
             </select>
-            {/* Meal type source indicator (Phase 4: T022) */}
             <span className="text-xs text-gray-400">
               ({mealTypeSource === 'text' ? 'テキストから判定' : '時刻から推測'})
             </span>

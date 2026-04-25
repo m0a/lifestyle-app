@@ -68,6 +68,3 @@ export const client = hc<AppType>(API_BASE_URL, {
 
 // Type-safe API client
 export const api = client.api;
-
-// Re-export types for convenience
-export type { AppType };
