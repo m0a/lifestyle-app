@@ -179,3 +179,6 @@ export type NewAIUsageRecord = typeof aiUsageRecords.$inferInsert;
 
 // Email-related tables
 export * from './schema/email';
+
+// WebAuthn / Passkey tables
+export * from './schema/webauthn';

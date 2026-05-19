@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/client';
 import { useAuthStore } from '../stores/authStore';
+import { PasskeyManagement } from '../components/auth/PasskeyManagement';
 
 export function Settings() {
   const navigate = useNavigate();
@@ -184,6 +185,9 @@ export function Settings() {
           </div>
         </div>
       </div>
+
+      {/* Passkey Management */}
+      <PasskeyManagement />
 
       {/* Goals Section */}
       <div className="card p-5">

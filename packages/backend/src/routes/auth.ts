@@ -16,6 +16,7 @@ import {
 } from '../services/auth/password-reset.service';
 import { sendVerificationEmail } from '../services/email/email-verification.service';
 import { getClientIP } from '../services/rate-limit/email-rate-limit';
+import { webauthn } from './auth/webauthn';
 
 type Bindings = {
   DB: D1Database;
@@ -23,6 +24,9 @@ type Bindings = {
   RESEND_API_KEY: string;
   FROM_EMAIL: string;
   FRONTEND_URL: string;
+  RP_ID: string;
+  RP_NAME: string;
+  RP_ORIGIN: string;
 };
 
 type Variables = {
@@ -32,6 +36,7 @@ type Variables = {
 
 // Chain format for RPC type inference
 export const auth = new Hono<{ Bindings: Bindings; Variables: Variables }>()
+  .route('/webauthn', webauthn)
   .post('/register', zValidator('json', registerSchema), async (c) => {
     const input = c.req.valid('json');
     const db = c.get('db');

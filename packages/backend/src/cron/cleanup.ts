@@ -10,6 +10,7 @@ import { drizzle } from 'drizzle-orm/d1';
 import { eq, and, lt } from 'drizzle-orm';
 import * as schema from '../db/schema';
 import * as emailSchema from '../db/schema/email';
+import * as webauthnSchema from '../db/schema/webauthn';
 
 const UNVERIFIED_ACCOUNT_RETENTION_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 const TOKEN_CLEANUP_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -19,13 +20,14 @@ interface CleanupResult {
   deletedPasswordResetTokens: number;
   deletedEmailVerificationTokens: number;
   deletedEmailChangeRequests: number;
+  deletedExpiredChallenges: number;
 }
 
 /**
  * Execute all scheduled cleanup tasks
  */
 export async function executeScheduledCleanup(db: D1Database): Promise<CleanupResult> {
-  const orm = drizzle(db, { schema: { ...schema, ...emailSchema } });
+  const orm = drizzle(db, { schema: { ...schema, ...emailSchema, ...webauthnSchema } });
   const now = Date.now();
   const unverifiedCutoff = now - UNVERIFIED_ACCOUNT_RETENTION_MS;
   const tokenCutoff = now - TOKEN_CLEANUP_AGE_MS;
@@ -140,11 +142,30 @@ export async function executeScheduledCleanup(db: D1Database): Promise<CleanupRe
     console.error('[Cleanup] Error deleting email change requests:', error);
   }
 
+  // 5. Delete expired WebAuthn challenges (5-minute TTL, so anything past now is dead)
+  let deletedExpiredChallenges = 0;
+  try {
+    const nowIso = new Date(now).toISOString();
+    const result = await orm
+      .delete(webauthnSchema.webauthnChallenges)
+      .where(lt(webauthnSchema.webauthnChallenges.expiresAt, nowIso))
+      .run();
+    deletedExpiredChallenges = result.meta?.changes ?? 0;
+    if (deletedExpiredChallenges > 0) {
+      console.log(`[Cleanup] Deleted ${deletedExpiredChallenges} expired WebAuthn challenges`);
+    } else {
+      console.log('[Cleanup] No expired WebAuthn challenges to delete');
+    }
+  } catch (error) {
+    console.error('[Cleanup] Error deleting expired WebAuthn challenges:', error);
+  }
+
   const result = {
     deletedUsers,
     deletedPasswordResetTokens,
     deletedEmailVerificationTokens,
     deletedEmailChangeRequests,
+    deletedExpiredChallenges,
   };
 
   console.log('[Cleanup] Cleanup tasks completed:', result);

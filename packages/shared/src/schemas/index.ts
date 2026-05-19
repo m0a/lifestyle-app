@@ -229,3 +229,6 @@ export * from './exercise';
 // Email and token schemas
 export * from './email';
 export * from './token';
+
+// WebAuthn / Passkey schemas
+export * from './webauthn';
