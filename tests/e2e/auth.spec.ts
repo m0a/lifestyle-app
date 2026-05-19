@@ -27,7 +27,7 @@ test.describe('Authentication', () => {
 
   test('should show validation errors on login with empty fields', async ({ page }) => {
     await page.goto('/login');
-    await page.getByRole('button', { name: 'ログイン' }).click();
+    await page.getByRole('button', { name: 'ログイン', exact: true }).click();
     // Form validation should prevent submission
     await expect(page).toHaveURL('/login');
   });
