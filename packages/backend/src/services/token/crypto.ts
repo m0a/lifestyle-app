@@ -33,7 +33,7 @@ export async function generateSecureToken(): Promise<string> {
  * @param {Uint8Array} buffer - Buffer to encode
  * @returns {string} Base64url-encoded string
  */
-function arrayBufferToBase64Url(buffer: Uint8Array): string {
+export function arrayBufferToBase64Url(buffer: Uint8Array): string {
   // Convert buffer to binary string
   let binary = '';
   for (let i = 0; i < buffer.byteLength; i++) {

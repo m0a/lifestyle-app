@@ -106,16 +106,13 @@ export const webauthn = new Hono<{ Bindings: Bindings; Variables: Variables }>()
       const { credential, credentialDeviceType, credentialBackedUp } =
         verification.registrationInfo;
 
-      const transports =
-        (response as unknown as RegistrationResponseJSON).response?.transports ?? undefined;
-
       const saved = await saveCredential(db, user.id, {
         credentialId: credential.id,
         publicKey: uint8ArrayToBase64url(credential.publicKey),
         counter: credential.counter,
         deviceType: credentialDeviceType,
         backedUp: credentialBackedUp,
-        transports,
+        transports: credential.transports,
         name,
       });
 
@@ -147,26 +144,13 @@ export const webauthn = new Hono<{ Bindings: Bindings; Variables: Variables }>()
     const db = c.get('db');
     const credentialId = c.req.param('credentialId');
 
-    const all = await getCredentialsByUserId(db, user.id);
-    const target = all.find((cred) => cred.credentialId === credentialId);
-    if (!target) {
+    // Phase 2 will introduce a "last credential" guard when passwordHash becomes
+    // nullable (passkey-only users must keep at least one credential). Phase 1
+    // always has a password fallback so deletion is unconditional.
+    const deleted = await deleteCredential(db, credentialId, user.id);
+    if (!deleted) {
       throw new AppError('パスキーが見つかりません', 404, 'CREDENTIAL_NOT_FOUND');
     }
-
-    // Phase 2 guard: if user has no password and this is their last credential,
-    // refuse deletion to avoid account lockout. In Phase 1 password is always set,
-    // so this branch is a no-op but keeps the guard logic stable.
-    const userRecord = await new AuthService(db).getUserById(user.id);
-    const hasPassword = Boolean((userRecord as { passwordHash?: string | null }).passwordHash);
-    if (!hasPassword && all.length <= 1) {
-      throw new AppError(
-        '最後のパスキーは削除できません',
-        400,
-        'LAST_CREDENTIAL',
-      );
-    }
-
-    await deleteCredential(db, credentialId, user.id);
     return c.json({ success: true });
   })
   .post('/authenticate/options', async (c) => {

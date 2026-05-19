@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import type { Database } from '../db';
 import { passkeyCredentials, webauthnChallenges } from '../db/schema/webauthn';
 import type { PasskeyCredential, WebAuthnChallenge } from '../db/schema/webauthn';
+import { arrayBufferToBase64Url } from './token/crypto';
 
 const CHALLENGE_TTL_MS = 5 * 60 * 1000;
 
@@ -62,10 +63,8 @@ export async function saveCredential(
     name?: string;
   },
 ): Promise<PasskeyCredential> {
-  const id = uuidv4();
-  const createdAt = new Date().toISOString();
-  await db.insert(passkeyCredentials).values({
-    id,
+  const row: PasskeyCredential = {
+    id: uuidv4(),
     userId,
     credentialId: cred.credentialId,
     publicKey: cred.publicKey,
@@ -75,16 +74,10 @@ export async function saveCredential(
     transports: cred.transports ? JSON.stringify(cred.transports) : null,
     name: cred.name ?? null,
     lastUsedAt: null,
-    createdAt,
-  });
-
-  const inserted = await db
-    .select()
-    .from(passkeyCredentials)
-    .where(eq(passkeyCredentials.id, id))
-    .get();
-  if (!inserted) throw new Error('Failed to insert credential');
-  return inserted;
+    createdAt: new Date().toISOString(),
+  };
+  await db.insert(passkeyCredentials).values(row);
+  return row;
 }
 
 export async function getCredentialsByUserId(
@@ -150,10 +143,4 @@ export function base64urlToUint8Array(b64url: string): Uint8Array {
   return bytes;
 }
 
-export function uint8ArrayToBase64url(arr: Uint8Array): string {
-  let binary = '';
-  for (let i = 0; i < arr.length; i += 1) {
-    binary += String.fromCharCode(arr[i]!);
-  }
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-}
+export { arrayBufferToBase64Url as uint8ArrayToBase64url };

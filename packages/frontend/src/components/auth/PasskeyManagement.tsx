@@ -3,22 +3,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { browserSupportsWebAuthn } from '@simplewebauthn/browser';
 import { api } from '../../lib/client';
 import { usePasskeyRegistration } from '../../hooks/usePasskeyRegistration';
-
-interface Credential {
-  id: string;
-  credentialId: string;
-  name: string | null;
-  deviceType: string;
-  backedUp: boolean;
-  lastUsedAt: string | null;
-  createdAt: string;
-}
+import { useToast } from '../ui/Toast';
 
 export function PasskeyManagement() {
   const queryClient = useQueryClient();
+  const toast = useToast();
   const [newName, setNewName] = useState('');
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
-  const [feedback, setFeedback] = useState<string | null>(null);
 
   const isSupported = browserSupportsWebAuthn();
 
@@ -27,7 +18,7 @@ export function PasskeyManagement() {
     queryFn: async () => {
       const res = await api.auth.webauthn.credentials.$get();
       if (!res.ok) throw new Error('Failed to fetch credentials');
-      return res.json() as Promise<{ credentials: Credential[] }>;
+      return res.json();
     },
     enabled: isSupported,
   });
@@ -48,6 +39,10 @@ export function PasskeyManagement() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['passkey', 'credentials'] });
       setDeleteTargetId(null);
+      toast.success('パスキーを削除しました');
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : '削除に失敗しました');
     },
   });
 
@@ -65,18 +60,15 @@ export function PasskeyManagement() {
   const credentials = data?.credentials ?? [];
 
   const handleAdd = async () => {
-    setFeedback(null);
     try {
       await registerAsync(newName.trim() || undefined);
       setNewName('');
-      setFeedback('パスキーを登録しました');
-      setTimeout(() => setFeedback(null), 3000);
+      toast.success('パスキーを登録しました');
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'パスキー登録に失敗しました';
       // ユーザーキャンセル(NotAllowedError)は黙る
       if (err instanceof Error && err.name === 'NotAllowedError') return;
-      setFeedback(message);
-      setTimeout(() => setFeedback(null), 5000);
+      const message = err instanceof Error ? err.message : 'パスキー登録に失敗しました';
+      toast.error(message);
     }
   };
 
@@ -140,9 +132,6 @@ export function PasskeyManagement() {
             {isRegistering ? '登録中...' : 'パスキーを追加'}
           </button>
         </div>
-        {feedback && (
-          <p className="text-xs text-gray-500">{feedback}</p>
-        )}
       </div>
 
       {deleteTargetId && (
@@ -169,11 +158,6 @@ export function PasskeyManagement() {
                 {deleteMutation.isPending ? '削除中...' : '削除する'}
               </button>
             </div>
-            {deleteMutation.isError && (
-              <p className="mt-2 text-xs text-red-500">
-                {(deleteMutation.error as Error).message}
-              </p>
-            )}
           </div>
         </div>
       )}

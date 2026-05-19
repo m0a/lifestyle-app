@@ -31,7 +31,6 @@ export function usePasskeyRegistration() {
   });
 
   return {
-    register: registerMutation.mutate,
     registerAsync: registerMutation.mutateAsync,
     isPending: registerMutation.isPending,
     error: registerMutation.error,
