@@ -42,7 +42,7 @@ export async function loginAsTestUser(
   // Click login button and wait for navigation
   await Promise.all([
     page.waitForURL('/', { timeout: 15000 }),
-    page.getByRole('button', { name: /ログイン/i }).click(),
+    page.getByRole('button', { name: 'ログイン', exact: true }).click(),
   ]);
 
   // Wait for auth state to be updated

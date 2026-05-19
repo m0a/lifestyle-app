@@ -8,6 +8,9 @@ ip = "0.0.0.0"
 
 [dev.vars]
 ENVIRONMENT = "development"
+RP_ID = "localhost"
+RP_NAME = "Lifestyle Tracker (Dev)"
+RP_ORIGIN = "http://localhost:5174"
 
 [assets]
 directory = "./public"
@@ -22,6 +25,10 @@ AI_MODEL = "gemini-3-flash-preview"
 # RESEND_API_KEY should be set via wrangler secrets (see .github/workflows/ci.yml)
 FROM_EMAIL = "noreply@yasedas.com"
 FRONTEND_URL = "https://lifestyle-tracker.abe00makoto.workers.dev"
+# WebAuthn / Passkey configuration
+RP_ID = "lifestyle-tracker.abe00makoto.workers.dev"
+RP_NAME = "Lifestyle Tracker"
+RP_ORIGIN = "https://lifestyle-tracker.abe00makoto.workers.dev"
 
 [[d1_databases]]
 binding = "DB"
@@ -48,6 +55,10 @@ AI_MODEL = "gemini-3-flash-preview"
 # Email delivery configuration
 FROM_EMAIL = "onboarding@resend.dev"
 FRONTEND_URL = "https://lifestyle-tracker-preview.abe00makoto.workers.dev"
+# WebAuthn / Passkey configuration
+RP_ID = "lifestyle-tracker-preview.abe00makoto.workers.dev"
+RP_NAME = "Lifestyle Tracker"
+RP_ORIGIN = "https://lifestyle-tracker-preview.abe00makoto.workers.dev"
 
 [[env.preview.d1_databases]]
 binding = "DB"

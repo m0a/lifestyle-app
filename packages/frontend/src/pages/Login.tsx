@@ -6,6 +6,7 @@ import { loginSchema, type LoginInput } from '@lifestyle-app/shared';
 import { api } from '../lib/client';
 import { useAuthStore } from '../stores/authStore';
 import { ForgotPasswordLink } from '../components/auth/ForgotPasswordLink';
+import { usePasskeyAuth } from '../hooks/usePasskeyAuth';
 
 export function Login() {
   const navigate = useNavigate();
@@ -16,6 +17,13 @@ export function Login() {
 
   const from = (location.state as { from?: Location })?.from?.pathname || '/';
   const successMessage = (location.state as { message?: string })?.message;
+
+  const {
+    authenticate: authenticateWithPasskey,
+    isPending: isPasskeyPending,
+    error: passkeyError,
+    isSupported: isPasskeySupported,
+  } = usePasskeyAuth(from);
 
   const {
     register,
@@ -137,6 +145,30 @@ export function Login() {
           >
             {isSubmitting ? 'ログイン中...' : 'ログイン'}
           </button>
+
+          {isPasskeySupported && (
+            <>
+              <div className="relative flex items-center">
+                <div className="flex-grow border-t border-gray-200" />
+                <span className="mx-3 flex-shrink text-xs text-gray-400">または</span>
+                <div className="flex-grow border-t border-gray-200" />
+              </div>
+              <button
+                type="button"
+                onClick={authenticateWithPasskey}
+                disabled={isPasskeyPending}
+                className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+              >
+                <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clipRule="evenodd" />
+                </svg>
+                {isPasskeyPending ? '認証中...' : 'パスキーでログイン'}
+              </button>
+              {passkeyError && (
+                <p className="text-center text-xs text-red-500">{passkeyError}</p>
+              )}
+            </>
+          )}
 
           <ForgotPasswordLink />
 

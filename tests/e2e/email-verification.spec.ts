@@ -156,7 +156,7 @@ test.describe('Email Verification Flow', () => {
     await page.waitForLoadState('networkidle');
     await page.getByLabel(/メールアドレス/).fill(uniqueEmail);
     await page.getByLabel(/パスワード/).fill(testPassword);
-    await page.getByRole('button', { name: /ログイン/ }).click();
+    await page.getByRole('button', { name: 'ログイン', exact: true }).click();
 
     // Wait for response
     await page.waitForTimeout(1000);
@@ -180,7 +180,7 @@ test.describe('Email Verification Flow', () => {
     await page.waitForLoadState('networkidle');
     await page.getByLabel(/メールアドレス/).fill('test@example.com');
     await page.getByLabel(/パスワード/).fill('test1234');
-    await page.getByRole('button', { name: /ログイン/ }).click();
+    await page.getByRole('button', { name: 'ログイン', exact: true }).click();
 
     // Wait for login to complete
     await page.waitForURL('/', { timeout: 10000 }).catch(() => {});
@@ -229,7 +229,7 @@ test.describe('Email Verification Flow', () => {
     await page.goto('/login');
     await page.getByLabel(/メールアドレス/).fill(uniqueEmail);
     await page.getByLabel(/パスワード/).fill(testPassword);
-    await page.getByRole('button', { name: /ログイン/ }).click();
+    await page.getByRole('button', { name: 'ログイン', exact: true }).click();
 
     // 5. Should be logged in without verification banner
     await expect(page).toHaveURL('/dashboard');

@@ -24,6 +24,7 @@
     "@ai-sdk/google": "^3.0.2",
     "@hono/zod-validator": "^0.2.0",
     "@lifestyle-app/shared": "workspace:*",
+    "@simplewebauthn/server": "^13.3.0",
     "ai": "^6.0.5",
     "bcryptjs": "^2.4.3",
     "drizzle-orm": "^0.30.0",
