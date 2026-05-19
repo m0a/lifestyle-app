@@ -45,10 +45,10 @@ type Variables = {
   user: { id: string; email: string };
 };
 
-// Authenticated sub-chain (uses authMiddleware)
-const authedRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>()
-  .use(authMiddleware)
-  .post('/register/options', async (c) => {
+// Public + authenticated routes. authMiddleware is attached per-route to avoid
+// leaking into sibling routes via Hono's middleware chain semantics.
+export const webauthn = new Hono<{ Bindings: Bindings; Variables: Variables }>()
+  .post('/register/options', authMiddleware, async (c) => {
     const user = c.get('user');
     const db = c.get('db');
 
@@ -82,6 +82,7 @@ const authedRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>()
   })
   .post(
     '/register/verify',
+    authMiddleware,
     zValidator('json', passkeyRegisterVerifySchema),
     async (c) => {
       const { response, name } = c.req.valid('json');
@@ -125,7 +126,7 @@ const authedRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>()
       });
     },
   )
-  .get('/credentials', async (c) => {
+  .get('/credentials', authMiddleware, async (c) => {
     const user = c.get('user');
     const db = c.get('db');
     const credentials = await getCredentialsByUserId(db, user.id);
@@ -141,7 +142,7 @@ const authedRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>()
       })),
     });
   })
-  .delete('/credentials/:credentialId', async (c) => {
+  .delete('/credentials/:credentialId', authMiddleware, async (c) => {
     const user = c.get('user');
     const db = c.get('db');
     const credentialId = c.req.param('credentialId');
@@ -167,11 +168,7 @@ const authedRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
     await deleteCredential(db, credentialId, user.id);
     return c.json({ success: true });
-  });
-
-// Public routes
-export const webauthn = new Hono<{ Bindings: Bindings; Variables: Variables }>()
-  .route('/', authedRoutes)
+  })
   .post('/authenticate/options', async (c) => {
     const db = c.get('db');
 
