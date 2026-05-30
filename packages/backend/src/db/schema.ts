@@ -6,7 +6,7 @@ export const users = sqliteTable('users', {
   passwordHash: text('password_hash').notNull(),
   emailVerified: integer('email_verified').notNull().default(0), // 0 = false, 1 = true
   goalWeight: real('goal_weight'),
-  goalCalories: integer('goal_calories'),
+  goalCalories: integer('goal_calories').default(2000),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });
@@ -91,7 +91,7 @@ export const mealFoodItems = sqliteTable(
   },
   (table) => ({
     idx_food_items_meal: index('idx_food_items_meal').on(table.mealId),
-    idx_food_items_photo: index('idx_food_items_photo').on(table.photoId),
+    idx_meal_food_items_photo: index('idx_meal_food_items_photo').on(table.photoId),
   })
 );
 

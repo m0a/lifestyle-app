@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lifestyle App — DB スキーマ ドキュメント</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --bg-soft: #161922;
+    --surface: #1b1f2a;
+    --surface-2: #222736;
+    --border: #2c3242;
+    --text: #e6e9ef;
+    --text-dim: #9aa3b2;
+    --text-faint: #6b7280;
+    --accent: #6ea8fe;
+    --pk: #f0b429;
+    --fk: #5ed3a0;
+    --uniq: #c792ea;
+    --enum: #7fd1e8;
+    --null-yes: #6b7280;
+    --null-no: #e06c75;
+    --warn: #e8b765;
+    --drift: #f08c5a;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Kaku Gothic ProN", "Noto Sans JP", Meiryo, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--sans); line-height: 1.7; font-size: 15px; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code { font-family: var(--mono); font-size: 0.9em; }
+
+  .wrap { display: flex; max-width: 1440px; margin: 0 auto; }
+  aside {
+    position: sticky; top: 0; align-self: flex-start;
+    width: 280px; height: 100vh; overflow-y: auto;
+    padding: 28px 20px; border-right: 1px solid var(--border); background: var(--bg-soft); flex-shrink: 0;
+  }
+  main { flex: 1; min-width: 0; padding: 36px 44px 120px; }
+
+  .side-title { font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-faint); margin: 0 0 6px; }
+  .side-sub { font-size: 12px; color: var(--text-faint); margin: 0 0 22px; }
+  .nav-group { margin-bottom: 18px; }
+  .nav-group > .nav-label { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: var(--accent); text-transform: uppercase; margin-bottom: 6px; }
+  .nav-group ul { list-style: none; margin: 0; padding: 0 0 0 2px; }
+  .nav-group a { display: block; padding: 3px 8px; border-radius: 6px; color: var(--text-dim); font-size: 13px; font-family: var(--mono); border-left: 2px solid transparent; }
+  .nav-group a:hover { background: var(--surface); color: var(--text); text-decoration: none; border-left-color: var(--accent); }
+  .nav-top { display:block; padding:4px 8px; margin-bottom:4px; border-radius:6px; font-size:12.5px; color:var(--drift); border-left:2px solid transparent; }
+  .nav-top:hover { background: var(--surface); text-decoration:none; border-left-color: var(--drift); }
+
+  header.hero { margin-bottom: 24px; }
+  header.hero h1 { font-size: 30px; margin: 0 0 8px; letter-spacing: -0.01em; }
+  header.hero p { color: var(--text-dim); margin: 4px 0; max-width: 820px; }
+  .meta-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+  .pill { display: inline-flex; align-items: center; gap: 7px; background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 6px 14px; font-size: 13px; color: var(--text-dim); }
+  .pill strong { color: var(--text); font-variant-numeric: tabular-nums; }
+  .pill .dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  .callout { margin-top: 22px; background: linear-gradient(180deg, var(--surface), var(--bg-soft)); border: 1px solid var(--border); border-left: 3px solid var(--fk); border-radius: 10px; padding: 14px 18px; font-size: 13.5px; color: var(--text-dim); }
+  .callout strong { color: var(--fk); }
+  .callout.src { border-left-color: var(--accent); }
+  .callout.src strong { color: var(--accent); }
+  .callout.prod { border-left-color: #2ea043; }
+  .callout.prod strong { color: #4ddf7d; }
+
+  /* drift section */
+  .drift-sec { margin-top: 38px; border: 1px solid rgba(94,211,160,0.35); border-radius: 12px; overflow: hidden; background: rgba(94,211,160,0.04); }
+  .drift-head { padding: 14px 20px; background: rgba(94,211,160,0.1); border-bottom: 1px solid rgba(94,211,160,0.25); }
+  .drift-head h2 { margin: 0; font-size: 17px; color: var(--fk); }
+  .drift-head p { margin: 4px 0 0; font-size: 12.5px; color: var(--text-dim); }
+  table.drift { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.drift th { text-align: left; padding: 9px 14px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-faint); border-bottom: 1px solid var(--border); white-space: nowrap; }
+  table.drift td { padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  table.drift tr:last-child td { border-bottom: none; }
+  table.drift .t-tbl { font-family: var(--mono); color: var(--text); white-space: nowrap; }
+  table.drift .t-code { font-family: var(--mono); font-size: 12px; color: var(--text-dim); }
+  table.drift .t-prod { font-family: var(--mono); font-size: 12px; color: #4ddf7d; }
+  .sev { display:inline-block; font-size:10.5px; font-weight:700; padding:1px 7px; border-radius:5px; }
+  .sev-mid { background: rgba(232,183,101,0.16); color: var(--warn); border:1px solid rgba(232,183,101,0.3); }
+  .sev-low { background: rgba(110,168,254,0.12); color: var(--accent); border:1px solid rgba(110,168,254,0.3); }
+  .sev-done { background: rgba(94,211,160,0.16); color: var(--fk); border:1px solid rgba(94,211,160,0.35); }
+
+  .domain { margin-top: 52px; }
+  .domain-head { display: flex; align-items: baseline; gap: 12px; padding-bottom: 10px; margin-bottom: 8px; border-bottom: 2px solid var(--border); }
+  .domain-head h2 { font-size: 21px; margin: 0; }
+  .domain-head .count { font-size: 12px; color: var(--text-faint); font-family: var(--mono); }
+
+  .tcard { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; margin-top: 22px; overflow: hidden; scroll-margin-top: 20px; }
+  .tcard-head { padding: 16px 20px; background: var(--surface-2); border-bottom: 1px solid var(--border); }
+  .tcard-head .tname-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .tcard-head .tname { font-family: var(--mono); font-size: 17px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 10px; }
+  .tcard-head .tname::before { content: "▦"; color: var(--accent); font-size: 15px; }
+  .rows-badge { font-family: var(--mono); font-size: 12px; color: var(--text-dim); background: var(--bg-soft); border: 1px solid var(--border); border-radius: 999px; padding: 3px 11px; white-space: nowrap; }
+  .rows-badge b { color: var(--fk); font-variant-numeric: tabular-nums; }
+  .rows-badge.empty b { color: var(--text-faint); }
+  .tcard-head .tpurpose { color: var(--text-dim); font-size: 13.5px; margin-top: 6px; }
+  .tnote { margin-top: 10px; font-size: 12.5px; color: var(--warn); background: rgba(232,183,101,0.08); border: 1px solid rgba(232,183,101,0.25); border-radius: 7px; padding: 8px 11px; line-height: 1.55; }
+  .tnote::before { content: "⚠ "; }
+
+  table.cols { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  table.cols th { text-align: left; padding: 9px 14px; font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-faint); font-weight: 600; border-bottom: 1px solid var(--border); background: var(--bg-soft); white-space: nowrap; }
+  table.cols td { padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  table.cols tr:last-child td { border-bottom: none; }
+  table.cols tr:hover td { background: rgba(110,168,254,0.04); }
+  table.cols tr.legacy td { background: rgba(240,140,90,0.05); }
+  td.c-name { font-family: var(--mono); color: var(--text); white-space: nowrap; font-weight: 600; }
+  td.c-type { font-family: var(--mono); color: var(--enum); white-space: nowrap; }
+  td.c-desc { color: var(--text-dim); min-width: 300px; }
+  td.c-key { white-space: nowrap; }
+
+  .badge { display: inline-block; font-size: 10.5px; font-weight: 700; font-family: var(--mono); padding: 1px 7px; border-radius: 5px; letter-spacing: 0.03em; line-height: 1.7; }
+  .b-pk { background: rgba(240,180,41,0.16); color: var(--pk); border: 1px solid rgba(240,180,41,0.35); }
+  .b-fk { background: rgba(94,211,160,0.14); color: var(--fk); border: 1px solid rgba(94,211,160,0.32); }
+  .b-uniq { background: rgba(199,146,234,0.14); color: var(--uniq); border: 1px solid rgba(199,146,234,0.32); }
+  .b-null { background: transparent; color: var(--null-yes); border: 1px solid var(--border); }
+  .b-notnull { background: transparent; color: var(--null-no); border: 1px solid rgba(224,108,117,0.3); }
+  .b-default { background: var(--surface-2); color: var(--text-dim); border: 1px solid var(--border); }
+  .b-check { background: rgba(127,209,232,0.1); color: var(--enum); border: 1px solid rgba(127,209,232,0.25); }
+  .b-legacy { background: rgba(240,140,90,0.14); color: var(--drift); border: 1px solid rgba(240,140,90,0.35); }
+
+  .enum-chip { display: inline-block; font-family: var(--mono); font-size: 11.5px; background: rgba(127,209,232,0.1); color: var(--enum); border: 1px solid rgba(127,209,232,0.25); border-radius: 4px; padding: 0 5px; margin: 1px 2px; }
+
+  .foot-row { display: flex; gap: 14px; padding: 11px 20px; border-top: 1px solid var(--border); font-size: 13px; align-items: flex-start; }
+  .foot-row .flabel { flex-shrink: 0; width: 80px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-faint); font-weight: 600; padding-top: 2px; }
+  .foot-items { display: flex; flex-wrap: wrap; gap: 8px; }
+  .rel, .idx { font-family: var(--mono); font-size: 12px; background: var(--bg-soft); border: 1px solid var(--border); border-radius: 6px; padding: 3px 9px; color: var(--text-dim); }
+  .rel .arrow { color: var(--fk); margin: 0 4px; }
+  .rel .ondel { color: var(--text-faint); font-size: 11px; }
+  .idx .uq { color: var(--uniq); font-weight: 700; margin-right: 5px; }
+  .idx .icols { color: var(--accent); }
+  .none { color: var(--text-faint); font-size: 12.5px; font-style: italic; }
+
+  footer { margin-top: 80px; padding-top: 24px; border-top: 1px solid var(--border); color: var(--text-faint); font-size: 12.5px; }
+
+  @media (max-width: 900px) {
+    aside { display: none; }
+    main { padding: 24px 18px 80px; }
+    td.c-desc { min-width: 0; }
+  }
+
+  /* ER diagram */
+  #er .er-box { overflow: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px; }
+  #er .mermaid { min-width: 900px; }
+  #er .er-hint { color: var(--text-faint); font-size: 11.5px; margin-top: 8px; }
+  #er .er-lead { color: var(--text-dim); font-size: 13px; margin: 0 0 14px; max-width: 820px; }
+</style>
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({ startOnLoad: true, theme: 'dark', securityLevel: 'loose', er: { useMaxWidth: false } });
+</script>
+</head>
+<body>
+<div class="wrap">
+  <aside>
+    <p class="side-title">DB Schema</p>
+    <p class="side-sub">Lifestyle App / Cloudflare D1</p>
+    <a class="nav-top" href="#er" style="color:var(--accent)">⬡ ER図</a>
+    <a class="nav-top" href="#drift" style="color:var(--fk)">✓ ドリフト解消済</a>
+    <nav id="nav"></nav>
+  </aside>
+
+  <main>
+    <header class="hero">
+      <h1>Lifestyle App — DB スキーマ</h1>
+      <p>体重・食事・運動を記録するPWAアプリのデータベース定義。Drizzle ORM 上で Cloudflare D1 (SQLite) を使用。本ドキュメントは<strong style="color:var(--text)">本番DB <code>health-tracker-db</code> の実スキーマと照合済み</strong>。</p>
+      <div class="meta-row">
+        <span class="pill"><span class="dot" style="background:var(--accent)"></span>テーブル <strong>15</strong></span>
+        <span class="pill"><span class="dot" style="background:var(--fk)"></span>ドメイン <strong>6</strong></span>
+        <span class="pill"><span class="dot" style="background:#4ddf7d"></span>マイグレーション <strong>21/21</strong> 適用済</span>
+        <span class="pill"><span class="dot" style="background:var(--fk)"></span>ドリフト <strong>0</strong>（解消済）</span>
+        <span class="pill">DB <strong>Cloudflare D1</strong></span>
+      </div>
+      <div class="callout prod">
+        <strong>本番DBスナップショット:</strong>
+        DB <code>health-tracker-db</code>（id <code>86957e0a…</code>）/ region <strong style="color:var(--text)">APAC (KIX)</strong> / size <strong style="color:var(--text)">≈1.15MB</strong> / 取得 <strong style="color:var(--text)">2026-05-30</strong>。
+        マイグレーションは <code>0000–0009</code> + <code>0021–0030</code> の全20件が 2025-09-22 に適用済み。
+        各テーブルの <span style="color:var(--fk)">緑バッジ</span>＝本番の実データ件数（総計 <strong style="color:var(--text)">2,561</strong> 行）。生DDLは <code>docs/db-schema-prod.sql</code> に保存。
+      </div>
+      <div class="callout">
+        <strong>凡例:</strong>
+        <span class="badge b-pk">PK</span>
+        <span class="badge b-fk">FK</span>
+        <span class="badge b-uniq">UNIQUE</span>
+        <span class="badge b-notnull">NOT NULL</span>
+        <span class="badge b-null">NULL可</span>
+        <span class="badge b-default">default …</span>
+        <span class="badge b-check">CHECK</span>
+        <span class="badge b-legacy">LEGACY</span> ──
+        日時は <code>text</code>(ISO8601) と <code>integer</code>(Unix ミリ秒) の2系統。<code>CHECK</code> 制約は本番DBに存在（Drizzle定義では表現不可）。
+      </div>
+    </header>
+
+    <section id="er" style="margin-top:42px">
+      <div class="domain-head"><h2>⬡ ER図（エンティティ関係）</h2><span class="count">15 エンティティ / 14 リレーション</span></div>
+      <p class="er-lead"><code>users</code> を中心に各記録テーブルが <code>user_id</code> で連なり、<code>meal_records</code> 配下に写真・食材・チャットがぶら下がるハブ&スポーク構造。線=外部キー、<code>||</code>=必須(NOT NULL)、<code>|o</code>=NULL可(SET NULL等)。<code>email_rate_limits</code> のみFKを持たない独立テーブル。</p>
+      <div class="er-box">
+        <pre class="mermaid">
+erDiagram
+  users ||--o{ weight_records : "user_id"
+  users ||--o{ exercise_records : "user_id"
+  users ||--o{ meal_records : "user_id"
+  users ||--o{ ai_usage_records : "user_id"
+  users ||--o{ password_reset_tokens : "user_id"
+  users ||--o{ email_verification_tokens : "user_id"
+  users ||--o{ email_change_requests : "user_id"
+  users |o--o{ email_delivery_logs : "user_id (SET NULL)"
+  users ||--o{ passkey_credentials : "user_id"
+  users |o--o{ webauthn_challenges : "user_id"
+  meal_records ||--o{ meal_photos : "meal_id"
+  meal_records ||--o{ meal_food_items : "meal_id"
+  meal_records ||--o{ meal_chat_messages : "meal_id"
+  meal_photos |o--o{ meal_food_items : "photo_id (SET NULL)"
+
+  users {
+    text id PK
+    text email UK
+    text password_hash
+    integer email_verified
+    real goal_weight
+    integer goal_calories
+    text created_at
+    text updated_at
+  }
+  weight_records {
+    text id PK
+    text user_id FK
+    real weight
+    text recorded_at
+    text created_at
+    text updated_at
+  }
+  exercise_records {
+    text id PK
+    text user_id FK
+    text exercise_type
+    text muscle_group
+    integer set_number "NOT NULL"
+    integer reps
+    real weight
+    text variation
+    text memo
+    text recorded_at
+    text created_at
+    text updated_at
+  }
+  meal_records {
+    text id PK
+    text user_id FK
+    text meal_type
+    text content
+    integer calories
+    real total_protein
+    real total_fat
+    real total_carbs
+    text analysis_source
+    text recorded_at
+    text created_at
+    text updated_at
+  }
+  meal_photos {
+    text id PK
+    text meal_id FK
+    text photo_key
+    integer display_order
+    text analysis_status
+    integer calories
+    real protein
+    real fat
+    real carbs
+    text created_at
+  }
+  meal_food_items {
+    text id PK
+    text meal_id FK
+    text photo_id FK
+    text name
+    text portion
+    integer calories
+    real protein
+    real fat
+    real carbs
+    text created_at
+  }
+  meal_chat_messages {
+    text id PK
+    text meal_id FK
+    text role
+    text content
+    text applied_changes
+    text created_at
+  }
+  ai_usage_records {
+    text id PK
+    text user_id FK
+    text feature_type
+    integer prompt_tokens
+    integer completion_tokens
+    integer total_tokens
+    text created_at
+  }
+  password_reset_tokens {
+    integer id PK
+    text user_id FK
+    text token UK
+    integer expires_at
+    integer used_at
+    integer created_at
+  }
+  email_verification_tokens {
+    integer id PK
+    text user_id FK
+    text token UK
+    integer expires_at
+    integer used_at
+    integer created_at
+  }
+  email_change_requests {
+    integer id PK
+    text user_id FK
+    text old_email
+    text new_email
+    text token UK
+    integer expires_at
+    integer confirmed_at
+    integer cancelled_at
+    integer created_at
+  }
+  email_delivery_logs {
+    integer id PK
+    text user_id FK
+    text email_type
+    text recipient_email
+    text status
+    text error_message
+    integer retry_count
+    integer created_at
+  }
+  email_rate_limits {
+    text ip PK
+    integer count
+    integer expires_at
+  }
+  passkey_credentials {
+    text id PK
+    text user_id FK
+    text credential_id UK
+    text public_key
+    integer counter
+    text device_type
+    integer backed_up
+    text transports
+    text name
+    text last_used_at
+    text created_at
+  }
+  webauthn_challenges {
+    text id PK
+    text user_id FK
+    text challenge UK
+    text type
+    text expires_at
+    text created_at
+  }
+        </pre>
+      </div>
+      <p class="er-hint">※ ER図は Mermaid.js (CDN) で描画。図が表示されない場合はネットワーク接続を確認してください（その場合も上記テキスト定義で関係は読み取れます）。</p>
+    </section>
+    <div id="drift"></div>
+    <div id="content"></div>
+
+    <footer>
+      Lifestyle App データベーススキーマ ドキュメント — Drizzle 定義・マイグレーションSQL・<strong style="color:var(--text-dim)">本番DB実スキーマ</strong>の三者を突き合わせて生成・検証（15テーブル / 6ドメイン）。<br>
+      生成物: <code>docs/db-schema.html</code>（本ファイル） / <code>docs/db-schema-prod.sql</code>（本番DDL生データ）。
+    </footer>
+  </main>
+</div>
+
+<script>
+const DATA = {
+  drift: [
+    { table: "meal_food_items", item: "photo_id のインデックス名", code: "idx_meal_food_items_photo", prod: "idx_meal_food_items_photo", sev: "done",
+      note: "【解消済】schema.ts の index 名を DB 実態 idx_meal_food_items_photo に統一（コード側修正・DB無変更）。" },
+    { table: "exercise_records", item: "set_number の NOT NULL", code: ".notNull().default(1)", prod: "INTEGER NOT NULL DEFAULT 1", sev: "done",
+      note: "【解消済】migration 0031 で exercise_records を再構築し set_number に NOT NULL を付与（local/preview/本番に適用・データ無損失）。" },
+    { table: "users", item: "goal_calories の既定値", code: ".default(2000)", prod: "DEFAULT 2000", sev: "done",
+      note: "【解消済】schema.ts に .default(2000) を追加し DB 実態に一致（コード側修正・DB無変更）。" },
+    { table: "meal_records", item: "レガシー photo_key 列", code: "定義なし（削除済）", prod: "列を DROP COLUMN 済", sev: "done",
+      note: "【解消済】migration 0031 で meal_records から photo_key 列を削除（local/preview/本番に適用。データは0009/0027で移行済のため安全）。" }
+  ],
+  domains: [
+    {
+      key: "core", label: "ユーザー基盤",
+      tables: [
+        {
+          name: "users", rows: 7,
+          purpose: "ユーザーアカウントの基本情報と、体重・カロリーのフィットネス目標を管理する中核テーブル。",
+          columns: [
+            { name: "id", type: "text", nullable: false, default: "", key: "PK", description: "ユーザーの一意識別子。UUID(uuidv4)形式の主キー" },
+            { name: "email", type: "text", nullable: false, default: "", key: "UNIQUE", description: "ログイン認証に使うメールアドレス。UNIQUE制約により重複登録を防止" },
+            { name: "password_hash", type: "text", nullable: false, default: "", key: "", description: "bcryptでハッシュ化したパスワード（10ラウンドのソルト付きハッシュ）" },
+            { name: "email_verified", type: "integer", nullable: false, default: "0", key: "", description: "メール検証状態。0=未検証, 1=検証済（boolean表現）。ログイン時は検証済(1)が必須。検証リンク通過で1に更新。※0023で後付け" },
+            { name: "goal_weight", type: "real", nullable: true, default: "", key: "", description: "目標体重（kg単位、小数可）。未設定はnull" },
+            { name: "goal_calories", type: "integer", nullable: true, default: "2000", key: "", description: "1日の目標摂取カロリー（kcal）。DEFAULT 2000（0006で後付け、schema.tsも.default(2000)で一致）。未入力なら2000が入る" },
+            { name: "created_at", type: "text", nullable: false, default: "", key: "", description: "登録日時。ISO8601(UTC)文字列" },
+            { name: "updated_at", type: "text", nullable: false, default: "", key: "", description: "最終更新日時。ISO8601(UTC)文字列" }
+          ],
+          foreignKeys: [],
+          indexes: [
+            { name: "idx_user_email", columns: ["email"], unique: false },
+            { name: "idx_users_email_verified", columns: ["email_verified"], unique: false }
+          ]
+        }
+      ]
+    },
+    {
+      key: "health", label: "記録系（体重・運動）",
+      tables: [
+        {
+          name: "weight_records", rows: 66,
+          purpose: "ユーザーの体重測定記録を時系列で管理する。推移グラフやダッシュボード集計の元データ。",
+          columns: [
+            { name: "id", type: "text", nullable: false, default: "", key: "PK", description: "UUID形式の記録ID" },
+            { name: "user_id", type: "text", nullable: false, default: "", key: "FK", description: "所有者ユーザーID。users.idを参照し、ユーザー削除時はcascade削除" },
+            { name: "weight", type: "real", nullable: false, default: "", key: "", description: "体重（kg単位、小数可）。想定範囲 20.0〜300.0kg" },
+            { name: "recorded_at", type: "text", nullable: false, default: "", key: "", description: "測定日時。ISO8601、タイムゾーンオフセット必須（例: 2025-12-31T10:13:00+09:00 / ...Z）" },
+            { name: "created_at", type: "text", nullable: false, default: "", key: "", description: "レコード作成日時。ISO8601" },
+            { name: "updated_at", type: "text", nullable: false, default: "", key: "", description: "レコード最終更新日時。ISO8601" }
+          ],
+          foreignKeys: [{ column: "user_id", references: "users.id", onDelete: "cascade" }],
+          indexes: [{ name: "idx_weight_user_date", columns: ["user_id", "recorded_at"], unique: false }]
+        },
+        {
+          name: "exercise_records", rows: 286,
+          purpose: "筋トレ等の運動記録を種目・部位・セット・回数・負荷ごとに管理する。1セット=1レコード。",
+          columns: [
+            { name: "id", type: "text", nullable: false, default: "", key: "PK", description: "UUID形式のレコードID" },
+            { name: "user_id", type: "text", nullable: false, default: "", key: "FK", description: "所有者ユーザーID。users.idを参照し、ユーザー削除時はcascade削除" },
+            { name: "exercise_type", type: "text", nullable: false, default: "", key: "", description: "運動種目名（例: ベンチプレス、スクワット、デッドリフト）。最大100文字" },
+            { name: "muscle_group", type: "text", nullable: true, default: "", key: "", description: "鍛える筋肉部位。許容値: chest（胸）, back（背中）, legs（脚）, shoulders（肩）, arms（腕）, core（体幹）, other（その他）。省略可" },
+            { name: "set_number", type: "integer", nullable: false, default: "1", key: "", description: "セット番号（1, 2, 3...）。同一種目内の何セット目か。migration 0031 で NOT NULL 付与。デフォルト1" },
+            { name: "reps", type: "integer", nullable: false, default: "", key: "", description: "そのセットの反復回数。想定範囲 1〜100回" },
+            { name: "weight", type: "real", nullable: true, default: "", key: "", description: "使用重量（kg単位、小数可）。想定範囲 0〜500kg。自重種目はnull" },
+            { name: "variation", type: "text", nullable: true, default: "", key: "", description: "種目バリエーション（例: ワイド、ナロウ）。最大50文字。省略可" },
+            { name: "memo", type: "text", nullable: true, default: "", key: "", description: "セットに関する自由記述メモ。最大200文字。0029で後付け。省略可" },
+            { name: "recorded_at", type: "text", nullable: false, default: "", key: "", description: "運動日時。ISO8601、タイムゾーンオフセット必須。同一日時の複数セットは同じ値" },
+            { name: "created_at", type: "text", nullable: false, default: "", key: "", description: "レコード作成日時。ISO8601" },
+            { name: "updated_at", type: "text", nullable: false, default: "", key: "", description: "レコード最終更新日時。ISO8601" }
+          ],
+          foreignKeys: [{ column: "user_id", references: "users.id", onDelete: "cascade" }],
+          indexes: [
+            { name: "idx_exercise_user_date", columns: ["user_id", "recorded_at"], unique: false },
+            { name: "idx_exercise_user_type_date", columns: ["user_id", "exercise_type", "recorded_at"], unique: false }
+          ]
+        }
+      ]
+    },
+    {
+      key: "meal", label: "食事ドメイン",
+      tables: [
+        {
+          name: "meal_records", rows: 315,
+          purpose: "1回の食事を表す中核テーブル。種別・内容・総カロリー・PFC(タンパク質/脂質/炭水化物)を保持。手動入力とAI解析の両方に対応。",
+          note: "レガシー photo_key 列は migration 0031 で削除済み（複数写真は meal_photos テーブルで管理）。total_*・analysis_source は後付け列。",
+          columns: [
+            { name: "id", type: "text", nullable: false, default: "", key: "PK", description: "UUID形式の食事記録ID" },
+            { name: "user_id", type: "text", nullable: false, default: "", key: "FK", description: "所有者ユーザーID。users.idを参照し、ユーザー削除時はcascade削除" },
+            { name: "meal_type", type: "text", nullable: false, default: "", key: "", description: "食事の種別。許容値: breakfast（朝食）, lunch（昼食）, dinner（夕食）, snack（間食）" },
+            { name: "content", type: "text", nullable: false, default: "", key: "", description: "食事内容の説明文・メモ（ユーザー入力の概要）" },
+            { name: "calories", type: "integer", nullable: true, default: "", key: "", description: "総カロリー（kcal）。食材から集計または手動入力。未算出はnull" },
+            { name: "total_protein", type: "real", nullable: true, default: "", key: "", description: "タンパク質合計（g）。AI解析または手動入力" },
+            { name: "total_fat", type: "real", nullable: true, default: "", key: "", description: "脂質合計（g）。AI解析または手動入力" },
+            { name: "total_carbs", type: "real", nullable: true, default: "", key: "", description: "炭水化物合計（g）。AI解析または手動入力" },
+            { name: "analysis_source", type: "text", nullable: true, default: "", key: "", description: "栄養情報の出所。許容値: ai（AI画像解析）, manual（手動入力）" },
+            { name: "recorded_at", type: "text", nullable: false, default: "", key: "", description: "食事日時。ISO8601、タイムゾーンオフセット付き（例: 2026-01-17T08:00:00+09:00）" },
+            { name: "created_at", type: "text", nullable: false, default: "", key: "", description: "レコード作成日時。ISO8601(UTC)" },
+            { name: "updated_at", type: "text", nullable: false, default: "", key: "", description: "レコード最終更新日時。ISO8601(UTC)" }
+          ],
+          foreignKeys: [{ column: "user_id", references: "users.id", onDelete: "cascade" }],
+          indexes: [{ name: "idx_meal_user_date", columns: ["user_id", "recorded_at"], unique: false }]
+        },
+        {
+          name: "meal_photos", rows: 253,
+          purpose: "食事記録に紐づく写真を管理。1食事に最大10枚登録でき、写真ごとにAI解析状態と栄養素推定値を持つ。",
+          note: "本番DBに CHECK 制約が実在（Drizzle定義では表現されない）: display_order は 0以上10未満、栄養カラム(calories/protein/fat/carbs)は 0以上、analysis_status は4値のいずれか。",
+          columns: [
+            { name: "id", type: "text", nullable: false, default: "", key: "PK", description: "UUID形式の写真レコードID" },
+            { name: "meal_id", type: "text", nullable: false, default: "", key: "FK", description: "紐づく食事記録ID。meal_records.idを参照し、食事削除時はcascade削除。1食事につき最大10枚" },
+            { name: "photo_key", type: "text", nullable: false, default: "", key: "", description: "Cloudflare R2上の写真オブジェクトキー。形式: temp/{uuid} または permanent/{uuid}/{uuid}" },
+            { name: "display_order", type: "integer", nullable: false, default: "", key: "CHECK", description: "表示順序（0始まり）。CHECK制約: 0以上10未満（0〜9）" },
+            { name: "analysis_status", type: "text", nullable: true, default: "", key: "CHECK", description: "AI解析状態。許容値(CHECK制約): pending（待機）, analyzing（解析中）, complete（完了）, failed（失敗）" },
+            { name: "calories", type: "integer", nullable: true, default: "", key: "CHECK", description: "この写真から推定したカロリー（kcal）。CHECK制約: 0以上" },
+            { name: "protein", type: "real", nullable: true, default: "", key: "CHECK", description: "推定タンパク質（g）。CHECK制約: 0以上" },
+            { name: "fat", type: "real", nullable: true, default: "", key: "CHECK", description: "推定脂質（g）。CHECK制約: 0以上" },
+            { name: "carbs", type: "real", nullable: true, default: "", key: "CHECK", description: "推定炭水化物（g）。CHECK制約: 0以上" },
+            { name: "created_at", type: "text", nullable: false, default: "", key: "", description: "レコード作成日時。ISO8601(UTC)" }
+          ],
+          foreignKeys: [{ column: "meal_id", references: "meal_records.id", onDelete: "cascade" }],
+          indexes: [{ name: "idx_meal_photos_meal", columns: ["meal_id", "display_order"], unique: false }]
+        },
+        {
+          name: "meal_food_items", rows: 981,
+          purpose: "食事を構成する個々の食品アイテムを管理。AI解析または手動で分解された食品単位の栄養素を保持し、由来写真とも紐づく。",
+          note: "photo_id は 0007 の ALTER TABLE で後付け追加された列。photo_id のインデックスは idx_meal_food_items_photo（schema.ts も同名に統一済み）。",
+          columns: [
+            { name: "id", type: "text", nullable: false, default: "", key: "PK", description: "UUID形式の食品アイテムID" },
+            { name: "meal_id", type: "text", nullable: false, default: "", key: "FK", description: "紐づく食事記録ID。meal_records.idを参照し、食事削除時はcascade削除" },
+            { name: "photo_id", type: "text", nullable: true, default: "", key: "FK", description: "由来となった写真ID。meal_photos.idを参照し、写真削除時はset null（手動追加はnull）。0007で後付け" },
+            { name: "name", type: "text", nullable: false, default: "", key: "", description: "食品名（例: ご飯、卵焼き、納豆）" },
+            { name: "portion", type: "text", nullable: false, default: "", key: "", description: "分量サイズ。許容値: small（少なめ）, medium（普通）, large（多め）" },
+            { name: "calories", type: "integer", nullable: false, default: "", key: "", description: "この食品のカロリー（kcal）" },
+            { name: "protein", type: "real", nullable: false, default: "", key: "", description: "この食品のタンパク質（g）" },
+            { name: "fat", type: "real", nullable: false, default: "", key: "", description: "この食品の脂質（g）" },
+            { name: "carbs", type: "real", nullable: false, default: "", key: "", description: "この食品の炭水化物（g）" },
+            { name: "created_at", type: "text", nullable: false, default: "", key: "", description: "レコード作成日時。ISO8601(UTC)" }
+          ],
+          foreignKeys: [
+            { column: "meal_id", references: "meal_records.id", onDelete: "cascade" },
+            { column: "photo_id", references: "meal_photos.id", onDelete: "set null" }
+          ],
+          indexes: [
+            { name: "idx_food_items_meal", columns: ["meal_id"], unique: false },
+            { name: "idx_meal_food_items_photo", columns: ["photo_id"], unique: false }
+          ]
+        },
+        {
+          name: "meal_chat_messages", rows: 226,
+          purpose: "食事内容の相談・修正を行うAIチャットの会話履歴を保持。ユーザーとAIアシスタントのやり取りと、適用された変更内容を記録する。",
+          columns: [
+            { name: "id", type: "text", nullable: false, default: "", key: "PK", description: "UUID形式のメッセージID" },
+            { name: "meal_id", type: "text", nullable: false, default: "", key: "FK", description: "紐づく食事記録ID。meal_records.idを参照し、食事削除時はcascade削除" },
+            { name: "role", type: "text", nullable: false, default: "", key: "", description: "発言者の役割。許容値: user（ユーザー）, assistant（AIアシスタント）" },
+            { name: "content", type: "text", nullable: false, default: "", key: "", description: "メッセージ本文（変更マーカー [CHANGE:{...}] を除いた表示用テキスト）" },
+            { name: "applied_changes", type: "text", nullable: true, default: "", key: "", description: "このメッセージで適用された変更内容（JSON文字列・配列）。食材のadd/remove/updateや日時・meal_type変更を含む。変更なしはnull" },
+            { name: "created_at", type: "text", nullable: false, default: "", key: "", description: "メッセージ作成日時。ISO8601(UTC)" }
+          ],
+          foreignKeys: [{ column: "meal_id", references: "meal_records.id", onDelete: "cascade" }],
+          indexes: [{ name: "idx_chat_messages_meal", columns: ["meal_id", "created_at"], unique: false }]
+        }
+      ]
+    },
+    {
+      key: "ai", label: "AI利用ログ",
+      tables: [
+        {
+          name: "ai_usage_records", rows: 417,
+          purpose: "AI機能（画像解析・テキスト解析・チャット）の呼び出しごとのトークン消費量を記録。ユーザー別の利用量追跡と日次制限判定に使用。",
+          columns: [
+            { name: "id", type: "text", nullable: false, default: "", key: "PK", description: "UUID形式のAI利用記録ID" },
+            { name: "user_id", type: "text", nullable: false, default: "", key: "FK", description: "利用者ユーザーID。users.idを参照し、ユーザー削除時はcascade削除" },
+            { name: "feature_type", type: "text", nullable: false, default: "", key: "", description: "利用したAI機能の種別。許容値: image_analysis（画像解析）, text_analysis（テキスト解析）, chat（チャット）" },
+            { name: "prompt_tokens", type: "integer", nullable: false, default: "", key: "", description: "プロンプト（入力）トークン数" },
+            { name: "completion_tokens", type: "integer", nullable: false, default: "", key: "", description: "コンプリーション（出力）トークン数" },
+            { name: "total_tokens", type: "integer", nullable: false, default: "", key: "", description: "合計トークン数（prompt + completion）。日次制限判定に使用" },
+            { name: "created_at", type: "text", nullable: false, default: "", key: "", description: "作成日時。ISO8601（タイムゾーンオフセット付き）。日次リセット計算に使用" }
+          ],
+          foreignKeys: [{ column: "user_id", references: "users.id", onDelete: "cascade" }],
+          indexes: [{ name: "idx_ai_usage_user_date", columns: ["user_id", "created_at"], unique: false }]
+        }
+      ]
+    },
+    {
+      key: "email", label: "メール / トークン",
+      tables: [
+        {
+          name: "password_reset_tokens", rows: 0,
+          purpose: "パスワードリセット要求のトークンを管理。32文字(256bitエントロピー)・24時間有効・ワンタイム使用(used_atで追跡)。",
+          columns: [
+            { name: "id", type: "integer", nullable: false, default: "", key: "PK", description: "自動採番される主キー(autoIncrement)" },
+            { name: "user_id", type: "text", nullable: false, default: "", key: "FK", description: "対象ユーザーID。users.idを参照し、ユーザー削除時はcascade削除" },
+            { name: "token", type: "text", nullable: false, default: "", key: "UNIQUE", description: "リセット用トークン(32文字/256bit)。リセットリンクに埋め込む。UNIQUE制約あり" },
+            { name: "expires_at", type: "integer", nullable: false, default: "", key: "", description: "有効期限。Unixタイムスタンプ(ミリ秒)。発行から24時間後" },
+            { name: "used_at", type: "integer", nullable: true, default: "", key: "", description: "使用日時。Unixタイムスタンプ(ミリ秒)。null=未使用。設定後は二重使用不可" },
+            { name: "created_at", type: "integer", nullable: false, default: "", key: "", description: "生成日時。Unixタイムスタンプ(ミリ秒)" }
+          ],
+          foreignKeys: [{ column: "user_id", references: "users.id", onDelete: "cascade" }],
+          indexes: [
+            { name: "idx_password_reset_token", columns: ["token"], unique: true },
+            { name: "idx_password_reset_user_id", columns: ["user_id"], unique: false },
+            { name: "idx_password_reset_expires_at", columns: ["expires_at"], unique: false }
+          ]
+        },
+        {
+          name: "email_verification_tokens", rows: 0,
+          purpose: "新規登録時のメールアドレス検証トークンを管理。32文字(256bit)・24時間有効・ワンタイム使用(used_atで追跡)。",
+          columns: [
+            { name: "id", type: "integer", nullable: false, default: "", key: "PK", description: "自動採番される主キー(autoIncrement)" },
+            { name: "user_id", type: "text", nullable: false, default: "", key: "FK", description: "対象ユーザーID。users.idを参照し、ユーザー削除時はcascade削除" },
+            { name: "token", type: "text", nullable: false, default: "", key: "UNIQUE", description: "メール検証用トークン(32文字/256bit)。認証リンクに埋め込む。UNIQUE制約あり" },
+            { name: "expires_at", type: "integer", nullable: false, default: "", key: "", description: "有効期限。Unixタイムスタンプ(ミリ秒)。発行から24時間後" },
+            { name: "used_at", type: "integer", nullable: true, default: "", key: "", description: "使用日時。Unixタイムスタンプ(ミリ秒)。null=未使用。ワンタイム使用を強制" },
+            { name: "created_at", type: "integer", nullable: false, default: "", key: "", description: "生成日時。Unixタイムスタンプ(ミリ秒)" }
+          ],
+          foreignKeys: [{ column: "user_id", references: "users.id", onDelete: "cascade" }],
+          indexes: [
+            { name: "idx_email_verification_token", columns: ["token"], unique: true },
+            { name: "idx_email_verification_user_id", columns: ["user_id"], unique: false },
+            { name: "idx_email_verification_expires_at", columns: ["expires_at"], unique: false }
+          ]
+        },
+        {
+          name: "email_change_requests", rows: 0,
+          purpose: "既存ユーザーのメールアドレス変更要求を管理。新旧アドレスとトークンを記録し、24時間有効・1回限り(confirmed_at/cancelled_atで追跡)。新旧両アドレスに確認メールを送信。",
+          columns: [
+            { name: "id", type: "integer", nullable: false, default: "", key: "PK", description: "自動採番される主キー(autoIncrement)" },
+            { name: "user_id", type: "text", nullable: false, default: "", key: "FK", description: "対象ユーザーID。users.idを参照し、ユーザー削除時はcascade削除" },
+            { name: "old_email", type: "text", nullable: false, default: "", key: "", description: "変更前メールアドレス。キャンセル通知の送信先" },
+            { name: "new_email", type: "text", nullable: false, default: "", key: "", description: "変更後の新メールアドレス。確認通知の送信先。重複チェック対象" },
+            { name: "token", type: "text", nullable: false, default: "", key: "UNIQUE", description: "確認/キャンセル用トークン(32文字/256bit)。UNIQUE制約あり" },
+            { name: "expires_at", type: "integer", nullable: false, default: "", key: "", description: "有効期限。Unixタイムスタンプ(ミリ秒)。発行から24時間後" },
+            { name: "confirmed_at", type: "integer", nullable: true, default: "", key: "", description: "確認完了日時。Unixタイムスタンプ(ミリ秒)。null=未確認。設定で新アドレスへ更新完了" },
+            { name: "cancelled_at", type: "integer", nullable: true, default: "", key: "", description: "キャンセル日時。Unixタイムスタンプ(ミリ秒)。null=キャンセルなし。設定でリクエスト無効化" },
+            { name: "created_at", type: "integer", nullable: false, default: "", key: "", description: "リクエスト作成日時。Unixタイムスタンプ(ミリ秒)" }
+          ],
+          foreignKeys: [{ column: "user_id", references: "users.id", onDelete: "cascade" }],
+          indexes: [
+            { name: "idx_email_change_token", columns: ["token"], unique: true },
+            { name: "idx_email_change_user_id", columns: ["user_id"], unique: false },
+            { name: "idx_email_change_expires_at", columns: ["expires_at"], unique: false },
+            { name: "idx_email_change_new_email", columns: ["new_email"], unique: false }
+          ]
+        },
+        {
+          name: "email_delivery_logs", rows: 8,
+          purpose: "全メール送信試行を記録するログテーブル。デバッグ・監視用に種別・宛先・成否・エラー・リトライ回数を保持。",
+          columns: [
+            { name: "id", type: "integer", nullable: false, default: "", key: "PK", description: "自動採番される主キー(autoIncrement)" },
+            { name: "user_id", type: "text", nullable: true, default: "", key: "FK", description: "対象ユーザーID(任意)。users.idを参照し、ユーザー削除時はset null。ユーザー不明の送信もありうるためnullable" },
+            { name: "email_type", type: "text", nullable: false, default: "", key: "CHECK", description: "メール種別。許容値(CHECK制約): password_reset, email_verification, email_change" },
+            { name: "recipient_email", type: "text", nullable: false, default: "", key: "", description: "送信先アドレス（監査ログ用。usersのemailと異なる場合あり）" },
+            { name: "status", type: "text", nullable: false, default: "", key: "CHECK", description: "送信結果。許容値(CHECK制約): success（Resend API送信成功）, failed（全リトライ失敗）" },
+            { name: "error_message", type: "text", nullable: true, default: "", key: "", description: "失敗時のエラーメッセージ。成功時はnull。Resend API/ネットワークエラー詳細" },
+            { name: "retry_count", type: "integer", nullable: false, default: "0", key: "CHECK", description: "リトライ試行回数。CHECK制約: 0〜3。0=初回成功。デフォルト0" },
+            { name: "created_at", type: "integer", nullable: false, default: "", key: "", description: "ログ作成日時。Unixタイムスタンプ(ミリ秒)。初回送信試行時刻" }
+          ],
+          foreignKeys: [{ column: "user_id", references: "users.id", onDelete: "set null" }],
+          indexes: [
+            { name: "idx_email_logs_user_id", columns: ["user_id"], unique: false },
+            { name: "idx_email_logs_status", columns: ["status"], unique: false },
+            { name: "idx_email_logs_created_at", columns: ["created_at"], unique: false },
+            { name: "idx_email_logs_email_type", columns: ["email_type"], unique: false }
+          ]
+        },
+        {
+          name: "email_rate_limits", rows: 1,
+          purpose: "IPアドレス単位のメール送信レート制限を管理。1IPあたり1時間10通の制限を実施し、期限切れレコードは自動クリーンアップ。",
+          columns: [
+            { name: "ip", type: "text", nullable: false, default: "", key: "PK", description: "クライアントIPアドレス（主キー）。CF-Connecting-IP > X-Forwarded-For > X-Real-IP の優先順で取得" },
+            { name: "count", type: "integer", nullable: false, default: "0", key: "CHECK", description: "現在の送信回数カウント。CHECK制約: 0〜10。10到達で該当IPをブロック。デフォルト0" },
+            { name: "expires_at", type: "integer", nullable: false, default: "", key: "", description: "リセット時刻。Unixタイムスタンプ(ミリ秒)。1時間ウィンドウ。経過後は自動削除対象" }
+          ],
+          foreignKeys: [],
+          indexes: []
+        }
+      ]
+    },
+    {
+      key: "webauthn", label: "Passkey / WebAuthn",
+      tables: [
+        {
+          name: "passkey_credentials", rows: 1,
+          purpose: "WebAuthn/Passkeyの登録済みクレデンシャル（公開鍵）を管理。各認証器の公開鍵・署名カウンタ・メタ情報を保持し、パスワードレス認証に利用。",
+          columns: [
+            { name: "id", type: "text", nullable: false, default: "", key: "PK", description: "UUID形式のクレデンシャルレコードID" },
+            { name: "user_id", type: "text", nullable: false, default: "", key: "FK", description: "所有者ユーザーID。users.idを参照し、ユーザー削除時はcascade削除" },
+            { name: "credential_id", type: "text", nullable: false, default: "", key: "UNIQUE", description: "WebAuthn仕様のクレデンシャルID。認証時のルックアップキー。UNIQUE制約あり" },
+            { name: "public_key", type: "text", nullable: false, default: "", key: "", description: "公開鍵(Uint8Array)をBase64URL文字列にエンコードして保存。署名検証に使用" },
+            { name: "counter", type: "integer", nullable: false, default: "0", key: "", description: "署名カウンタ。リプレイ攻撃検知用。各認証で更新。初期値0" },
+            { name: "device_type", type: "text", nullable: false, default: "", key: "", description: "デバイス種別（例: singleDevice / multiDevice）。登録に使った認証器のタイプ表示用" },
+            { name: "backed_up", type: "integer", nullable: false, default: "0", key: "", description: "バックアップ/同期可否。0=ローカル専用, 1=複数デバイス同期可（boolean表現）。デフォルト0" },
+            { name: "transports", type: "text", nullable: true, default: "", key: "", description: "認証器の通信方法(JSON配列文字列、例: [\"internal\",\"usb\"])。認証オプション生成時に利用。null可" },
+            { name: "name", type: "text", nullable: true, default: "", key: "", description: "ユーザー定義の表示名（例: \"My iPhone\"）。UIで複数パスキーを区別。登録時の任意入力" },
+            { name: "last_used_at", type: "text", nullable: true, default: "", key: "", description: "最終使用日時。ISO8601。認証時に更新。null=未使用" },
+            { name: "created_at", type: "text", nullable: false, default: "", key: "", description: "登録日時。ISO8601" }
+          ],
+          foreignKeys: [{ column: "user_id", references: "users.id", onDelete: "cascade" }],
+          indexes: [{ name: "idx_passkey_user_id", columns: ["user_id"], unique: false }]
+        },
+        {
+          name: "webauthn_challenges", rows: 0,
+          purpose: "WebAuthn登録・認証フローで使う一時的なチャレンジ値を保持。チャレンジ・レスポンス検証用に短期間だけ保存し、有効期限で失効。",
+          columns: [
+            { name: "id", type: "text", nullable: false, default: "", key: "PK", description: "UUID形式のチャレンジレコードID" },
+            { name: "user_id", type: "text", nullable: true, default: "", key: "FK", description: "対象ユーザーID。users.idを参照し、ユーザー削除時はcascade削除。認証開始時はnull（ユーザー不特定）、登録時は認証済みユーザーID" },
+            { name: "challenge", type: "text", nullable: false, default: "", key: "UNIQUE", description: "WebAuthnチャレンジ値(base64url)。クライアント・サーバ間で検証。使用後に削除。UNIQUE制約あり" },
+            { name: "type", type: "text", nullable: false, default: "", key: "", description: "チャレンジ種別。許容値: registration（登録）, authentication（認証）" },
+            { name: "expires_at", type: "text", nullable: false, default: "", key: "", description: "有効期限。ISO8601。saveChallenge時から5分後（CHALLENGE_TTL_MS=5分）。cleanup cronで失効分を削除" },
+            { name: "created_at", type: "text", nullable: false, default: "", key: "", description: "生成日時。ISO8601" }
+          ],
+          foreignKeys: [{ column: "user_id", references: "users.id", onDelete: "cascade" }],
+          indexes: [{ name: "idx_webauthn_challenge_expires", columns: ["expires_at"], unique: false }]
+        }
+      ]
+    }
+  ]
+};
+
+function escapeHtml(s) {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+function renderDesc(desc) {
+  const esc = escapeHtml(desc);
+  const mIdx = esc.indexOf("許容値");
+  if (mIdx === -1) return esc;
+  let colonIdx = esc.indexOf(":", mIdx);
+  const jColon = esc.indexOf("：", mIdx);
+  if (colonIdx === -1 || (jColon !== -1 && jColon < colonIdx)) colonIdx = jColon;
+  if (colonIdx === -1) return esc;
+  const head = esc.slice(0, colonIdx + 1);
+  const rest = esc.slice(colonIdx + 1);
+  const stop = rest.search(/。/);
+  const listPart = stop === -1 ? rest : rest.slice(0, stop);
+  const tailPart = stop === -1 ? "" : rest.slice(stop);
+  const chips = listPart.split(/,|、|\//).map(tok => {
+    const t = tok.trim();
+    if (!t) return "";
+    const m = t.match(/^([A-Za-z0-9_]+)\s*(（.+）)?$/);
+    if (m) return '<span class="enum-chip">' + m[1] + "</span>" + (m[2] ? '<span style="color:var(--text-faint)">' + m[2] + "</span>" : "");
+    return t;
+  }).filter(Boolean).join(" ");
+  return head + " " + chips + tailPart;
+}
+function keyBadge(key) {
+  if (key === "PK") return '<span class="badge b-pk">PK</span>';
+  if (key === "FK") return '<span class="badge b-fk">FK</span>';
+  if (key === "UNIQUE") return '<span class="badge b-uniq">UNIQUE</span>';
+  if (key === "CHECK") return '<span class="badge b-check">CHECK</span>';
+  if (key === "LEGACY") return '<span class="badge b-legacy">LEGACY</span>';
+  return "";
+}
+function nullBadge(nullable) {
+  return nullable ? '<span class="badge b-null">NULL可</span>' : '<span class="badge b-notnull">NOT NULL</span>';
+}
+function rowsBadge(n) {
+  if (n === undefined || n === null) return "";
+  const cls = n === 0 ? "rows-badge empty" : "rows-badge";
+  return `<span class="${cls}">本番 <b>${n.toLocaleString()}</b> 行</span>`;
+}
+function renderTable(t) {
+  const rows = t.columns.map(c => {
+    const badges = [keyBadge(c.key), nullBadge(c.nullable)];
+    if (c.default !== "") badges.push('<span class="badge b-default">default ' + escapeHtml(c.default) + "</span>");
+    return `<tr class="${c.legacy ? 'legacy' : ''}">
+        <td class="c-name">${escapeHtml(c.name)}</td>
+        <td class="c-type">${escapeHtml(c.type)}</td>
+        <td class="c-key">${badges.filter(Boolean).join(" ")}</td>
+        <td class="c-desc">${renderDesc(c.description)}</td>
+      </tr>`;
+  }).join("");
+  const fkHtml = t.foreignKeys.length
+    ? t.foreignKeys.map(fk => `<span class="rel">${escapeHtml(fk.column)}<span class="arrow">→</span>${escapeHtml(fk.references)}<span class="ondel"> (on delete ${escapeHtml(fk.onDelete)})</span></span>`).join("")
+    : '<span class="none">なし</span>';
+  const idxHtml = t.indexes.length
+    ? t.indexes.map(ix => `<span class="idx">${ix.unique ? '<span class="uq">UNIQUE</span>' : ""}${escapeHtml(ix.name)} <span class="icols">(${ix.columns.map(escapeHtml).join(", ")})</span></span>`).join("")
+    : '<span class="none">なし</span>';
+  const noteHtml = t.note ? `<div class="tnote">${escapeHtml(t.note)}</div>` : "";
+  return `<div class="tcard" id="t-${t.name}">
+      <div class="tcard-head">
+        <div class="tname-row"><div class="tname">${escapeHtml(t.name)}</div>${rowsBadge(t.rows)}</div>
+        <div class="tpurpose">${escapeHtml(t.purpose)}</div>
+        ${noteHtml}
+      </div>
+      <table class="cols">
+        <thead><tr><th>カラム</th><th>型</th><th>制約</th><th>説明</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <div class="tcard-foot">
+        <div class="foot-row"><span class="flabel">リレーション</span><div class="foot-items">${fkHtml}</div></div>
+        <div class="foot-row"><span class="flabel">インデックス</span><div class="foot-items">${idxHtml}</div></div>
+      </div>
+    </div>`;
+}
+function renderDrift() {
+  const sevCls = { mid: "sev-mid", low: "sev-low", done: "sev-done" };
+  const sevLabel = { mid: "中", low: "低", done: "解消" };
+  const rows = DATA.drift.map(d => `
+    <tr>
+      <td class="t-tbl">${escapeHtml(d.table)}</td>
+      <td>${escapeHtml(d.item)}</td>
+      <td class="t-code">${escapeHtml(d.code)}</td>
+      <td class="t-prod">${escapeHtml(d.prod)}</td>
+      <td><span class="sev ${sevCls[d.sev]}">${sevLabel[d.sev]}</span></td>
+      <td style="color:var(--text-dim);font-size:12px">${escapeHtml(d.note)}</td>
+    </tr>`).join("");
+  return `<section class="drift-sec">
+    <div class="drift-head">
+      <h2>✓ コード定義 ⇔ 本番DB のドリフト（全${DATA.drift.length}件 解消済み）</h2>
+      <p>Drizzle 定義 (schema.ts) と本番DB実スキーマの食い違いは migration 0031 とコード修正で全て解消済み（local / preview / 本番に適用、データ無損失を確認）。下表は解消内容の記録。「コード定義」「本番DB実態」は<strong style="color:var(--fk)">解消後</strong>の一致状態を示す。</p>
+    </div>
+    <table class="drift">
+      <thead><tr><th>テーブル</th><th>項目</th><th>コード定義</th><th>本番DB実態</th><th>状態</th><th>解消内容</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </section>`;
+}
+function render() {
+  document.getElementById("drift").innerHTML = renderDrift();
+  const content = document.getElementById("content");
+  const nav = document.getElementById("nav");
+  content.innerHTML = DATA.domains.map(d => `
+    <section class="domain" id="d-${d.key}">
+      <div class="domain-head"><h2>${escapeHtml(d.label)}</h2><span class="count">${d.tables.length} テーブル</span></div>
+      ${d.tables.map(renderTable).join("")}
+    </section>`).join("");
+  nav.innerHTML = DATA.domains.map(d => `
+    <div class="nav-group">
+      <div class="nav-label"><a href="#d-${d.key}" style="color:inherit">${escapeHtml(d.label)}</a></div>
+      <ul>${d.tables.map(t => `<li><a href="#t-${t.name}">${escapeHtml(t.name)}</a></li>`).join("")}</ul>
+    </div>`).join("");
+}
+render();
+</script>
+</body>
+</html>
