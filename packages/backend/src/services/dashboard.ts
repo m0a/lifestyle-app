@@ -1,4 +1,4 @@
-import { eq, and, gte, lte, desc } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
 import { weights, meals, exercises } from '../db/schema';
 import type { Database } from '../db';
 
@@ -125,45 +125,38 @@ export class DashboardService {
     const startISO = startDate.toISOString();
     const endISO = endDate.toISOString();
 
-    // Get weight data for the period
-    const weightRecords = await this.db
-      .select()
-      .from(weights)
-      .where(
-        and(
-          eq(weights.userId, userId),
-          gte(weights.recordedAt, startISO),
-          lte(weights.recordedAt, endISO)
-        )
-      )
-      .orderBy(weights.recordedAt)
-      .all();
+    // recorded_at carries a local offset (e.g. "+09:00"); the period bounds are
+    // instants. Comparing the raw ISO strings in SQL mixes "Z" and "+09:00"
+    // forms, and SQLite's lexicographic TEXT compare then drifts by the offset,
+    // systematically dropping/mixing edge records (#99). Filter by LOCAL date
+    // instead — the approach getDailyActivity and the meal/weight services use.
+    const startLocalDate = extractLocalDate(startISO);
+    const endLocalDate = extractLocalDate(endISO);
+    const inRange = (recordedAt: string): boolean => {
+      const localDate = extractLocalDate(recordedAt);
+      return localDate >= startLocalDate && localDate <= endLocalDate;
+    };
 
-    // Get meal data for the period
-    const mealRecords = await this.db
-      .select()
-      .from(meals)
-      .where(
-        and(
-          eq(meals.userId, userId),
-          gte(meals.recordedAt, startISO),
-          lte(meals.recordedAt, endISO)
-        )
-      )
-      .all();
+    // Get weight data, then filter by local date (kept ordered so the summary
+    // start/end weights are the chronological first/last in range).
+    const weightRecords = (
+      await this.db
+        .select()
+        .from(weights)
+        .where(eq(weights.userId, userId))
+        .orderBy(weights.recordedAt)
+        .all()
+    ).filter((r) => inRange(r.recordedAt));
 
-    // Get exercise data for the period
-    const exerciseRecords = await this.db
-      .select()
-      .from(exercises)
-      .where(
-        and(
-          eq(exercises.userId, userId),
-          gte(exercises.recordedAt, startISO),
-          lte(exercises.recordedAt, endISO)
-        )
-      )
-      .all();
+    // Get meal data, then filter by local date
+    const mealRecords = (
+      await this.db.select().from(meals).where(eq(meals.userId, userId)).all()
+    ).filter((r) => inRange(r.recordedAt));
+
+    // Get exercise data, then filter by local date
+    const exerciseRecords = (
+      await this.db.select().from(exercises).where(eq(exercises.userId, userId)).all()
+    ).filter((r) => inRange(r.recordedAt));
 
     // Calculate weight summary
     const weightSummary = this.calculateWeightSummary(weightRecords);
@@ -294,8 +287,26 @@ export class DashboardService {
 
   async getWeeklyTrend(userId: string, weeks: number = 4): Promise<WeeklyTrendItem[]> {
     const endDate = new Date();
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - weeks * 7);
+
+    // Fetch each dataset once, then bucket by LOCAL date per week. Filtering by
+    // local date (not a raw ISO compare) avoids the "+09:00" vs "Z"
+    // lexicographic drift that dropped edge records (#99).
+    const allWeights = await this.db
+      .select()
+      .from(weights)
+      .where(eq(weights.userId, userId))
+      .orderBy(desc(weights.recordedAt))
+      .all();
+    const allMeals = await this.db
+      .select()
+      .from(meals)
+      .where(eq(meals.userId, userId))
+      .all();
+    const allExercises = await this.db
+      .select()
+      .from(exercises)
+      .where(eq(exercises.userId, userId))
+      .all();
 
     const result: WeeklyTrendItem[] = [];
 
@@ -305,46 +316,18 @@ export class DashboardService {
       const weekStart = new Date(weekEnd);
       weekStart.setDate(weekStart.getDate() - 6);
 
-      // Get latest weight for this week
-      const weekWeights = await this.db
-        .select()
-        .from(weights)
-        .where(
-          and(
-            eq(weights.userId, userId),
-            gte(weights.recordedAt, weekStart.toISOString()),
-            lte(weights.recordedAt, weekEnd.toISOString())
-          )
-        )
-        .orderBy(desc(weights.recordedAt))
-        .limit(1)
-        .all();
+      const weekStartLocal = extractLocalDate(weekStart.toISOString());
+      const weekEndLocal = extractLocalDate(weekEnd.toISOString());
+      const inWeek = (recordedAt: string): boolean => {
+        const localDate = extractLocalDate(recordedAt);
+        return localDate >= weekStartLocal && localDate <= weekEndLocal;
+      };
 
-      // Get total calories for this week
-      const weekMeals = await this.db
-        .select()
-        .from(meals)
-        .where(
-          and(
-            eq(meals.userId, userId),
-            gte(meals.recordedAt, weekStart.toISOString()),
-            lte(meals.recordedAt, weekEnd.toISOString())
-          )
-        )
-        .all();
+      // Latest weight in this week (allWeights is ordered desc, so first match)
+      const latestWeekWeight = allWeights.find((w) => inWeek(w.recordedAt));
 
-      // Get total exercise minutes for this week
-      const weekExercises = await this.db
-        .select()
-        .from(exercises)
-        .where(
-          and(
-            eq(exercises.userId, userId),
-            gte(exercises.recordedAt, weekStart.toISOString()),
-            lte(exercises.recordedAt, weekEnd.toISOString())
-          )
-        )
-        .all();
+      const weekMeals = allMeals.filter((m) => inWeek(m.recordedAt));
+      const weekExercises = allExercises.filter((e) => inWeek(e.recordedAt));
 
       const totalCalories = weekMeals
         .filter((m) => m.calories != null)
@@ -354,9 +337,9 @@ export class DashboardService {
       const exerciseSets = weekExercises.length;
 
       result.unshift({
-        weekStart: weekStart.toISOString().split('T')[0] ?? '',
-        weekEnd: weekEnd.toISOString().split('T')[0] ?? '',
-        weight: weekWeights.length > 0 ? weekWeights[0]?.weight ?? null : null,
+        weekStart: weekStartLocal,
+        weekEnd: weekEndLocal,
+        weight: latestWeekWeight?.weight ?? null,
         totalCalories,
         exerciseSets,
       });
@@ -376,8 +359,11 @@ export class DashboardService {
     const now = new Date();
     const weekStart = new Date(now);
     weekStart.setDate(weekStart.getDate() - 7);
+    // Compare by LOCAL date to avoid the "+09:00" vs "Z" lexicographic drift
+    // that dropped edge records (#99).
+    const weekStartLocal = extractLocalDate(weekStart.toISOString());
 
-    // Get latest weight
+    // Get latest weight (overall, no date filter)
     const latestWeight = await this.db
       .select()
       .from(weights)
@@ -386,29 +372,15 @@ export class DashboardService {
       .limit(1)
       .all();
 
-    // Get weekly exercise total
-    const weeklyExercises = await this.db
-      .select()
-      .from(exercises)
-      .where(
-        and(
-          eq(exercises.userId, userId),
-          gte(exercises.recordedAt, weekStart.toISOString())
-        )
-      )
-      .all();
+    // Get weekly exercise total (filtered by local date)
+    const weeklyExercises = (
+      await this.db.select().from(exercises).where(eq(exercises.userId, userId)).all()
+    ).filter((e) => extractLocalDate(e.recordedAt) >= weekStartLocal);
 
-    // Get weekly meal average
-    const weeklyMeals = await this.db
-      .select()
-      .from(meals)
-      .where(
-        and(
-          eq(meals.userId, userId),
-          gte(meals.recordedAt, weekStart.toISOString())
-        )
-      )
-      .all();
+    // Get weekly meals (filtered by local date)
+    const weeklyMeals = (
+      await this.db.select().from(meals).where(eq(meals.userId, userId)).all()
+    ).filter((m) => extractLocalDate(m.recordedAt) >= weekStartLocal);
 
     const currentWeight = latestWeight.length > 0 ? latestWeight[0]?.weight ?? null : null;
     const targetWeight = goals.targetWeight || 65;
@@ -419,7 +391,7 @@ export class DashboardService {
     const mealsWithCalories = weeklyMeals.filter((m) => m.calories != null);
     const totalCalories = mealsWithCalories.reduce((sum, m) => sum + (m.calories || 0), 0);
     const daysWithMeals = new Set(
-      weeklyMeals.map((m) => new Date(m.recordedAt).toDateString())
+      weeklyMeals.map((m) => extractLocalDate(m.recordedAt))
     ).size;
     const averageCalories = daysWithMeals > 0 ? totalCalories / daysWithMeals : 0;
     const targetCalories = goals.dailyCalories || 2000;
