@@ -1,0 +1,22 @@
+-- Migration 0032: 本番DBから E2E テストユーザー (test@example.com) を恒久削除する
+--
+-- 背景 (Issue #96):
+--   migration 0028 が環境ガード無しで test@example.com / password=test1234 という
+--   既知クレデンシャルのアカウントを INSERT しており、CI の本番デプロイ
+--   (`wrangler d1 migrations apply DB --remote`, .github/workflows/ci.yml) が
+--   本番(health-tracker-db)にも適用していた。結果として公開URLの本番に
+--   「誰でもログインできる email_verified 済みアカウント」が常設されていた。
+--
+-- 方針:
+--   テストユーザーはマイグレーションでは投入せず、テスト実行時にのみ用意する。
+--     - E2E : tests/setup/e2e-global-setup.ts がローカル miniflare D1 へ直接 seed
+--     - 統合: tests/integration/meals.test.ts が ensureTestUser() で register API 経由で作成
+--   よって全環境から削除しても local/CI/preview のテストは実行時に自前で
+--   再プロビジョニングされ、本番には二度と再投入されない。
+--   (0028 は適用済み履歴のため残置し、本マイグレーションで効果を打ち消す)
+--
+-- 注意:
+--   users への各 FK は ON DELETE CASCADE のため、当該ユーザーに紐づく記録
+--   (weight/meal/exercise 等) も連鎖削除される。テストアカウントのため問題なし。
+
+DELETE FROM users WHERE email = 'test@example.com';

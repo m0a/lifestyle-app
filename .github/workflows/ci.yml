@@ -72,6 +72,11 @@ jobs:
           cd packages/backend
           pnpm exec wrangler d1 migrations apply DB --local
 
+      - name: Seed local test user (local DB only — never preview/production)
+        run: |
+          cd packages/backend
+          pnpm exec wrangler d1 execute DB --local --file seed/test-user.local.sql
+
       - name: Start backend server
         run: |
           cd packages/backend
@@ -157,6 +162,11 @@ jobs:
         run: |
           cd packages/backend
           pnpm exec wrangler d1 migrations apply DB --local
+
+      - name: Seed local test user (local DB only — never preview/production)
+        run: |
+          cd packages/backend
+          pnpm exec wrangler d1 execute DB --local --file seed/test-user.local.sql
 
       - name: Start backend server
         run: |

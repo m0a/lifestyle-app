@@ -10,11 +10,14 @@ export default defineConfig({
   workers: isCI ? 2 : undefined,
   reporter: isCI ? 'list' : 'html',
   timeout: 30000,
-  // Global setup ensures test user is properly configured before tests run
-  // In CI, we rely on migrations alone since they run on a fresh database
-  // Locally, global setup helps fix stale test user data
-  // Before running E2E tests locally, ensure migrations are applied:
+  // Global setup ensures the test user is configured before tests run.
+  // In CI, the test user is seeded into the local D1 by a dedicated workflow
+  // step (`db:seed:local`, see .github/workflows/ci.yml) — NOT by migrations,
+  // so the known-credential account never reaches preview/production (#96).
+  // Locally, global setup helps fix stale test user data. Before running E2E
+  // tests locally, apply migrations and seed:
   //   pnpm --filter @lifestyle-app/backend db:migrate:local
+  //   pnpm --filter @lifestyle-app/backend db:seed:local
   globalSetup: isCI ? undefined : './tests/setup/e2e-global-setup.ts',
   use: {
     baseURL: isCI ? 'http://localhost:4174' : 'http://localhost:5174',
