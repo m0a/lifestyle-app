@@ -11,7 +11,7 @@ import { drizzle } from 'drizzle-orm/d1';
 import { eq, and, isNull } from 'drizzle-orm';
 import * as schema from '../../db/schema/email';
 import { users } from '../../db/schema';
-import { generateSecureToken } from '../token/crypto';
+import { generateSecureToken, hashToken } from '../token/crypto';
 import { sendEmail } from './email.service';
 import {
   generateEmailChangeConfirmationEmail,
@@ -71,23 +71,26 @@ export async function requestEmailChange(
       };
     }
 
+    // Only the token's SHA-256 hash is stored; the raw token goes in the email
+    // links (#98).
     const token = await generateSecureToken();
+    const tokenHash = await hashToken(token);
     const now = Date.now();
     const expiresAt = now + EMAIL_CHANGE_TOKEN_EXPIRATION_MS;
 
-    // Create email change request
+    // Create email change request (stores the token hash)
     await orm.insert(schema.emailChangeRequests).values({
       userId,
       oldEmail,
       newEmail,
-      token,
+      token: tokenHash,
       expiresAt,
       confirmedAt: null,
       cancelledAt: null,
       createdAt: now,
     });
 
-    // Send confirmation email to NEW address
+    // Send confirmation email to NEW address (carries the raw token)
     const confirmationUrl = `${frontendUrl}/change-email/confirm?token=${token}`;
     const confirmationResult = await sendEmail(db, resendApiKey, fromEmail, {
       to: newEmail,
@@ -150,11 +153,12 @@ export async function confirmEmailChange(
   const orm = drizzle(db, { schema });
 
   try {
-    // Find the email change request
+    // Look up by the token's hash (raw token is never stored).
+    const tokenHash = await hashToken(token);
     const request = await orm
       .select()
       .from(schema.emailChangeRequests)
-      .where(eq(schema.emailChangeRequests.token, token))
+      .where(eq(schema.emailChangeRequests.token, tokenHash))
       .get();
 
     if (!request) {
@@ -227,11 +231,12 @@ export async function cancelEmailChange(
   const orm = drizzle(db, { schema });
 
   try {
-    // Find the email change request
+    // Look up by the token's hash (raw token is never stored).
+    const tokenHash = await hashToken(token);
     const request = await orm
       .select()
       .from(schema.emailChangeRequests)
-      .where(eq(schema.emailChangeRequests.token, token))
+      .where(eq(schema.emailChangeRequests.token, tokenHash))
       .get();
 
     if (!request) {

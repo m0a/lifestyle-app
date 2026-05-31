@@ -12,6 +12,7 @@ import { describe, it, expect } from 'vitest';
 import {
   generateSecureToken,
   isValidTokenFormat,
+  hashToken,
 } from '../../../packages/backend/src/services/token/crypto';
 
 describe('Token Generation Service', () => {
@@ -101,6 +102,37 @@ describe('Token Generation Service', () => {
 
     it('should reject empty strings', () => {
       expect(isValidTokenFormat('')).toBe(false);
+    });
+  });
+
+  describe('hashToken', () => {
+    it('should return a 64-character lowercase hex digest', async () => {
+      const hash = await hashToken(await generateSecureToken());
+      expect(hash).toMatch(/^[0-9a-f]{64}$/);
+    });
+
+    it('should be deterministic for the same input', async () => {
+      const token = await generateSecureToken();
+      expect(await hashToken(token)).toBe(await hashToken(token));
+    });
+
+    it('should produce different hashes for different inputs', async () => {
+      const a = await hashToken(await generateSecureToken());
+      const b = await hashToken(await generateSecureToken());
+      expect(a).not.toBe(b);
+    });
+
+    it('should match the known SHA-256 vector for "abc"', async () => {
+      // SHA-256("abc") — confirms hex encoding/byte order, so a stored hash is
+      // reproducible from the raw token submitted at verification time (#98).
+      expect(await hashToken('abc')).toBe(
+        'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad'
+      );
+    });
+
+    it('should not return the raw token (token is not stored in the clear)', async () => {
+      const token = await generateSecureToken();
+      expect(await hashToken(token)).not.toBe(token);
     });
   });
 });

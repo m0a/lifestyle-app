@@ -28,6 +28,27 @@ export async function generateSecureToken(): Promise<string> {
 }
 
 /**
+ * Hash a token with SHA-256 for storage at rest.
+ *
+ * The raw token is what travels in the email link and is what the user submits;
+ * only its hash is persisted in the DB. A leaked DB/backup therefore cannot be
+ * replayed to reset a password or hijack an email — an attacker would need to
+ * invert SHA-256 of a 256-bit random value (#98). Verification re-hashes the
+ * submitted token and looks it up by hash, so the existing unique index and
+ * one-time-use logic keep working unchanged.
+ *
+ * @param {string} token - Raw token (as sent to the user)
+ * @returns {Promise<string>} 64-character lowercase hex SHA-256 digest
+ */
+export async function hashToken(token: string): Promise<string> {
+  const bytes = new TextEncoder().encode(token) as Uint8Array<ArrayBuffer>;
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return [...new Uint8Array(digest)]
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+/**
  * Convert ArrayBuffer to base64url encoding
  *
  * @param {Uint8Array} buffer - Buffer to encode

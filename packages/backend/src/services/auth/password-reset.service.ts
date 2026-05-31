@@ -12,7 +12,7 @@ import type { D1Database } from '@cloudflare/workers-types';
 import { eq, and, isNull, gt } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 import * as schema from '../../db/schema';
-import { generateSecureToken } from '../token/crypto';
+import { generateSecureToken, hashToken } from '../token/crypto';
 import { sendEmail } from '../email/email.service';
 import { generatePasswordResetEmail } from '../email/templates/password-reset';
 import {
@@ -77,21 +77,23 @@ export async function requestPasswordReset(
   }
 
   try {
-    // Generate secure token
+    // Generate secure token. Only its SHA-256 hash is stored; the raw token
+    // goes in the email link (#98).
     const token = await generateSecureToken();
+    const tokenHash = await hashToken(token);
     const now = Date.now();
     const expiresAt = now + PASSWORD_RESET_TOKEN_EXPIRATION_MS;
 
-    // Save token to database
+    // Save token hash to database
     await orm.insert(schema.passwordResetTokens).values({
       userId: user.id,
-      token,
+      token: tokenHash,
       expiresAt,
       usedAt: null,
       createdAt: now,
     });
 
-    // Generate reset URL
+    // Generate reset URL (carries the raw token)
     const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
 
     // Send email
@@ -145,10 +147,13 @@ export async function confirmPasswordReset(
   const now = Date.now();
 
   try {
+    // Look up by the token's hash (raw token is never stored).
+    const tokenHash = await hashToken(token);
+
     // Find valid token (not used, not expired)
     const tokenRecord = await orm.query.passwordResetTokens.findFirst({
       where: and(
-        eq(schema.passwordResetTokens.token, token),
+        eq(schema.passwordResetTokens.token, tokenHash),
         isNull(schema.passwordResetTokens.usedAt),
         gt(schema.passwordResetTokens.expiresAt, now)
       ),
