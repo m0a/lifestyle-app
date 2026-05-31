@@ -3,6 +3,7 @@ import type { Database } from './db';
 export type Bindings = {
   DB: D1Database;
   ENVIRONMENT: string;
+  SESSION_SECRET?: string;
   // AI meal analysis
   PHOTOS: R2Bucket;
   GOOGLE_GENERATIVE_AI_API_KEY?: string;

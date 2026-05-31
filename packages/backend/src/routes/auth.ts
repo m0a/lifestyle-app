@@ -8,7 +8,7 @@ import {
   passwordResetConfirmSchema,
 } from '@lifestyle-app/shared';
 import { AuthService } from '../services/auth';
-import { createSessionToken, authMiddleware } from '../middleware/auth';
+import { createSessionToken, authMiddleware, resolveSessionSecret } from '../middleware/auth';
 import type { Database } from '../db';
 import {
   requestPasswordReset,
@@ -21,6 +21,7 @@ import { webauthn } from './auth/webauthn';
 type Bindings = {
   DB: D1Database;
   ENVIRONMENT: string;
+  SESSION_SECRET?: string;
   RESEND_API_KEY: string;
   FROM_EMAIL: string;
   FRONTEND_URL: string;
@@ -62,7 +63,7 @@ export const auth = new Hono<{ Bindings: Bindings; Variables: Variables }>()
       );
     }
 
-    const token = createSessionToken(user.id);
+    const token = await createSessionToken(user.id, resolveSessionSecret(c.env));
 
     const isProduction = c.env.ENVIRONMENT === 'production';
     setCookie(c, 'session', token, {
@@ -81,7 +82,7 @@ export const auth = new Hono<{ Bindings: Bindings; Variables: Variables }>()
     const authService = new AuthService(db);
 
     const user = await authService.login(input);
-    const token = createSessionToken(user.id);
+    const token = await createSessionToken(user.id, resolveSessionSecret(c.env));
 
     const isProduction = c.env.ENVIRONMENT === 'production';
     setCookie(c, 'session', token, {

@@ -1,3 +1,8 @@
+# Marks this as a local dev run (cookies served over http, insecure session
+# fallback key allowed). Without this, wrangler dev inherits ENVIRONMENT from
+# [vars] (= "production"), which makes auth fail closed locally.
+ENVIRONMENT=development
+
 # AI Configuration
 # Get your API key from https://makersuite.google.com/app/apikey
 GOOGLE_GENERATIVE_AI_API_KEY=your-google-ai-api-key-here
@@ -5,3 +10,9 @@ GOOGLE_GENERATIVE_AI_API_KEY=your-google-ai-api-key-here
 # AI Provider settings
 AI_PROVIDER=google
 AI_MODEL=gemini-3-flash
+
+# Session signing key (HMAC-SHA256 for the `session` cookie). Optional locally:
+# non-production runs fall back to a shared insecure dev key. Set a real
+# high-entropy value here to mirror production. Production/preview MUST set this
+# as a real Workers Secret via `wrangler secret put SESSION_SECRET`.
+# SESSION_SECRET=replace-with-a-high-entropy-string

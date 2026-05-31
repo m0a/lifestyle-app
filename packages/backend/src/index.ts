@@ -22,6 +22,7 @@ import { executeScheduledCleanup } from './cron/cleanup';
 type Bindings = {
   DB: D1Database;
   ENVIRONMENT: string;
+  SESSION_SECRET?: string;
   PHOTOS: R2Bucket;
   ASSETS: Fetcher;
   GOOGLE_GENERATIVE_AI_API_KEY?: string;

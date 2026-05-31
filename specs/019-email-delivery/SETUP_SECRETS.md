@@ -18,6 +18,39 @@
 
 ---
 
+## 🔑 SESSION_SECRET（セッションCookie署名鍵 / Issue #95）
+
+セッションCookieを HMAC-SHA256 で署名するための鍵。挙動は環境で異なる:
+
+- **Production（`ENVIRONMENT=production`）**: 未設定だと**全ての認証が fail-closed で失敗**する（推測可能な鍵を黙って使わないための設計）。→ デプロイ前に必ず設定。
+- **dev / test / preview**: 未設定なら共有の**insecureなdevフォールバック鍵**で動作する（ローカル・CIはそのまま動く）。preview は公開URLなので、フォールバックに頼らず実シークレットを設定することを推奨。
+
+| 環境 | 保存場所 | 対応 |
+|------|---------|------|
+| ローカル開発 / CI統合テスト | （未設定でOK＝devフォールバック） | ✅ 対応不要 |
+| Production（`lifestyle-tracker`） | Cloudflare Workers Secret | ⚠️ **デプロイ前に手動設定（必須・一度のみ）** |
+| Main Preview（`lifestyle-tracker-preview`） | Cloudflare Workers Secret | 🔸 推奨（未設定でも起動はする） |
+| PR Preview（動的Worker） | GitHub Secrets → CI自動設定 | `gh secret set SESSION_SECRET` を一度実行 |
+
+### 設定手順（本番デプロイ前に必須）
+
+```bash
+# 1. 強い鍵を生成
+openssl rand -base64 48
+
+# 2. Production と Main Preview の Worker に設定（生成値を貼り付け）
+cd packages/backend
+pnpm exec wrangler secret put SESSION_SECRET             # production (lifestyle-tracker)
+pnpm exec wrangler secret put SESSION_SECRET --env preview  # main preview
+
+# 3. PR Preview を使う場合は GitHub Secrets にも追加
+gh secret set SESSION_SECRET    # プロンプトに同じ値（または別の値）を貼り付け
+```
+
+> 既存ユーザーの旧形式（署名なし）Cookieは検証に失敗し401になるため、初回は再ログインが必要。
+
+---
+
 ## 🔐 環境変数の3層管理
 
 ```
