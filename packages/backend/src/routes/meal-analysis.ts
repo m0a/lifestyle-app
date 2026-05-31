@@ -36,13 +36,42 @@ type Variables = {
 
 export const mealAnalysis = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
-// Photo serving (no auth required - photo keys are unguessable)
-// Use wildcard to capture keys with slashes (e.g., temp/uuid)
+// All meal-analysis routes require authentication — including photo serving.
+// Photos were previously served with no auth and no owner check, so any leaked
+// key (DB value, client response, log, Referer) let anyone view another user's
+// meal photo (IDOR, #97). The session cookie is httpOnly + same-origin
+// (SameSite=Lax), so <img> requests still carry it and image display is
+// unaffected by requiring auth here.
+mealAnalysis.use('*', authMiddleware);
+
+// GET /api/meals/photos/* - Serve a meal photo to its owner only.
+// The wildcard captures keys whose slashes the client percent-encodes.
 mealAnalysis.get('/photos/*', async (c) => {
+  const userId = c.get('user').id;
+  const db = c.get('db');
+
   const key = c.req.path.replace('/api/meals/photos/', '');
   const decodedKey = decodeURIComponent(key);
-  const photoStorage = new PhotoStorageService(c.env.PHOTOS);
 
+  // Ownership check: the requested key must belong to a photo on one of the
+  // caller's meals. meal_photos always stores the currently-served key (a
+  // temp/<uuid> key during the analysis review flow, a photos/<userId>/... key
+  // after save), linked via meal_id to meal_records.user_id — so this single
+  // lookup covers both temp and permanent keys without trusting the key format.
+  const owner = await db
+    .select({ userId: mealRecords.userId })
+    .from(mealPhotos)
+    .innerJoin(mealRecords, eq(mealPhotos.mealId, mealRecords.id))
+    .where(eq(mealPhotos.photoKey, decodedKey))
+    .get();
+
+  // Use the same 404 for "missing" and "not yours" so the response never
+  // reveals whether a key exists for a different user.
+  if (!owner || owner.userId !== userId) {
+    return c.json({ error: 'not_found', message: '写真が見つかりません' }, 404);
+  }
+
+  const photoStorage = new PhotoStorageService(c.env.PHOTOS);
   const result = await photoStorage.getPhotoForServing(decodedKey);
   if (!result) {
     return c.json({ error: 'not_found', message: '写真が見つかりません' }, 404);
@@ -51,20 +80,11 @@ mealAnalysis.get('/photos/*', async (c) => {
   return new Response(result.body, {
     headers: {
       'Content-Type': result.contentType,
-      'Cache-Control': 'public, max-age=31536000',
+      // Per-user private content: keep it out of shared/CDN caches. A short
+      // browser cache still avoids re-fetching within a viewing session.
+      'Cache-Control': 'private, max-age=3600',
     },
   });
-});
-
-// Auth middleware - exclude photo serving endpoint
-mealAnalysis.use('*', async (c, next) => {
-  // Skip auth for photo serving (keys are unguessable UUIDs)
-  // c.req.path in subrouter is relative, c.req.url has full path
-  const url = new URL(c.req.url);
-  if (url.pathname.startsWith('/api/meals/photos/')) {
-    return next();
-  }
-  return authMiddleware(c, next);
 });
 
 // POST /api/meals/analyze - Analyze meal photo

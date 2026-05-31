@@ -15,7 +15,6 @@ import { mealAnalysis } from './routes/meal-analysis';
 import { mealChat } from './routes/meal-chat';
 import { emailVerify } from './routes/email/verify';
 import { emailChange } from './routes/email/change';
-import { PhotoStorageService } from './services/photo-storage';
 import { requestContext } from './middleware/requestContext';
 import { executeScheduledCleanup } from './cron/cleanup';
 
@@ -112,24 +111,9 @@ app.get('/api/health', (c) => {
   });
 });
 
-// Photo serving - no auth required (keys are unguessable UUIDs)
-app.get('/api/meals/photos/*', async (c) => {
-  const key = c.req.path.replace('/api/meals/photos/', '');
-  const decodedKey = decodeURIComponent(key);
-  const photoStorage = new PhotoStorageService(c.env.PHOTOS);
-
-  const result = await photoStorage.getPhotoForServing(decodedKey);
-  if (!result) {
-    return c.json({ error: 'not_found', message: '写真が見つかりません' }, 404);
-  }
-
-  return new Response(result.body, {
-    headers: {
-      'Content-Type': result.contentType,
-      'Cache-Control': 'public, max-age=31536000',
-    },
-  });
-});
+// Photo serving is handled by the meal-analysis router (`/api/meals/photos/*`),
+// behind authMiddleware with an owner check. It used to be duplicated here
+// without auth, which let it shadow the secured handler — removed for #97.
 
 // Routes - chain format for RPC type inference
 const routes = app

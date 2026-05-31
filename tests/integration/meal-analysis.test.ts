@@ -1,4 +1,11 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
+import {
+  createTestSession,
+  ensureTestUser,
+  TEST_USERS,
+  API_BASE,
+  type TestSession,
+} from '../helpers/integration';
 
 /**
  * Integration tests for AI Meal Analysis API
@@ -13,7 +20,7 @@ import { describe, it, expect } from 'vitest';
  */
 
 describe('Meal Analysis API Integration Tests', () => {
-  const API_BASE = 'http://localhost:8787';
+  // API_BASE is imported from the helper (honors TEST_API_BASE).
 
   // Test data placeholders - actual implementation requires test fixtures
   // and proper authentication setup
@@ -198,23 +205,72 @@ describe('Meal Analysis API Integration Tests', () => {
     });
   });
 
-  describe('GET /api/photos/:key', () => {
-    it('should serve photo with correct content type', async () => {
-      // Expected: image/jpeg or image/png with Cache-Control header
-      expect(true).toBe(true);
+  // #97: photo serving now requires authentication AND owner verification.
+  // A leaked key must not expose another user's meal photo (IDOR).
+  describe('GET /api/meals/photos/* (auth + ownership)', () => {
+    // Minimal JPEG header bytes — enough for an image/* upload (no AI involved
+    // via the legacy single-photo endpoint).
+    const JPEG_BYTES = new Uint8Array([
+      0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01,
+    ]);
+
+    let owner: TestSession;
+    let other: TestSession;
+    let photoKey: string;
+    let photoPath: string;
+
+    beforeAll(async () => {
+      await ensureTestUser(TEST_USERS.default.email, TEST_USERS.default.password);
+      await ensureTestUser(TEST_USERS.secondary.email, TEST_USERS.secondary.password);
+
+      owner = createTestSession();
+      await owner.login(TEST_USERS.default.email, TEST_USERS.default.password);
+      other = createTestSession();
+      await other.login(TEST_USERS.secondary.email, TEST_USERS.secondary.password);
+
+      // Create an empty meal and attach a photo (permanent key) as the owner.
+      const createRes = await owner.request('/api/meals/create-empty', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mealType: 'lunch' }),
+      });
+      expect(createRes.status).toBe(200);
+      const { mealId } = (await createRes.json()) as { mealId: string };
+
+      const form = new FormData();
+      form.append('photo', new Blob([JPEG_BYTES], { type: 'image/jpeg' }), 'p.jpg');
+      const upRes = await owner.request(`/api/meals/${mealId}/photo`, {
+        method: 'POST',
+        body: form,
+      });
+      expect(upRes.status).toBe(200);
+      const upData = (await upRes.json()) as { photoKey: string };
+      photoKey = upData.photoKey;
+      photoPath = `/api/meals/photos/${encodeURIComponent(photoKey)}`;
     });
 
-    it('should return 404 for non-existent photo', async () => {
-      expect(true).toBe(true);
+    it('serves the photo to its owner (200, image/*, private cache)', async () => {
+      const res = await owner.request(photoPath);
+      expect(res.status).toBe(200);
+      expect(res.headers.get('content-type')).toMatch(/^image\//);
+      expect(res.headers.get('cache-control') ?? '').toContain('private');
     });
 
-    it('should not require authentication (photo keys are unguessable)', async () => {
-      expect(true).toBe(true);
+    it('rejects unauthenticated requests (401)', async () => {
+      const res = await fetch(`${API_BASE}${photoPath}`);
+      expect(res.status).toBe(401);
     });
 
-    it('should not serve temp photos (security)', async () => {
-      // GET /api/photos/temp/xxx should return 404
-      expect(true).toBe(true);
+    it("does not serve another user's photo — 404 hides existence (IDOR)", async () => {
+      const res = await other.request(photoPath);
+      expect(res.status).toBe(404);
+    });
+
+    it('returns 404 for a non-existent key (authenticated)', async () => {
+      const res = await owner.request(
+        `/api/meals/photos/${encodeURIComponent('photos/nobody/none/none.jpg')}`
+      );
+      expect(res.status).toBe(404);
     });
   });
 });

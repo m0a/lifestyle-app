@@ -70,6 +70,9 @@ export const mealPhotos = sqliteTable(
   },
   (table) => ({
     idx_meal_photos_meal: index('idx_meal_photos_meal').on(table.mealId, table.displayOrder),
+    // Photo serving verifies ownership by looking up photo_key on every image
+    // request (#97); index it so that lookup stays O(log n).
+    idx_meal_photos_photo_key: index('idx_meal_photos_photo_key').on(table.photoKey),
   })
 );
 
