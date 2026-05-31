@@ -14,7 +14,7 @@ import type { D1Database } from '@cloudflare/workers-types';
 import { eq, and, isNull, gt } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 import * as schema from '../../db/schema';
-import { generateSecureToken } from '../token/crypto';
+import { generateSecureToken, hashToken } from '../token/crypto';
 import { sendEmail } from './email.service';
 import { emailVerificationTemplate } from './templates/email-verification';
 
@@ -42,21 +42,23 @@ export async function sendVerificationEmail(
   const orm = drizzle(db, { schema });
 
   try {
-    // Generate secure token
+    // Generate secure token. Only its SHA-256 hash is stored; the raw token
+    // goes in the verification link (#98).
     const token = await generateSecureToken();
+    const tokenHash = await hashToken(token);
     const now = Date.now();
     const expiresAt = now + EMAIL_VERIFICATION_TOKEN_EXPIRATION_MS;
 
-    // Insert token into database
+    // Insert token hash into database
     await orm.insert(schema.emailVerificationTokens).values({
       userId,
-      token,
+      token: tokenHash,
       expiresAt,
       usedAt: null,
       createdAt: now,
     });
 
-    // Generate verification link
+    // Generate verification link (carries the raw token)
     const verificationLink = `${frontendUrl}/verify-email?token=${token}`;
 
     // Send email
@@ -97,10 +99,13 @@ export async function verifyEmail(
   const now = Date.now();
 
   try {
+    // Look up by the token's hash (raw token is never stored).
+    const tokenHash = await hashToken(token);
+
     // Find valid token (not used, not expired)
     const tokenRecord = await orm.query.emailVerificationTokens.findFirst({
       where: and(
-        eq(schema.emailVerificationTokens.token, token),
+        eq(schema.emailVerificationTokens.token, tokenHash),
         isNull(schema.emailVerificationTokens.usedAt),
         gt(schema.emailVerificationTokens.expiresAt, now)
       ),
