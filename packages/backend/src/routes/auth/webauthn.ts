@@ -16,7 +16,7 @@ import {
   passkeyRegisterVerifySchema,
   passkeyAuthVerifySchema,
 } from '@lifestyle-app/shared';
-import { authMiddleware, createSessionToken } from '../../middleware/auth';
+import { authMiddleware, createSessionToken, resolveSessionSecret } from '../../middleware/auth';
 import { AppError } from '../../middleware/error';
 import type { Database } from '../../db';
 import {
@@ -35,6 +35,7 @@ import { AuthService } from '../../services/auth';
 type Bindings = {
   DB: D1Database;
   ENVIRONMENT: string;
+  SESSION_SECRET?: string;
   RP_ID: string;
   RP_NAME: string;
   RP_ORIGIN: string;
@@ -214,7 +215,7 @@ export const webauthn = new Hono<{ Bindings: Bindings; Variables: Variables }>()
       const authService = new AuthService(db);
       const user = await authService.getUserById(credentialRow.userId);
 
-      const token = createSessionToken(user.id);
+      const token = await createSessionToken(user.id, resolveSessionSecret(c.env));
       const isProduction = c.env.ENVIRONMENT === 'production';
       setCookie(c, 'session', token, {
         httpOnly: true,
