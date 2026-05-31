@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DashboardService } from '../../packages/backend/src/services/dashboard';
 
 describe('DashboardService', () => {
@@ -36,11 +36,12 @@ describe('DashboardService', () => {
         { calories: 2200, mealType: 'dinner', recordedAt: '2025-01-02T19:00:00+09:00' },
       ]);
 
-      // Mock exercise data (each record = 1 set)
+      // Mock exercise data (each record = 1 set). recordedAt is within
+      // [startDate, endDate] so the local-date filter keeps them (#99).
       mockDb.all.mockResolvedValueOnce([
-        { exerciseType: 'ベンチプレス', setNumber: 1, reps: 10 },
-        { exerciseType: 'ベンチプレス', setNumber: 2, reps: 10 },
-        { exerciseType: 'スクワット', setNumber: 1, reps: 12 },
+        { exerciseType: 'ベンチプレス', setNumber: 1, reps: 10, recordedAt: '2025-01-02T10:00:00+09:00' },
+        { exerciseType: 'ベンチプレス', setNumber: 2, reps: 10, recordedAt: '2025-01-02T10:05:00+09:00' },
+        { exerciseType: 'スクワット', setNumber: 1, reps: 12, recordedAt: '2025-01-03T18:00:00+09:00' },
       ]);
 
       const result = await service.getSummary(userId, { startDate, endDate });
@@ -140,20 +141,21 @@ describe('DashboardService', () => {
 
       mockDb.all.mockResolvedValueOnce([]);
       mockDb.all.mockResolvedValueOnce([]);
-      // Each record = 1 set. Total: 7 ベンチプレス + 3 スクワット + 2 ランジ = 12 sets
+      // Each record = 1 set. Total: 7 ベンチプレス + 3 スクワット + 2 ランジ = 12 sets.
+      // recordedAt is within [startDate, endDate] so the local-date filter keeps them (#99).
       mockDb.all.mockResolvedValueOnce([
-        { exerciseType: 'ベンチプレス', setNumber: 1, reps: 10 },
-        { exerciseType: 'ベンチプレス', setNumber: 2, reps: 10 },
-        { exerciseType: 'ベンチプレス', setNumber: 3, reps: 10 },
-        { exerciseType: 'ベンチプレス', setNumber: 1, reps: 8 },
-        { exerciseType: 'ベンチプレス', setNumber: 2, reps: 8 },
-        { exerciseType: 'ベンチプレス', setNumber: 3, reps: 8 },
-        { exerciseType: 'ベンチプレス', setNumber: 4, reps: 8 },
-        { exerciseType: 'スクワット', setNumber: 1, reps: 12 },
-        { exerciseType: 'スクワット', setNumber: 2, reps: 12 },
-        { exerciseType: 'スクワット', setNumber: 3, reps: 12 },
-        { exerciseType: 'ランジ', setNumber: 1, reps: 15 },
-        { exerciseType: 'ランジ', setNumber: 2, reps: 15 },
+        { exerciseType: 'ベンチプレス', setNumber: 1, reps: 10, recordedAt: '2025-01-02T10:00:00+09:00' },
+        { exerciseType: 'ベンチプレス', setNumber: 2, reps: 10, recordedAt: '2025-01-02T10:05:00+09:00' },
+        { exerciseType: 'ベンチプレス', setNumber: 3, reps: 10, recordedAt: '2025-01-02T10:10:00+09:00' },
+        { exerciseType: 'ベンチプレス', setNumber: 1, reps: 8, recordedAt: '2025-01-04T10:00:00+09:00' },
+        { exerciseType: 'ベンチプレス', setNumber: 2, reps: 8, recordedAt: '2025-01-04T10:05:00+09:00' },
+        { exerciseType: 'ベンチプレス', setNumber: 3, reps: 8, recordedAt: '2025-01-04T10:10:00+09:00' },
+        { exerciseType: 'ベンチプレス', setNumber: 4, reps: 8, recordedAt: '2025-01-04T10:15:00+09:00' },
+        { exerciseType: 'スクワット', setNumber: 1, reps: 12, recordedAt: '2025-01-05T18:00:00+09:00' },
+        { exerciseType: 'スクワット', setNumber: 2, reps: 12, recordedAt: '2025-01-05T18:05:00+09:00' },
+        { exerciseType: 'スクワット', setNumber: 3, reps: 12, recordedAt: '2025-01-05T18:10:00+09:00' },
+        { exerciseType: 'ランジ', setNumber: 1, reps: 15, recordedAt: '2025-01-06T19:00:00+09:00' },
+        { exerciseType: 'ランジ', setNumber: 2, reps: 15, recordedAt: '2025-01-06T19:05:00+09:00' },
       ]);
 
       const result = await service.getSummary(userId, { startDate, endDate });
@@ -212,16 +214,113 @@ describe('DashboardService', () => {
         dailyCalories: 2000,
       };
 
-      mockDb.all.mockResolvedValueOnce([{ weight: 68.0 }]);
-      mockDb.all.mockResolvedValueOnce([{ total: 120 }]);
-      mockDb.all.mockResolvedValueOnce([{ avg: 1950 }]);
+      // Real row shapes carry recordedAt (the local-date filter reads it, #99).
+      // Use "now" so the records fall inside the trailing-7-day window.
+      const recentISO = new Date().toISOString();
+      mockDb.all.mockResolvedValueOnce([{ weight: 68.0 }]); // latest weight (no date filter)
+      mockDb.all.mockResolvedValueOnce([{ reps: 10, recordedAt: recentISO }]); // weekly exercises
+      mockDb.all.mockResolvedValueOnce([{ calories: 1950, recordedAt: recentISO }]); // weekly meals
 
       const result = await service.getGoalProgress(userId, goals);
 
       expect(result).toBeDefined();
-      expect(result.weight).toBeDefined();
-      expect(result.exercise).toBeDefined();
-      expect(result.calories).toBeDefined();
+      expect(result.weight.current).toBe(68.0);
+      // One in-window exercise record => 1 set; one meal of 1950 on a single
+      // local day => daily average 1950 (locks the local-date filter output).
+      expect(result.exercise.currentSets).toBe(1);
+      expect(result.calories.average).toBe(1950);
+    });
+  });
+
+  // Regression for #99: aggregation must bucket records by their LOCAL date,
+  // not by a UTC ("Z") vs "+09:00" lexicographic string compare. Under the old
+  // code the boundary used startDate.toISOString() (a "Z" instant), which
+  // dropped/mixed records near the day edge.
+  describe('timezone boundary (#99)', () => {
+    it('getSummary keeps JST same-day edge records and drops the previous local day', async () => {
+      const userId = 'user-tz';
+      // Frontend asks for local day 2026-01-17; the route builds new Date('2026-01-17').
+      const startDate = new Date('2026-01-17');
+      const endDate = new Date('2026-01-17');
+
+      mockDb.all.mockResolvedValueOnce([]); // weights
+      mockDb.all.mockResolvedValueOnce([
+        // 23:30 JST on Jan 17 (14:30Z same day): the old end-bound (Z midnight)
+        // dropped this true same-day record.
+        { calories: 700, mealType: 'dinner', totalProtein: 0, totalFat: 0, totalCarbs: 0, recordedAt: '2026-01-17T23:30:00+09:00' },
+        // 07:00 JST on Jan 17 (22:00Z on the 16th): still belongs to Jan 17.
+        { calories: 300, mealType: 'breakfast', totalProtein: 0, totalFat: 0, totalCarbs: 0, recordedAt: '2026-01-17T07:00:00+09:00' },
+        // Previous local day — must be excluded.
+        { calories: 999, mealType: 'dinner', totalProtein: 0, totalFat: 0, totalCarbs: 0, recordedAt: '2026-01-16T23:30:00+09:00' },
+      ]);
+      mockDb.all.mockResolvedValueOnce([]); // exercises
+
+      const result = await service.getSummary(userId, { startDate, endDate });
+
+      // Both Jan-17 records counted; the Jan-16 one excluded. (Old code returned
+      // all 3 because the SQL bound is a no-op against the mock and there was no
+      // local-date filter.)
+      expect(result.meals.mealCount).toBe(2);
+      expect(result.meals.totalCalories).toBe(1000);
+    });
+
+    // getWeeklyTrend / getGoalProgress use a "now"-relative window, so pin the
+    // clock to make the local-date bucketing deterministic.
+    describe('now-relative windows', () => {
+      beforeEach(() => {
+        vi.useFakeTimers();
+        // 2026-01-17T05:00:00Z = 2026-01-17 14:00 JST
+        vi.setSystemTime(new Date('2026-01-17T05:00:00Z'));
+      });
+      afterEach(() => {
+        vi.useRealTimers();
+      });
+
+      it('getWeeklyTrend buckets a late-night JST record into the correct week', async () => {
+        // weeks=1 => single window: local 2026-01-11 .. 2026-01-17
+        mockDb.all.mockResolvedValueOnce([
+          { weight: 70.0, recordedAt: '2026-01-17T23:30:00+09:00' }, // local 01-17, in week
+        ]); // allWeights
+        mockDb.all.mockResolvedValueOnce([
+          { calories: 500, recordedAt: '2026-01-17T23:30:00+09:00' }, // in week (late-night JST)
+          { calories: 999, recordedAt: '2026-01-10T12:00:00+09:00' }, // local 01-10, before weekStart
+        ]); // allMeals
+        mockDb.all.mockResolvedValueOnce([
+          { recordedAt: '2026-01-17T07:00:00+09:00' }, // local 01-17, in week
+        ]); // allExercises
+
+        const result = await service.getWeeklyTrend('user-tz', 1);
+
+        expect(result).toHaveLength(1);
+        expect(result[0]!.weekStart).toBe('2026-01-11');
+        expect(result[0]!.weekEnd).toBe('2026-01-17');
+        // Late-night JST record kept; the 01-10 record dropped.
+        expect(result[0]!.totalCalories).toBe(500);
+        expect(result[0]!.exerciseSets).toBe(1);
+        expect(result[0]!.weight).toBe(70.0);
+      });
+
+      it('getGoalProgress filters by local date and averages calories per local day', async () => {
+        // now=2026-01-17T05:00:00Z => weekStart (local) = 2026-01-10
+        mockDb.all.mockResolvedValueOnce([{ weight: 68.0 }]); // latest weight
+        mockDb.all.mockResolvedValueOnce([
+          { reps: 10, recordedAt: '2026-01-17T23:30:00+09:00' }, // local 01-17 >= 01-10 => kept
+          { reps: 8, recordedAt: '2026-01-09T12:00:00+09:00' }, // local 01-09 < 01-10 => dropped
+        ]); // weekly exercises
+        mockDb.all.mockResolvedValueOnce([
+          { calories: 1950, recordedAt: '2026-01-17T23:30:00+09:00' }, // kept; one local day
+        ]); // weekly meals
+
+        const result = await service.getGoalProgress('user-tz', {
+          targetWeight: 65,
+          dailyCalories: 2000,
+        });
+
+        // Edge record kept, stale (pre-window) one dropped.
+        expect(result.exercise.currentSets).toBe(1);
+        // 1950 over a single local day.
+        expect(result.calories.average).toBe(1950);
+      });
     });
   });
 });
