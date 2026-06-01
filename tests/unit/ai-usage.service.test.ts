@@ -9,7 +9,11 @@ describe('AIUsageService', () => {
     vi.clearAllMocks();
     mockDb = {
       insert: vi.fn().mockReturnThis(),
-      values: vi.fn().mockResolvedValue(undefined),
+      // values()/onConflictDoUpdate() build the statements that are handed to
+      // db.batch([...]) (the detail insert + the ai_usage_totals rollup, #104).
+      values: vi.fn().mockReturnThis(),
+      onConflictDoUpdate: vi.fn().mockReturnThis(),
+      batch: vi.fn().mockResolvedValue([]),
       select: vi.fn().mockReturnThis(),
       from: vi.fn().mockReturnThis(),
       where: vi.fn().mockResolvedValue([]),
@@ -82,7 +86,7 @@ describe('AIUsageService', () => {
     });
 
     it('should not throw on database error (fire-and-forget)', async () => {
-      mockDb.values.mockRejectedValue(new Error('Database error'));
+      mockDb.batch.mockRejectedValue(new Error('Database error'));
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       const userId = 'user-123';
@@ -102,6 +106,25 @@ describe('AIUsageService', () => {
       );
 
       consoleSpy.mockRestore();
+    });
+
+    it('atomically writes the detail row and the lifetime rollup (ai_usage_totals, #104)', async () => {
+      await service.recordUsage('user-roll', 'image_analysis', {
+        promptTokens: 100,
+        completionTokens: 50,
+        totalTokens: 150,
+      });
+
+      // Both statements (detail insert + rollup upsert) go through one atomic batch.
+      expect(mockDb.batch).toHaveBeenCalledTimes(1);
+      expect(mockDb.batch.mock.calls[0][0]).toHaveLength(2);
+      // Two values() builds: the detail row and the rollup upsert.
+      expect(mockDb.values).toHaveBeenCalledTimes(2);
+      // The rollup uses onConflictDoUpdate to add this call's token total.
+      expect(mockDb.onConflictDoUpdate).toHaveBeenCalledTimes(1);
+      expect(mockDb.values).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: 'user-roll', totalTokens: 150, updatedAt: expect.any(String) })
+      );
     });
   });
 

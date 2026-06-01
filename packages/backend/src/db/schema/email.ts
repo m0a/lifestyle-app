@@ -101,7 +101,11 @@ export const emailChangeRequests = sqliteTable(
 /**
  * Email delivery logs table
  *
- * Tracks all email delivery attempts for debugging and monitoring
+ * Tracks all email delivery attempts for debugging and monitoring.
+ * Append-only: rows are INSERTed by the email service and never read back into
+ * any user-facing aggregate. Pruned by the retention cron (~90 days) using
+ * idx_email_logs_created_at; recipient_email is PII, so retention is bounded
+ * (#104). created_at is INTEGER epoch ms.
  */
 export const emailDeliveryLogs = sqliteTable(
   'email_delivery_logs',
