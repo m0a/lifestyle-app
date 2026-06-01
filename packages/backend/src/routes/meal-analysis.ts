@@ -6,7 +6,11 @@ import { eq, and } from 'drizzle-orm';
 import { authMiddleware } from '../middleware/auth';
 import { mealRecords, mealFoodItems, mealPhotos } from '../db/schema';
 import { PhotoStorageService } from '../services/photo-storage';
-import { MealPhotoService } from '../services/meal-photo.service';
+import {
+  MealPhotoService,
+  recalculateMealTotals,
+  deletePhotosWithFoodItems,
+} from '../services/meal-photo.service';
 import { AIAnalysisService } from '../services/ai-analysis';
 import { AIUsageService } from '../services/ai-usage';
 import { aiUsageLimitCheck } from '../middleware/ai-usage-limit';
@@ -18,7 +22,6 @@ import {
   saveMealAnalysisSchema,
   textAnalysisRequestSchema,
   type FoodItem,
-  type NutritionTotals,
 } from '@lifestyle-app/shared';
 
 type Bindings = {
@@ -379,7 +382,7 @@ mealAnalysis.post(
     };
 
     // Recalculate totals
-    const updatedTotals = await recalculateTotals(db, mealId);
+    const updatedTotals = await recalculateMealTotals(db, mealId);
 
     return c.json({ foodItem, updatedTotals }, 201);
   }
@@ -434,7 +437,7 @@ mealAnalysis.patch(
     };
 
     // Recalculate totals
-    const updatedTotals = await recalculateTotals(db, mealId);
+    const updatedTotals = await recalculateMealTotals(db, mealId);
 
     return c.json({ foodItem, updatedTotals });
   }
@@ -461,7 +464,7 @@ mealAnalysis.delete('/:mealId/food-items/:foodItemId', async (c) => {
   );
 
   // Recalculate totals
-  const updatedTotals = await recalculateTotals(db, mealId);
+  const updatedTotals = await recalculateMealTotals(db, mealId);
 
   return c.json({ message: '削除しました', updatedTotals });
 });
@@ -491,16 +494,10 @@ mealAnalysis.delete('/:mealId/photo', async (c) => {
     return c.json({ error: 'not_found', message: '写真が設定されていません' }, 404);
   }
 
-  // Delete all photos for this meal
-  for (const photo of photos) {
-    try {
-      await photoStorage.deletePhoto(photo.photoKey);
-    } catch (error) {
-      console.error('Failed to delete photo from storage:', error);
-      // Continue even if storage deletion fails
-    }
-    await db.delete(mealPhotos).where(eq(mealPhotos.id, photo.id));
-  }
+  // Delete all photos + their food items, then recompute totals (#101).
+  // Previously this only removed meal_photos rows, leaving orphaned food items
+  // and stale meal_records totals.
+  await deletePhotosWithFoodItems(db, photoStorage, mealId, photos);
 
   return c.json({ success: true, message: '写真を削除しました' });
 });
@@ -541,16 +538,12 @@ mealAnalysis.post('/:mealId/photo', async (c) => {
     return c.json({ error: 'invalid_request', message: 'ファイルサイズは10MB以下にしてください' }, 400);
   }
 
-  // Delete old photos if exist (legacy single-photo replacement behavior)
+  // Delete old photos (+ their food items) and reconcile totals before adding
+  // the replacement (legacy single-photo behavior). Previously this left
+  // orphaned food items and stale totals (#101).
   const existingPhotos = await photoService.getMealPhotos(mealId);
-  for (const existingPhoto of existingPhotos) {
-    try {
-      await photoStorage.deletePhoto(existingPhoto.photoKey);
-    } catch (error) {
-      console.error('Failed to delete old photo:', error);
-      // Continue even if old photo deletion fails
-    }
-    await db.delete(mealPhotos).where(eq(mealPhotos.id, existingPhoto.id));
+  if (existingPhotos.length > 0) {
+    await deletePhotosWithFoodItems(db, photoStorage, mealId, existingPhotos);
   }
 
   // Upload new photo directly as permanent (not temp)
@@ -652,34 +645,5 @@ mealAnalysis.post(
   }
 );
 
-// Helper function to recalculate meal totals
-async function recalculateTotals(db: Database, mealId: string): Promise<NutritionTotals> {
-  const items = await db.query.mealFoodItems.findMany({
-    where: eq(mealFoodItems.mealId, mealId),
-  });
-
-  const totals: NutritionTotals = items.reduce(
-    (acc, item) => ({
-      calories: acc.calories + item.calories,
-      protein: Math.round((acc.protein + item.protein) * 10) / 10,
-      fat: Math.round((acc.fat + item.fat) * 10) / 10,
-      carbs: Math.round((acc.carbs + item.carbs) * 10) / 10,
-    }),
-    { calories: 0, protein: 0, fat: 0, carbs: 0 }
-  );
-
-  const now = new Date().toISOString();
-  await db
-    .update(mealRecords)
-    .set({
-      calories: totals.calories,
-      totalProtein: totals.protein,
-      totalFat: totals.fat,
-      totalCarbs: totals.carbs,
-      content: items.map((i) => i.name).join(', '),
-      updatedAt: now,
-    })
-    .where(eq(mealRecords.id, mealId));
-
-  return totals;
-}
+// recalculateTotals was consolidated into recalculateMealTotals in
+// services/meal-photo.service.ts (the single source of truth for meal totals, #101).

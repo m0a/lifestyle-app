@@ -1,7 +1,9 @@
 import { nanoid } from 'nanoid';
 import { eq, asc } from 'drizzle-orm';
 import type { Database } from '../db';
-import { mealPhotos, type MealPhoto } from '../db/schema';
+import { mealPhotos, mealFoodItems, mealRecords, type MealPhoto } from '../db/schema';
+import type { NutritionTotals } from '@lifestyle-app/shared';
+import type { PhotoStorageService } from './photo-storage';
 
 export class MealPhotoService {
   constructor(private db: Database) {}
@@ -43,26 +45,6 @@ export class MealPhotoService {
     }
 
     return photo;
-  }
-
-  async deletePhoto(photoId: string): Promise<{ photoKey: string }> {
-    const photo = await this.db.query.mealPhotos.findFirst({
-      where: eq(mealPhotos.id, photoId),
-    });
-
-    if (!photo) {
-      throw new Error('Photo not found');
-    }
-
-    // Check if last photo
-    const remaining = await this.getMealPhotos(photo.mealId);
-    if (remaining.length === 1) {
-      throw new Error('Meals must have at least one photo');
-    }
-
-    await this.db.delete(mealPhotos).where(eq(mealPhotos.id, photoId));
-
-    return { photoKey: photo.photoKey };
   }
 
   async updateAnalysisResult(
@@ -114,4 +96,75 @@ export class MealPhotoService {
       analyzedPhotoCount: analyzed.length,
     };
   }
+}
+
+/**
+ * Recalculate a meal's stored totals from its food items and persist them.
+ *
+ * meal_food_items is the single source of truth for meal_records.calories /
+ * total_* — every edit path (chat, manual, photo delete) converges here so the
+ * stored totals never drift (#100/#101). Protein/fat/carbs are rounded to one
+ * decimal to match the other recompute call sites.
+ */
+export async function recalculateMealTotals(
+  db: Database,
+  mealId: string
+): Promise<NutritionTotals> {
+  const items = await db.query.mealFoodItems.findMany({
+    where: eq(mealFoodItems.mealId, mealId),
+  });
+
+  const totals: NutritionTotals = items.reduce(
+    (acc, item) => ({
+      calories: acc.calories + item.calories,
+      protein: Math.round((acc.protein + item.protein) * 10) / 10,
+      fat: Math.round((acc.fat + item.fat) * 10) / 10,
+      carbs: Math.round((acc.carbs + item.carbs) * 10) / 10,
+    }),
+    { calories: 0, protein: 0, fat: 0, carbs: 0 }
+  );
+
+  await db
+    .update(mealRecords)
+    .set({
+      calories: totals.calories,
+      totalProtein: totals.protein,
+      totalFat: totals.fat,
+      totalCarbs: totals.carbs,
+      content: items.map((i) => i.name).join(', '),
+      updatedAt: new Date().toISOString(),
+    })
+    .where(eq(mealRecords.id, mealId));
+
+  return totals;
+}
+
+/**
+ * Delete the given photos for a meal and reconcile state in one place (#101):
+ * for each photo, remove its meal_food_items (so they don't orphan), the
+ * meal_photos row, and the R2 object (best-effort), then recompute the meal
+ * totals from the remaining food items. All photo-deletion paths funnel through
+ * this so food items never orphan and meal_records totals never drift.
+ */
+export async function deletePhotosWithFoodItems(
+  db: Database,
+  photoStorage: PhotoStorageService,
+  mealId: string,
+  photos: { id: string; photoKey: string }[]
+): Promise<NutritionTotals> {
+  for (const photo of photos) {
+    // Remove food items captured from this photo. (The FK is ON DELETE CASCADE
+    // since #101, so deleting the photo row would also clear them; doing it
+    // explicitly keeps the behavior correct regardless of FK enforcement.)
+    await db.delete(mealFoodItems).where(eq(mealFoodItems.photoId, photo.id));
+    await db.delete(mealPhotos).where(eq(mealPhotos.id, photo.id));
+    try {
+      await photoStorage.deletePhoto(photo.photoKey);
+    } catch (error) {
+      console.error('Failed to delete photo from storage:', error);
+      // Continue even if storage deletion fails — DB state is the source of truth.
+    }
+  }
+
+  return recalculateMealTotals(db, mealId);
 }

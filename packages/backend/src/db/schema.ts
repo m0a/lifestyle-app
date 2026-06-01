@@ -83,7 +83,7 @@ export const mealFoodItems = sqliteTable(
     mealId: text('meal_id')
       .notNull()
       .references(() => mealRecords.id, { onDelete: 'cascade' }),
-    photoId: text('photo_id').references(() => mealPhotos.id, { onDelete: 'set null' }),
+    photoId: text('photo_id').references(() => mealPhotos.id, { onDelete: 'cascade' }),
     name: text('name').notNull(),
     portion: text('portion').notNull(), // 'small' | 'medium' | 'large'
     calories: integer('calories').notNull(),

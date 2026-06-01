@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { nanoid } from 'nanoid';
 import { createMealSchema, updateMealSchema, dateRangeSchema, mealTypeSchema, mealDatesQuerySchema } from '@lifestyle-app/shared';
 import { MealService } from '../services/meal';
-import { MealPhotoService } from '../services/meal-photo.service';
+import { MealPhotoService, deletePhotosWithFoodItems } from '../services/meal-photo.service';
 import { PhotoStorageService } from '../services/photo-storage';
 import { AIAnalysisService } from '../services/ai-analysis';
 import { AIUsageService } from '../services/ai-usage';
@@ -564,57 +564,27 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
     const photoService = new MealPhotoService(db);
     const photoStorage = new PhotoStorageService(c.env.PHOTOS);
 
-    try {
-      // Delete food items associated with this photo
-      await db.delete(schema.mealFoodItems)
-        .where(eq(schema.mealFoodItems.photoId, photoId));
-
-      const { photoKey } = await photoService.deletePhoto(photoId);
-
-      // Delete from R2
-      await photoStorage.deletePhoto(photoKey);
-
-      // Recalculate totals from remaining food items
-      const remainingFoodItems = await db.query.mealFoodItems.findMany({
-        where: eq(schema.mealFoodItems.mealId, mealId),
-      });
-
-      const totalCalories = remainingFoodItems.reduce((sum, item) => sum + item.calories, 0);
-      const totalProtein = remainingFoodItems.reduce((sum, item) => sum + item.protein, 0);
-      const totalFat = remainingFoodItems.reduce((sum, item) => sum + item.fat, 0);
-      const totalCarbs = remainingFoodItems.reduce((sum, item) => sum + item.carbs, 0);
-      const contentNames = remainingFoodItems.map(item => item.name).join('、');
-
-      await db.update(mealRecords)
-        .set({
-          content: contentNames,
-          calories: totalCalories,
-          totalProtein,
-          totalFat,
-          totalCarbs,
-        })
-        .where(eq(mealRecords.id, mealId));
-
-      const updatedTotals = {
-        calories: totalCalories,
-        protein: totalProtein,
-        fat: totalFat,
-        carbs: totalCarbs,
-      };
-
-      const remainingPhotos = await photoService.getMealPhotos(mealId);
-
-      return c.json({
-        success: true,
-        remainingPhotos: remainingPhotos.length,
-        updatedTotals,
-      });
-    } catch (error) {
-      if (error instanceof Error && error.message.includes('at least one')) {
-        return c.json({ message: error.message, code: 'LAST_PHOTO' }, 400);
-      }
-      throw error;
+    const photos = await photoService.getMealPhotos(mealId);
+    const target = photos.find((p) => p.id === photoId);
+    if (!target) {
+      return c.json({ message: 'Photo not found' }, 404);
     }
+    // A meal must keep at least one photo.
+    if (photos.length === 1) {
+      return c.json({ message: 'Meals must have at least one photo', code: 'LAST_PHOTO' }, 400);
+    }
+
+    // Delete the photo + its food items and recompute totals via the shared
+    // reconcile helper (single source of truth, #101).
+    const updatedTotals = await deletePhotosWithFoodItems(db, photoStorage, mealId, [target]);
+
+    const remainingPhotos = await photoService.getMealPhotos(mealId);
+
+    return c.json({
+      success: true,
+      remainingPhotos: remainingPhotos.length,
+      updatedTotals,
+    });
   })
   // T071: Photo reorder endpoint
   .patch('/:id/photos/reorder', async (c) => {
