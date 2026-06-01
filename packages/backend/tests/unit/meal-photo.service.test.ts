@@ -134,71 +134,8 @@ describe('MealPhotoService', () => {
     });
   });
 
-  describe('deletePhoto', () => {
-    it('should delete photo successfully', async () => {
-      const photo: MealPhoto = {
-        id: 'photo2',
-        mealId: 'meal1',
-        photoKey: 'photos/user1/meal1/photo2.jpg',
-        displayOrder: 1,
-        analysisStatus: 'complete',
-        calories: 100,
-        protein: 10,
-        fat: 5,
-        carbs: 15,
-        createdAt: new Date().toISOString(),
-      };
-
-      const remainingPhotos: MealPhoto[] = [
-        {
-          id: 'photo1',
-          mealId: 'meal1',
-          photoKey: 'photos/user1/meal1/photo1.jpg',
-          displayOrder: 0,
-          analysisStatus: 'complete',
-          calories: 100,
-          protein: 10,
-          fat: 5,
-          carbs: 15,
-          createdAt: new Date().toISOString(),
-        },
-        photo,
-      ];
-
-      mockDb.query.mealPhotos.findFirst = vi.fn().mockResolvedValue(photo);
-      mockDb.query.mealPhotos.findMany = vi.fn().mockResolvedValue(remainingPhotos);
-
-      const mockDelete = vi.fn().mockResolvedValue(undefined);
-      mockDb.delete = vi.fn().mockReturnValue({ where: mockDelete });
-
-      const result = await service.deletePhoto('photo2');
-
-      expect(result.photoKey).toBe('photos/user1/meal1/photo2.jpg');
-      expect(mockDelete).toHaveBeenCalled();
-    });
-
-    it('should throw error when deleting last photo', async () => {
-      const photo: MealPhoto = {
-        id: 'photo1',
-        mealId: 'meal1',
-        photoKey: 'photos/user1/meal1/photo1.jpg',
-        displayOrder: 0,
-        analysisStatus: 'complete',
-        calories: 100,
-        protein: 10,
-        fat: 5,
-        carbs: 15,
-        createdAt: new Date().toISOString(),
-      };
-
-      mockDb.query.mealPhotos.findFirst = vi.fn().mockResolvedValue(photo);
-      mockDb.query.mealPhotos.findMany = vi.fn().mockResolvedValue([photo]);
-
-      await expect(service.deletePhoto('photo1')).rejects.toThrow(
-        'Meals must have at least one photo'
-      );
-    });
-  });
+  // NOTE: MealPhotoService.deletePhoto was removed in #101 — photo deletion is
+  // now handled by deletePhotosWithFoodItems (see tests/unit/meal-photo-reconcile.test.ts).
 
   describe('calculateTotals', () => {
     it('should calculate totals from complete photos only', () => {
