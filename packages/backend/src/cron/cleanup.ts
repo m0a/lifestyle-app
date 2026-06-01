@@ -4,6 +4,10 @@
  * Runs daily at 2:00 AM UTC to clean up:
  * 1. Unverified user accounts (>7 days old)
  * 2. Expired/used tokens (>7 days old)
+ * 3. Expired WebAuthn challenges
+ * 4. Append-only logs past their retention window (#104):
+ *    email_delivery_logs and ai_usage_records (detail; lifetime AI total is kept
+ *    in ai_usage_totals so pruning detail does not affect the displayed total).
  */
 
 import { drizzle } from 'drizzle-orm/d1';
@@ -14,6 +18,8 @@ import * as webauthnSchema from '../db/schema/webauthn';
 
 const UNVERIFIED_ACCOUNT_RETENTION_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 const TOKEN_CLEANUP_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+const EMAIL_LOG_RETENTION_MS = 90 * 24 * 60 * 60 * 1000; // 90 days (operational logs, recipient PII)
+const AI_USAGE_RETENTION_MS = 90 * 24 * 60 * 60 * 1000; // 90 days (detail; total kept in rollup)
 
 interface CleanupResult {
   deletedUsers: number;
@@ -21,6 +27,8 @@ interface CleanupResult {
   deletedEmailVerificationTokens: number;
   deletedEmailChangeRequests: number;
   deletedExpiredChallenges: number;
+  deletedEmailLogs: number;
+  deletedAiUsageRecords: number;
 }
 
 /**
@@ -31,6 +39,10 @@ export async function executeScheduledCleanup(db: D1Database): Promise<CleanupRe
   const now = Date.now();
   const unverifiedCutoff = now - UNVERIFIED_ACCOUNT_RETENTION_MS;
   const tokenCutoff = now - TOKEN_CLEANUP_AGE_MS;
+  // Type-matched cutoffs: email_delivery_logs.created_at is INTEGER epoch ms;
+  // ai_usage_records.created_at is TEXT ISO8601.
+  const emailLogCutoffEpoch = now - EMAIL_LOG_RETENTION_MS;
+  const aiUsageCutoffIso = new Date(now - AI_USAGE_RETENTION_MS).toISOString();
 
   console.log('[Cleanup] Starting scheduled cleanup tasks...');
 
@@ -160,12 +172,52 @@ export async function executeScheduledCleanup(db: D1Database): Promise<CleanupRe
     console.error('[Cleanup] Error deleting expired WebAuthn challenges:', error);
   }
 
+  // 6. Delete email delivery logs older than the retention window.
+  //    created_at is INTEGER epoch ms; uses idx_email_logs_created_at.
+  let deletedEmailLogs = 0;
+  try {
+    const result = await orm
+      .delete(emailSchema.emailDeliveryLogs)
+      .where(lt(emailSchema.emailDeliveryLogs.createdAt, emailLogCutoffEpoch))
+      .run();
+    deletedEmailLogs = result.meta?.changes ?? 0;
+    console.log(
+      deletedEmailLogs > 0
+        ? `[Cleanup] Deleted ${deletedEmailLogs} old email delivery logs`
+        : '[Cleanup] No old email delivery logs to delete'
+    );
+  } catch (error) {
+    console.error('[Cleanup] Error deleting email delivery logs:', error);
+  }
+
+  // 7. Delete AI usage detail rows older than the retention window. The lifetime
+  //    total lives in ai_usage_totals and daily/monthly views only read recent
+  //    rows, so this does not affect any displayed figure. created_at is TEXT
+  //    ISO8601; uses idx_ai_usage_user_date.
+  let deletedAiUsageRecords = 0;
+  try {
+    const result = await orm
+      .delete(schema.aiUsageRecords)
+      .where(lt(schema.aiUsageRecords.createdAt, aiUsageCutoffIso))
+      .run();
+    deletedAiUsageRecords = result.meta?.changes ?? 0;
+    console.log(
+      deletedAiUsageRecords > 0
+        ? `[Cleanup] Deleted ${deletedAiUsageRecords} old AI usage records`
+        : '[Cleanup] No old AI usage records to delete'
+    );
+  } catch (error) {
+    console.error('[Cleanup] Error deleting AI usage records:', error);
+  }
+
   const result = {
     deletedUsers,
     deletedPasswordResetTokens,
     deletedEmailVerificationTokens,
     deletedEmailChangeRequests,
     deletedExpiredChallenges,
+    deletedEmailLogs,
+    deletedAiUsageRecords,
   };
 
   console.log('[Cleanup] Cleanup tasks completed:', result);

@@ -1,6 +1,6 @@
 import { eq, sql, and, gte, desc } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
-import { aiUsageRecords, mealRecords } from '../db/schema';
+import { aiUsageRecords, aiUsageTotals, mealRecords } from '../db/schema';
 import { AI_USAGE_LIMITS } from '@lifestyle-app/shared';
 import type { AIFeatureType, AIUsageSummary, AIDailyUsage } from '@lifestyle-app/shared';
 import type { Database } from '../db';
@@ -38,7 +38,23 @@ export class AIUsageService {
         createdAt: new Date().toISOString(),
       };
       console.log('Inserting record:', record);
-      await this.db.insert(aiUsageRecords).values(record);
+      // Write the detail row and increment the per-user lifetime rollup
+      // ATOMICALLY (D1 batch = implicit transaction): either both commit or
+      // neither. The rollup is what getSummary reads and it cannot be rebuilt
+      // once old detail is pruned, so it must never drift from its detail (#104).
+      await this.db.batch([
+        this.db.insert(aiUsageRecords).values(record),
+        this.db
+          .insert(aiUsageTotals)
+          .values({ userId, totalTokens: usage.totalTokens, updatedAt: record.createdAt })
+          .onConflictDoUpdate({
+            target: aiUsageTotals.userId,
+            set: {
+              totalTokens: sql`${aiUsageTotals.totalTokens} + ${usage.totalTokens}`,
+              updatedAt: record.createdAt,
+            },
+          }),
+      ]);
       console.log('Record inserted successfully');
     } catch (error) {
       console.error('Failed to record AI usage:', error);
@@ -50,13 +66,15 @@ export class AIUsageService {
    * Get usage summary for a user.
    */
   async getSummary(userId: string): Promise<AIUsageSummary> {
-    // Get total tokens
+    // Lifetime total comes from the rollup, not the (prunable) detail rows, so
+    // it stays accurate after the retention cron deletes old detail (#104).
     const totalResult = await this.db
-      .select({ total: sql<number>`COALESCE(SUM(${aiUsageRecords.totalTokens}), 0)` })
-      .from(aiUsageRecords)
-      .where(eq(aiUsageRecords.userId, userId));
+      .select({ total: aiUsageTotals.totalTokens })
+      .from(aiUsageTotals)
+      .where(eq(aiUsageTotals.userId, userId));
 
-    // Get monthly tokens (current calendar month)
+    // Get monthly tokens (current calendar month). The current month is always
+    // within the retention window, so detail-based SUM stays accurate.
     const startOfMonth = new Date();
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);

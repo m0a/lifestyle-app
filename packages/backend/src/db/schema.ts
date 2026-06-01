@@ -139,6 +139,10 @@ export const exerciseRecords = sqliteTable(
   })
 );
 
+// Append-only AI usage detail. Pruned by the retention cron (#104, ~90 days)
+// using idx_ai_usage_user_date; the daily limit/usage views only read the
+// current day, and the lifetime "total tokens" display reads ai_usage_totals,
+// so old detail rows are safe to delete. created_at is TEXT ISO8601.
 export const aiUsageRecords = sqliteTable(
   'ai_usage_records',
   {
@@ -156,6 +160,17 @@ export const aiUsageRecords = sqliteTable(
     idx_ai_usage_user_date: index('idx_ai_usage_user_date').on(table.userId, table.createdAt),
   })
 );
+
+// Per-user lifetime AI token rollup. Maintained incrementally on every
+// recordUsage so the settings "total tokens" display stays accurate even after
+// old ai_usage_records detail rows are pruned by the retention cron (#104).
+export const aiUsageTotals = sqliteTable('ai_usage_totals', {
+  userId: text('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  totalTokens: integer('total_tokens').notNull().default(0),
+  updatedAt: text('updated_at').notNull(),
+});
 
 // Aliases for convenience
 export { weightRecords as weights };
@@ -179,6 +194,8 @@ export type MealChatMessage = typeof mealChatMessages.$inferSelect;
 export type NewMealChatMessage = typeof mealChatMessages.$inferInsert;
 export type AIUsageRecord = typeof aiUsageRecords.$inferSelect;
 export type NewAIUsageRecord = typeof aiUsageRecords.$inferInsert;
+export type AIUsageTotal = typeof aiUsageTotals.$inferSelect;
+export type NewAIUsageTotal = typeof aiUsageTotals.$inferInsert;
 
 // Email-related tables
 export * from './schema/email';
