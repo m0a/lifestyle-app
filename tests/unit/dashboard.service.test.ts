@@ -237,29 +237,24 @@ describe('DashboardService', () => {
   // code the boundary used startDate.toISOString() (a "Z" instant), which
   // dropped/mixed records near the day edge.
   describe('timezone boundary (#99)', () => {
-    it('getSummary keeps JST same-day edge records and drops the previous local day', async () => {
+    it('getSummary aggregates the in-range rows the DB returns (range filtered in SQL, #103)', async () => {
       const userId = 'user-tz';
-      // Frontend asks for local day 2026-01-17; the route builds new Date('2026-01-17').
       const startDate = new Date('2026-01-17');
       const endDate = new Date('2026-01-17');
 
+      // The date range is now filtered in SQL — gte(startLocal) + lt(nextDay(end))
+      // on recorded_at (#103) — so the query returns only the Jan-17 rows; a
+      // previous-day row never reaches JS. (The actual SQL boundary
+      // inclusion/exclusion is covered by the dashboard range integration/e2e.)
       mockDb.all.mockResolvedValueOnce([]); // weights
       mockDb.all.mockResolvedValueOnce([
-        // 23:30 JST on Jan 17 (14:30Z same day): the old end-bound (Z midnight)
-        // dropped this true same-day record.
         { calories: 700, mealType: 'dinner', totalProtein: 0, totalFat: 0, totalCarbs: 0, recordedAt: '2026-01-17T23:30:00+09:00' },
-        // 07:00 JST on Jan 17 (22:00Z on the 16th): still belongs to Jan 17.
         { calories: 300, mealType: 'breakfast', totalProtein: 0, totalFat: 0, totalCarbs: 0, recordedAt: '2026-01-17T07:00:00+09:00' },
-        // Previous local day — must be excluded.
-        { calories: 999, mealType: 'dinner', totalProtein: 0, totalFat: 0, totalCarbs: 0, recordedAt: '2026-01-16T23:30:00+09:00' },
       ]);
       mockDb.all.mockResolvedValueOnce([]); // exercises
 
       const result = await service.getSummary(userId, { startDate, endDate });
 
-      // Both Jan-17 records counted; the Jan-16 one excluded. (Old code returned
-      // all 3 because the SQL bound is a no-op against the mock and there was no
-      // local-date filter.)
       expect(result.meals.mealCount).toBe(2);
       expect(result.meals.totalCalories).toBe(1000);
     });
@@ -300,15 +295,15 @@ describe('DashboardService', () => {
         expect(result[0]!.weight).toBe(70.0);
       });
 
-      it('getGoalProgress filters by local date and averages calories per local day', async () => {
-        // now=2026-01-17T05:00:00Z => weekStart (local) = 2026-01-10
+      it('getGoalProgress aggregates the weekly rows the DB returns (range filtered in SQL, #103)', async () => {
+        // The weekly window is now filtered in SQL — gte(weekStartLocal) on
+        // recorded_at (#103) — so the query returns only in-window rows.
         mockDb.all.mockResolvedValueOnce([{ weight: 68.0 }]); // latest weight
         mockDb.all.mockResolvedValueOnce([
-          { reps: 10, recordedAt: '2026-01-17T23:30:00+09:00' }, // local 01-17 >= 01-10 => kept
-          { reps: 8, recordedAt: '2026-01-09T12:00:00+09:00' }, // local 01-09 < 01-10 => dropped
+          { reps: 10, recordedAt: '2026-01-17T23:30:00+09:00' },
         ]); // weekly exercises
         mockDb.all.mockResolvedValueOnce([
-          { calories: 1950, recordedAt: '2026-01-17T23:30:00+09:00' }, // kept; one local day
+          { calories: 1950, recordedAt: '2026-01-17T23:30:00+09:00' }, // one local day
         ]); // weekly meals
 
         const result = await service.getGoalProgress('user-tz', {
@@ -316,9 +311,7 @@ describe('DashboardService', () => {
           dailyCalories: 2000,
         });
 
-        // Edge record kept, stale (pre-window) one dropped.
         expect(result.exercise.currentSets).toBe(1);
-        // 1950 over a single local day.
         expect(result.calories.average).toBe(1950);
       });
     });

@@ -1,10 +1,10 @@
-import { eq, desc, inArray } from 'drizzle-orm';
+import { eq, desc, inArray, and, gte, lt } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import type { Database } from '../db';
 import { schema } from '../db';
 import { AppError } from '../middleware/error';
 import type { CreateMealInput, UpdateMealInput, MealType } from '@lifestyle-app/shared';
-import { extractLocalDate } from './dashboard';
+import { extractLocalDate, nextLocalDate } from '../lib/localDate';
 
 export class MealService {
   constructor(private db: Database) {}
@@ -58,46 +58,31 @@ export class MealService {
     userId: string,
     options?: { startDate?: string; endDate?: string; mealType?: MealType; limit?: number }
   ) {
-    const records = await this.db
+    // Push filters into SQL so the idx_meal_user_date range scan is used instead
+    // of fetching the user's whole history and filtering in JS (#103). The
+    // local-date range gte(extractLocalDate(start)) + lt(nextLocalDate(end)) is
+    // exactly equivalent to the previous extractLocalDate JS comparison (handles
+    // both "YYYY-MM-DD" and full ISO start/end inputs and the "+09:00"/"Z" mix).
+    const conditions = [eq(schema.mealRecords.userId, userId)];
+    if (options?.startDate) {
+      conditions.push(gte(schema.mealRecords.recordedAt, extractLocalDate(options.startDate)));
+    }
+    if (options?.endDate) {
+      conditions.push(lt(schema.mealRecords.recordedAt, nextLocalDate(options.endDate)));
+    }
+    if (options?.mealType) {
+      conditions.push(eq(schema.mealRecords.mealType, options.mealType));
+    }
+
+    const baseQuery = this.db
       .select()
       .from(schema.mealRecords)
-      .where(eq(schema.mealRecords.userId, userId))
-      .orderBy(desc(schema.mealRecords.recordedAt))
-      .all();
+      .where(and(...conditions))
+      .orderBy(desc(schema.mealRecords.recordedAt));
 
-    let filtered = records;
-
-    if (options?.startDate) {
-      // recordedAtのオフセット付きISO形式から直接ローカル日付を抽出して比較
-      // 例: "2026-01-17T08:00:00+09:00" → "2026-01-17"
-      const isIsoFormat = options.startDate.includes('T');
-      if (isIsoFormat) {
-        // ISO形式の場合は日付部分を抽出して比較
-        const startLocalDate = extractLocalDate(options.startDate);
-        filtered = filtered.filter((r) => extractLocalDate(r.recordedAt) >= startLocalDate);
-      } else {
-        // YYYY-MM-DD形式の場合はそのまま比較
-        filtered = filtered.filter((r) => extractLocalDate(r.recordedAt) >= options.startDate!);
-      }
-    }
-
-    if (options?.endDate) {
-      const isIsoFormat = options.endDate.includes('T');
-      if (isIsoFormat) {
-        const endLocalDate = extractLocalDate(options.endDate);
-        filtered = filtered.filter((r) => extractLocalDate(r.recordedAt) <= endLocalDate);
-      } else {
-        filtered = filtered.filter((r) => extractLocalDate(r.recordedAt) <= options.endDate!);
-      }
-    }
-
-    if (options?.mealType) {
-      filtered = filtered.filter((r) => r.mealType === options.mealType);
-    }
-
-    if (options?.limit) {
-      filtered = filtered.slice(0, options.limit);
-    }
+    const filtered = options?.limit
+      ? await baseQuery.limit(options.limit).all()
+      : await baseQuery.all();
 
     // Get photo counts, first photo keys, and photos array for all filtered meals
     const mealIds = filtered.map((m) => m.id);
