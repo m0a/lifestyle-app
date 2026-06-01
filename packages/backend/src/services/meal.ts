@@ -1,4 +1,4 @@
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, inArray } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import type { Database } from '../db';
 import { schema } from '../db';
@@ -106,35 +106,37 @@ export class MealService {
     const photosArrays = new Map<string, Array<{ id: string; photoKey: string; photoUrl: string }>>();
 
     if (mealIds.length > 0) {
-      // Query all photos
+      // Fetch only this user's meal photos, filtered and ordered in the DB so
+      // the idx_meal_photos_meal (meal_id, display_order) index is used —
+      // instead of scanning every user's photos and filtering/sorting in JS
+      // (#102). mealIds is guaranteed non-empty here, so inArray is safe.
       const photoRecords = await this.db
         .select()
         .from(schema.mealPhotos)
+        .where(inArray(schema.mealPhotos.mealId, mealIds))
+        .orderBy(schema.mealPhotos.mealId, schema.mealPhotos.displayOrder)
         .all();
 
-      // Group photos by mealId
+      // Group photos by mealId (rows are already restricted to these meals and
+      // ordered by displayOrder within each meal).
       const photosByMeal = new Map<string, typeof photoRecords>();
       for (const photo of photoRecords) {
-        if (mealIds.includes(photo.mealId)) {
-          if (!photosByMeal.has(photo.mealId)) {
-            photosByMeal.set(photo.mealId, []);
-          }
-          photosByMeal.get(photo.mealId)!.push(photo);
+        if (!photosByMeal.has(photo.mealId)) {
+          photosByMeal.set(photo.mealId, []);
         }
+        photosByMeal.get(photo.mealId)!.push(photo);
       }
 
       // Count photos, get first photo key, and create photos array per meal
       for (const [mealId, photos] of photosByMeal.entries()) {
         photoCounts.set(mealId, photos.length);
-        // Sort by displayOrder
-        const sortedPhotos = photos.sort((a, b) => a.displayOrder - b.displayOrder);
-        const firstPhoto = sortedPhotos[0];
+        const firstPhoto = photos[0];
         if (firstPhoto) {
           firstPhotoKeys.set(mealId, firstPhoto.photoKey);
         }
 
-        // Create photos array with URLs
-        const photosWithUrls = sortedPhotos.map((photo) => ({
+        // Create photos array with URLs (already ordered by displayOrder)
+        const photosWithUrls = photos.map((photo) => ({
           id: photo.id,
           photoKey: photo.photoKey,
           photoUrl: `/api/meals/photos/${encodeURIComponent(photo.photoKey)}`,

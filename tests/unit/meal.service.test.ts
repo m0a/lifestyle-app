@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { MealService } from '../../packages/backend/src/services/meal';
 
 // Mock the database
 const mockDb = {
@@ -101,6 +102,40 @@ describe('MealService', () => {
       const mealType = 'breakfast';
 
       expect(true).toBe(true);
+    });
+
+    it('fetches only the user\'s photos via a WHERE filter and groups them ordered by displayOrder (#102)', async () => {
+      const userId = 'user-123';
+      const now = '2026-01-01T12:00:00+09:00';
+      mockDb.all
+        // 1st .all(): the user's meal records
+        .mockResolvedValueOnce([
+          { id: 'm1', userId, mealType: 'lunch', content: 'a', calories: 100, recordedAt: now, createdAt: now, updatedAt: now },
+          { id: 'm2', userId, mealType: 'dinner', content: 'b', calories: 200, recordedAt: now, createdAt: now, updatedAt: now },
+        ])
+        // 2nd .all(): photos as the DB returns them — already restricted to these
+        // meals and ordered by (mealId, displayOrder). The previous code instead
+        // fetched every user's photos and filtered/sorted in JS (#102).
+        .mockResolvedValueOnce([
+          { id: 'm1p0', mealId: 'm1', photoKey: 'k-m1-0', displayOrder: 0 },
+          { id: 'm1p1', mealId: 'm1', photoKey: 'k-m1-1', displayOrder: 1 },
+          { id: 'm2p0', mealId: 'm2', photoKey: 'k-m2-0', displayOrder: 0 },
+        ]);
+
+      const service = new MealService(mockDb as never);
+      const result = await service.findByUserId(userId);
+
+      const m1 = result.find((r) => r.id === 'm1')!;
+      expect(m1.photoCount).toBe(2);
+      expect(m1.firstPhotoKey).toBe('k-m1-0');
+      expect(m1.photos.map((p) => p.id)).toEqual(['m1p0', 'm1p1']);
+
+      const m2 = result.find((r) => r.id === 'm2')!;
+      expect(m2.photoCount).toBe(1);
+      expect(m2.firstPhotoKey).toBe('k-m2-0');
+
+      // The photos were fetched with a WHERE clause (inArray), not a full scan.
+      expect(mockDb.where).toHaveBeenCalled();
     });
   });
 
