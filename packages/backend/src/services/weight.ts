@@ -1,5 +1,6 @@
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, and, gte, lt } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
+import { extractLocalDate, nextLocalDate } from '../lib/localDate';
 import type { Database } from '../db';
 import { schema } from '../db';
 import { AppError } from '../middleware/error';
@@ -53,31 +54,28 @@ export class WeightService {
     userId: string,
     options?: { startDate?: string; endDate?: string; limit?: number }
   ) {
-    const query = this.db
+    // Push filters into SQL so the idx_weight_user_date range scan is used
+    // instead of fetching the user's whole history and filtering in JS (#103).
+    // Filter by LOCAL date (gte(extractLocalDate(start)) + lt(nextLocalDate(end)))
+    // — this both enables the index AND fixes the previous full-string compare,
+    // which excluded same-day records when end was a bare "YYYY-MM-DD" date.
+    const conditions = [eq(schema.weightRecords.userId, userId)];
+    if (options?.startDate) {
+      conditions.push(gte(schema.weightRecords.recordedAt, extractLocalDate(options.startDate)));
+    }
+    if (options?.endDate) {
+      conditions.push(lt(schema.weightRecords.recordedAt, nextLocalDate(options.endDate)));
+    }
+
+    const baseQuery = this.db
       .select()
       .from(schema.weightRecords)
-      .where(eq(schema.weightRecords.userId, userId))
+      .where(and(...conditions))
       .orderBy(desc(schema.weightRecords.recordedAt));
 
-    // Note: For D1/SQLite, complex queries need to be built differently
-    // This is a simplified version
-    const records = await query.all();
-
-    let filtered = records;
-
-    if (options?.startDate) {
-      filtered = filtered.filter((r) => r.recordedAt >= options.startDate!);
-    }
-
-    if (options?.endDate) {
-      filtered = filtered.filter((r) => r.recordedAt <= options.endDate!);
-    }
-
-    if (options?.limit) {
-      filtered = filtered.slice(0, options.limit);
-    }
-
-    return filtered;
+    return options?.limit
+      ? await baseQuery.limit(options.limit).all()
+      : await baseQuery.all();
   }
 
   async update(id: string, userId: string, input: UpdateWeightInput) {

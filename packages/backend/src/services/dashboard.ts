@@ -1,19 +1,7 @@
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, and, gte, lt } from 'drizzle-orm';
 import { weights, meals, exercises } from '../db/schema';
 import type { Database } from '../db';
-
-/**
- * Extract local date from ISO 8601 datetime with offset.
- * For offset-aware strings like "2026-01-17T08:00:00+09:00",
- * the first 10 characters are always the local date.
- *
- * @example
- * extractLocalDate("2026-01-17T08:00:00+09:00") // "2026-01-17"
- * extractLocalDate("2026-01-16T23:00:00Z")     // "2026-01-16"
- */
-export const extractLocalDate = (recordedAt: string): string => {
-  return recordedAt.slice(0, 10);
-};
+import { extractLocalDate, nextLocalDate } from '../lib/localDate';
 
 interface DateRange {
   startDate: Date;
@@ -125,38 +113,54 @@ export class DashboardService {
     const startISO = startDate.toISOString();
     const endISO = endDate.toISOString();
 
-    // recorded_at carries a local offset (e.g. "+09:00"); the period bounds are
-    // instants. Comparing the raw ISO strings in SQL mixes "Z" and "+09:00"
-    // forms, and SQLite's lexicographic TEXT compare then drifts by the offset,
-    // systematically dropping/mixing edge records (#99). Filter by LOCAL date
-    // instead — the approach getDailyActivity and the meal/weight services use.
+    // recorded_at's first 10 chars are the local date. Push a LOCAL-date range
+    // into SQL — gte(startLocal) + lt(nextDay(endLocal)) — so the
+    // idx_*_user_date range scan is used instead of fetching the whole history
+    // and filtering in JS (#103). This is exactly equivalent to the previous
+    // extractLocalDate JS filter (#99), including the "+09:00" vs "Z" handling.
     const startLocalDate = extractLocalDate(startISO);
     const endLocalDate = extractLocalDate(endISO);
-    const inRange = (recordedAt: string): boolean => {
-      const localDate = extractLocalDate(recordedAt);
-      return localDate >= startLocalDate && localDate <= endLocalDate;
-    };
+    const endExclusive = nextLocalDate(endLocalDate);
 
-    // Get weight data, then filter by local date (kept ordered so the summary
-    // start/end weights are the chronological first/last in range).
-    const weightRecords = (
-      await this.db
-        .select()
-        .from(weights)
-        .where(eq(weights.userId, userId))
-        .orderBy(weights.recordedAt)
-        .all()
-    ).filter((r) => inRange(r.recordedAt));
+    // Weight data (kept ordered so summary start/end weights are first/last).
+    const weightRecords = await this.db
+      .select()
+      .from(weights)
+      .where(
+        and(
+          eq(weights.userId, userId),
+          gte(weights.recordedAt, startLocalDate),
+          lt(weights.recordedAt, endExclusive)
+        )
+      )
+      .orderBy(weights.recordedAt)
+      .all();
 
-    // Get meal data, then filter by local date
-    const mealRecords = (
-      await this.db.select().from(meals).where(eq(meals.userId, userId)).all()
-    ).filter((r) => inRange(r.recordedAt));
+    // Meal data
+    const mealRecords = await this.db
+      .select()
+      .from(meals)
+      .where(
+        and(
+          eq(meals.userId, userId),
+          gte(meals.recordedAt, startLocalDate),
+          lt(meals.recordedAt, endExclusive)
+        )
+      )
+      .all();
 
-    // Get exercise data, then filter by local date
-    const exerciseRecords = (
-      await this.db.select().from(exercises).where(eq(exercises.userId, userId)).all()
-    ).filter((r) => inRange(r.recordedAt));
+    // Exercise data
+    const exerciseRecords = await this.db
+      .select()
+      .from(exercises)
+      .where(
+        and(
+          eq(exercises.userId, userId),
+          gte(exercises.recordedAt, startLocalDate),
+          lt(exercises.recordedAt, endExclusive)
+        )
+      )
+      .all();
 
     // Calculate weight summary
     const weightSummary = this.calculateWeightSummary(weightRecords);
@@ -288,24 +292,48 @@ export class DashboardService {
   async getWeeklyTrend(userId: string, weeks: number = 4): Promise<WeeklyTrendItem[]> {
     const endDate = new Date();
 
-    // Fetch each dataset once, then bucket by LOCAL date per week. Filtering by
-    // local date (not a raw ISO compare) avoids the "+09:00" vs "Z"
-    // lexicographic drift that dropped edge records (#99).
+    // Bound the fetch to the overall trend window [oldest weekStart .. today] on
+    // the DB side so only that window is read instead of the whole history
+    // (#103); the per-week bucketing below stays in JS. The oldest week starts
+    // (weeks-1)*7 + 6 days before today.
+    const overallStart = new Date(endDate);
+    overallStart.setDate(overallStart.getDate() - ((weeks - 1) * 7 + 6));
+    const rangeStartLocal = extractLocalDate(overallStart.toISOString());
+    const rangeEndExclusive = nextLocalDate(extractLocalDate(endDate.toISOString()));
+
     const allWeights = await this.db
       .select()
       .from(weights)
-      .where(eq(weights.userId, userId))
+      .where(
+        and(
+          eq(weights.userId, userId),
+          gte(weights.recordedAt, rangeStartLocal),
+          lt(weights.recordedAt, rangeEndExclusive)
+        )
+      )
       .orderBy(desc(weights.recordedAt))
       .all();
     const allMeals = await this.db
       .select()
       .from(meals)
-      .where(eq(meals.userId, userId))
+      .where(
+        and(
+          eq(meals.userId, userId),
+          gte(meals.recordedAt, rangeStartLocal),
+          lt(meals.recordedAt, rangeEndExclusive)
+        )
+      )
       .all();
     const allExercises = await this.db
       .select()
       .from(exercises)
-      .where(eq(exercises.userId, userId))
+      .where(
+        and(
+          eq(exercises.userId, userId),
+          gte(exercises.recordedAt, rangeStartLocal),
+          lt(exercises.recordedAt, rangeEndExclusive)
+        )
+      )
       .all();
 
     const result: WeeklyTrendItem[] = [];
@@ -372,15 +400,21 @@ export class DashboardService {
       .limit(1)
       .all();
 
-    // Get weekly exercise total (filtered by local date)
-    const weeklyExercises = (
-      await this.db.select().from(exercises).where(eq(exercises.userId, userId)).all()
-    ).filter((e) => extractLocalDate(e.recordedAt) >= weekStartLocal);
+    // Get weekly exercise total — filtered by local date on the DB side (#103).
+    // gte(recordedAt, weekStartLocal) is equivalent to the extractLocalDate >=
+    // comparison; there is no upper bound (everything from weekStart forward).
+    const weeklyExercises = await this.db
+      .select()
+      .from(exercises)
+      .where(and(eq(exercises.userId, userId), gte(exercises.recordedAt, weekStartLocal)))
+      .all();
 
-    // Get weekly meals (filtered by local date)
-    const weeklyMeals = (
-      await this.db.select().from(meals).where(eq(meals.userId, userId)).all()
-    ).filter((m) => extractLocalDate(m.recordedAt) >= weekStartLocal);
+    // Get weekly meals — filtered by local date on the DB side (#103).
+    const weeklyMeals = await this.db
+      .select()
+      .from(meals)
+      .where(and(eq(meals.userId, userId), gte(meals.recordedAt, weekStartLocal)))
+      .all();
 
     const currentWeight = latestWeight.length > 0 ? latestWeight[0]?.weight ?? null : null;
     const targetWeight = goals.targetWeight || 65;
@@ -452,19 +486,22 @@ export class DashboardService {
       current.setDate(current.getDate() + 1);
     }
 
-    // Get all weight records for user, then filter by local date
-    // This avoids string comparison issues with mixed timezone formats
-    const allWeightRecords = await this.db
+    // Push the local-date range into SQL so the idx_*_user_date range scan is
+    // used instead of fetching the user's whole history (#103). gte(start) +
+    // lt(nextDay(end)) is equivalent to the extractLocalDate filter.
+    const endExclusive = nextLocalDate(endDateStr);
+
+    const weightRecords = await this.db
       .select({ recordedAt: weights.recordedAt, weight: weights.weight })
       .from(weights)
-      .where(eq(weights.userId, userId))
+      .where(
+        and(
+          eq(weights.userId, userId),
+          gte(weights.recordedAt, startDateStr),
+          lt(weights.recordedAt, endExclusive)
+        )
+      )
       .all();
-
-    // Filter by local date range
-    const weightRecords = allWeightRecords.filter((r) => {
-      const localDate = extractLocalDate(r.recordedAt);
-      return localDate >= startDateStr && localDate <= endDateStr;
-    });
 
     // Map date to latest weight value using extractLocalDate
     const weightByDate = new Map<string, number>();
@@ -473,18 +510,17 @@ export class DashboardService {
       weightByDate.set(date, r.weight);
     }
 
-    // Get all meal records for user, then filter by local date
-    const allMealRecords = await this.db
+    const mealRecords = await this.db
       .select({ recordedAt: meals.recordedAt, calories: meals.calories })
       .from(meals)
-      .where(eq(meals.userId, userId))
+      .where(
+        and(
+          eq(meals.userId, userId),
+          gte(meals.recordedAt, startDateStr),
+          lt(meals.recordedAt, endExclusive)
+        )
+      )
       .all();
-
-    // Filter by local date range
-    const mealRecords = allMealRecords.filter((r) => {
-      const localDate = extractLocalDate(r.recordedAt);
-      return localDate >= startDateStr && localDate <= endDateStr;
-    });
 
     // Map date to total calories using extractLocalDate
     const caloriesByDate = new Map<string, number>();
@@ -494,18 +530,17 @@ export class DashboardService {
       caloriesByDate.set(date, current + (r.calories || 0));
     }
 
-    // Get all exercise records for user, then filter by local date
-    const allExerciseRecords = await this.db
+    const exerciseRecords = await this.db
       .select({ recordedAt: exercises.recordedAt })
       .from(exercises)
-      .where(eq(exercises.userId, userId))
+      .where(
+        and(
+          eq(exercises.userId, userId),
+          gte(exercises.recordedAt, startDateStr),
+          lt(exercises.recordedAt, endExclusive)
+        )
+      )
       .all();
-
-    // Filter by local date range
-    const exerciseRecords = allExerciseRecords.filter((r) => {
-      const localDate = extractLocalDate(r.recordedAt);
-      return localDate >= startDateStr && localDate <= endDateStr;
-    });
 
     // Map date to total sets using extractLocalDate
     const setsByDate = new Map<string, number>();

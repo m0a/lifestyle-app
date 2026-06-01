@@ -1,8 +1,9 @@
-import { eq, desc, and, sql } from 'drizzle-orm';
+import { eq, desc, and, sql, gte, lt } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import type { Database } from '../db';
 import { schema } from '../db';
 import { AppError } from '../middleware/error';
+import { extractLocalDate, nextLocalDate } from '../lib/localDate';
 import type { CreateExerciseInput, UpdateExerciseInput, ExerciseImportSummary, ExerciseRecord, RecentExerciseItem } from '@lifestyle-app/shared';
 import { z } from 'zod';
 import { createExerciseSetsSchema, calculate1RM } from '@lifestyle-app/shared';
@@ -114,38 +115,33 @@ export class ExerciseService {
     userId: string,
     options?: { startDate?: string; endDate?: string; limit?: number; exerciseType?: string }
   ) {
-    const records = await this.db
+    // Push filters into SQL so the idx_exercise_user_type_date range scan is
+    // used instead of fetching the user's whole history and filtering in JS
+    // (#103). For bare "YYYY-MM-DD" bounds (the /, /summary, /weekly callers)
+    // this is exactly equivalent to the old `recordedAt.split('T')[0]` compare.
+    // For full-ISO bounds (the /by-date route passes `${date}T00:00:00.000Z`),
+    // the old `'YYYY-MM-DD' >= '...T00:00:00.000Z'` was always false and dropped
+    // every same-day row — normalizing via extractLocalDate FIXES that.
+    const conditions = [eq(schema.exerciseRecords.userId, userId)];
+    if (options?.exerciseType) {
+      conditions.push(eq(schema.exerciseRecords.exerciseType, options.exerciseType));
+    }
+    if (options?.startDate) {
+      conditions.push(gte(schema.exerciseRecords.recordedAt, extractLocalDate(options.startDate)));
+    }
+    if (options?.endDate) {
+      conditions.push(lt(schema.exerciseRecords.recordedAt, nextLocalDate(options.endDate)));
+    }
+
+    const baseQuery = this.db
       .select()
       .from(schema.exerciseRecords)
-      .where(eq(schema.exerciseRecords.userId, userId))
-      .orderBy(desc(schema.exerciseRecords.recordedAt))
-      .all();
+      .where(and(...conditions))
+      .orderBy(desc(schema.exerciseRecords.recordedAt));
 
-    let filtered = records;
-
-    if (options?.exerciseType) {
-      filtered = filtered.filter((r) => r.exerciseType === options.exerciseType);
-    }
-
-    if (options?.startDate) {
-      filtered = filtered.filter((r) => {
-        const recordDate = r.recordedAt.split('T')[0] ?? '';
-        return recordDate >= options.startDate!;
-      });
-    }
-
-    if (options?.endDate) {
-      filtered = filtered.filter((r) => {
-        const recordDate = r.recordedAt.split('T')[0] ?? '';
-        return recordDate <= options.endDate!;
-      });
-    }
-
-    if (options?.limit) {
-      filtered = filtered.slice(0, options.limit);
-    }
-
-    return filtered;
+    return options?.limit
+      ? await baseQuery.limit(options.limit).all()
+      : await baseQuery.all();
   }
 
   async getLastByType(userId: string, exerciseType: string) {

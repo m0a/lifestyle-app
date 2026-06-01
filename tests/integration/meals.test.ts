@@ -263,4 +263,47 @@ describe('Meal API Integration Tests', () => {
       expect(true).toBe(true);
     });
   });
+
+  // #103: the date-range filter is pushed into SQL (gte(start) + lt(nextDay(end))
+  // on recorded_at). Verify the local-day boundary against a real backend: a
+  // same-local-day JST record (even early-morning / late-night) is included, and
+  // the adjacent local days are excluded.
+  describe('GET /api/meals — date range boundary (#103)', () => {
+    it('includes only the requested local day, excluding the adjacent days', async () => {
+      const tag = `tz103-${Date.now()}`;
+      const createMeal = async (recordedAt: string, content: string): Promise<string> => {
+        const res = await session.request('/api/meals', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mealType: 'lunch', content, calories: 100, recordedAt }),
+        });
+        expect(res.status).toBe(201);
+        const data = (await res.json()) as { meal: { id: string } };
+        return data.meal.id;
+      };
+
+      // 23:30 JST on the 16th, 07:00 JST on the 17th, 07:00 JST on the 18th.
+      const id16 = await createMeal('2026-01-16T23:30:00+09:00', `${tag}-d16`);
+      const id17 = await createMeal('2026-01-17T07:00:00+09:00', `${tag}-d17`);
+      const id18 = await createMeal('2026-01-18T07:00:00+09:00', `${tag}-d18`);
+
+      try {
+        const res = await session.request('/api/meals?startDate=2026-01-17&endDate=2026-01-17');
+        expect(res.status).toBe(200);
+        const json = (await res.json()) as
+          | { meals?: Array<{ id: string }> }
+          | Array<{ id: string }>;
+        const meals: Array<{ id: string }> = Array.isArray(json) ? json : json.meals ?? [];
+        const ids = new Set(meals.map((m) => m.id));
+
+        expect(ids.has(id17)).toBe(true); // same local day (07:00 JST) — included
+        expect(ids.has(id16)).toBe(false); // previous local day — excluded
+        expect(ids.has(id18)).toBe(false); // next local day — excluded
+      } finally {
+        for (const id of [id16, id17, id18]) {
+          await session.request(`/api/meals/${id}`, { method: 'DELETE' });
+        }
+      }
+    });
+  });
 });
