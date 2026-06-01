@@ -15,6 +15,7 @@ import { eq, and, lt } from 'drizzle-orm';
 import * as schema from '../db/schema';
 import * as emailSchema from '../db/schema/email';
 import * as webauthnSchema from '../db/schema/webauthn';
+import { epochCutoff, isoCutoff } from '../lib/dateCutoff';
 
 const UNVERIFIED_ACCOUNT_RETENTION_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 const TOKEN_CLEANUP_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -37,12 +38,16 @@ interface CleanupResult {
 export async function executeScheduledCleanup(db: D1Database): Promise<CleanupResult> {
   const orm = drizzle(db, { schema: { ...schema, ...emailSchema, ...webauthnSchema } });
   const now = Date.now();
-  const unverifiedCutoff = now - UNVERIFIED_ACCOUNT_RETENTION_MS;
-  const tokenCutoff = now - TOKEN_CLEANUP_AGE_MS;
-  // Type-matched cutoffs: email_delivery_logs.created_at is INTEGER epoch ms;
-  // ai_usage_records.created_at is TEXT ISO8601.
-  const emailLogCutoffEpoch = now - EMAIL_LOG_RETENTION_MS;
-  const aiUsageCutoffIso = new Date(now - AI_USAGE_RETENTION_MS).toISOString();
+  // Each cutoff uses the helper matching its column's storage type so the
+  // INTEGER-epoch vs TEXT-ISO split is decided in one place (#105):
+  //   users.created_at (ISO), *_tokens/email_change.created_at (epoch),
+  //   email_delivery_logs.created_at (epoch), ai_usage_records.created_at (ISO),
+  //   webauthn_challenges.expires_at (ISO).
+  const unverifiedCutoffIso = isoCutoff(now, UNVERIFIED_ACCOUNT_RETENTION_MS);
+  const tokenCutoffEpoch = epochCutoff(now, TOKEN_CLEANUP_AGE_MS);
+  const emailLogCutoffEpoch = epochCutoff(now, EMAIL_LOG_RETENTION_MS);
+  const aiUsageCutoffIso = isoCutoff(now, AI_USAGE_RETENTION_MS);
+  const nowIso = isoCutoff(now, 0);
 
   console.log('[Cleanup] Starting scheduled cleanup tasks...');
 
@@ -55,7 +60,7 @@ export async function executeScheduledCleanup(db: D1Database): Promise<CleanupRe
       .where(
         and(
           eq(schema.users.emailVerified, 0),
-          lt(schema.users.createdAt, new Date(unverifiedCutoff).toISOString())
+          lt(schema.users.createdAt, unverifiedCutoffIso)
         )
       )
       .all();
@@ -81,7 +86,7 @@ export async function executeScheduledCleanup(db: D1Database): Promise<CleanupRe
       .from(emailSchema.passwordResetTokens)
       .where(
         and(
-          lt(emailSchema.passwordResetTokens.createdAt, tokenCutoff),
+          lt(emailSchema.passwordResetTokens.createdAt, tokenCutoffEpoch),
           // Delete tokens that are used OR expired
           // Used tokens have usedAt != null
           // Expired tokens have expiresAt < now
@@ -110,7 +115,7 @@ export async function executeScheduledCleanup(db: D1Database): Promise<CleanupRe
     const oldTokens = await orm
       .select({ id: emailSchema.emailVerificationTokens.id })
       .from(emailSchema.emailVerificationTokens)
-      .where(lt(emailSchema.emailVerificationTokens.createdAt, tokenCutoff))
+      .where(lt(emailSchema.emailVerificationTokens.createdAt, tokenCutoffEpoch))
       .all();
 
     if (oldTokens.length > 0) {
@@ -136,7 +141,7 @@ export async function executeScheduledCleanup(db: D1Database): Promise<CleanupRe
     const oldRequests = await orm
       .select({ id: emailSchema.emailChangeRequests.id })
       .from(emailSchema.emailChangeRequests)
-      .where(lt(emailSchema.emailChangeRequests.createdAt, tokenCutoff))
+      .where(lt(emailSchema.emailChangeRequests.createdAt, tokenCutoffEpoch))
       .all();
 
     if (oldRequests.length > 0) {
@@ -157,7 +162,6 @@ export async function executeScheduledCleanup(db: D1Database): Promise<CleanupRe
   // 5. Delete expired WebAuthn challenges (5-minute TTL, so anything past now is dead)
   let deletedExpiredChallenges = 0;
   try {
-    const nowIso = new Date(now).toISOString();
     const result = await orm
       .delete(webauthnSchema.webauthnChallenges)
       .where(lt(webauthnSchema.webauthnChallenges.expiresAt, nowIso))

@@ -1,3 +1,11 @@
+/**
+ * WebAuthn / passkey schema (Drizzle ORM).
+ *
+ * Datetime convention (#105): timestamps here (created_at / last_used_at /
+ * expires_at) are TEXT ISO8601, like the records tables — NOT epoch ms like the
+ * token/email family. Compare against an ISO cutoff (lib/dateCutoff.ts isoCutoff).
+ * See the full convention in db/schema.ts.
+ */
 import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
 import { users } from '../schema';
 

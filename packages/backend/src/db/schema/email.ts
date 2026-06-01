@@ -7,6 +7,11 @@
  * - email_change_requests
  * - email_delivery_logs
  * - email_rate_limits
+ *
+ * Datetime convention (#105): all timestamps here (expires_at / created_at /
+ * used_at, etc.) are INTEGER epoch ms — NOT TEXT ISO like the records tables.
+ * Compare against an epoch cutoff (lib/dateCutoff.ts epochCutoff). See the
+ * full convention in db/schema.ts.
  */
 
 import { sqliteTable, integer, text, index, uniqueIndex } from 'drizzle-orm/sqlite-core';
