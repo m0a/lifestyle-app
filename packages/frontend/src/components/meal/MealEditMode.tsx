@@ -392,15 +392,14 @@ export function MealEditMode({
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
-                  {/* Nutrition info tooltip on hover */}
-                  {photo.analysisStatus === 'complete' && (
-                    <div className="absolute bottom-2 left-2 right-2 rounded bg-black bg-opacity-75 p-2 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">
-                      <div className="flex justify-between">
-                        <span>{photo.calories} kcal</span>
-                        <span>P:{photo.protein?.toFixed(1) ?? 0}g F:{photo.fat?.toFixed(1) ?? 0}g C:{photo.carbs?.toFixed(1) ?? 0}g</span>
-                      </div>
-                    </div>
-                  )}
+                  {/*
+                    Per-photo nutrition (meal_photos.calories etc.) is an AI
+                    analysis-time snapshot that is NOT recomputed on chat/manual
+                    food edits, so it drifts out of sync (#100). The single
+                    source of truth is meal_food_items; only the food-item-derived
+                    "栄養合計" below is shown. Per-photo breakdown is intentionally
+                    omitted to avoid displaying stale numbers.
+                  */}
                 </div>
               ))}
             </div>
