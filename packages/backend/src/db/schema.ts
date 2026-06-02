@@ -1,3 +1,17 @@
+/**
+ * Datetime storage-type convention (#105).
+ *
+ * Timestamps are stored in one of two forms; new tables MUST pick one, and
+ * cross-table code must never compare the two forms directly (use the matching
+ * helper in lib/dateCutoff.ts — epochCutoff / isoCutoff):
+ *
+ *  - TEXT ISO8601 — this file's tables (users, weight_records, meal_records,
+ *    exercise_records, ai_usage_records) and webauthn (schema/webauthn.ts).
+ *    recorded_at carries a local "+09:00" offset; created_at / updated_at are UTC "Z".
+ *  - INTEGER epoch ms — the token / email family (schema/email.ts:
+ *    password_reset_tokens, email_verification_tokens, email_change_requests,
+ *    email_delivery_logs, email_rate_limits).
+ */
 import { sqliteTable, text, real, integer, index } from 'drizzle-orm/sqlite-core';
 
 export const users = sqliteTable('users', {
