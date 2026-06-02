@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { nanoid } from 'nanoid';
-import { createMealSchema, updateMealSchema, dateRangeSchema, mealTypeSchema, mealDatesQuerySchema } from '@lifestyle-app/shared';
+import { createMealSchema, updateMealSchema, dateRangeSchema, mealTypeSchema, mealDatesQuerySchema, ANALYSIS_SOURCE, MEAL_CONTENT_DELIMITER } from '@lifestyle-app/shared';
 import { MealService } from '../services/meal';
 import { MealPhotoService, deletePhotosWithFoodItems } from '../services/meal-photo.service';
 import { PhotoStorageService } from '../services/photo-storage';
@@ -200,7 +200,7 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
       // Generate meal content from AI-detected food items
       const generatedContent = allFoodNames.length > 0
-        ? allFoodNames.join(', ')
+        ? allFoodNames.join(MEAL_CONTENT_DELIMITER)
         : content; // Fallback to user-provided content if no items detected
 
       // Recalculate meal totals and update content
@@ -213,7 +213,7 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
           totalProtein: totals.protein,
           totalFat: totals.fat,
           totalCarbs: totals.carbs,
-          analysisSource: 'ai',
+          analysisSource: ANALYSIS_SOURCE.ai,
           updatedAt: new Date().toISOString(),
         })
         .where(eq(schema.mealRecords.id, meal.id));
@@ -518,7 +518,7 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
       const totalProtein = allFoodItems.reduce((sum, item) => sum + item.protein, 0);
       const totalFat = allFoodItems.reduce((sum, item) => sum + item.fat, 0);
       const totalCarbs = allFoodItems.reduce((sum, item) => sum + item.carbs, 0);
-      const contentNames = allFoodItems.map(item => item.name).join('、');
+      const contentNames = allFoodItems.map(item => item.name).join(MEAL_CONTENT_DELIMITER);
 
       await db.update(mealRecords)
         .set({
@@ -721,7 +721,7 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
           const totalProtein = allFoodItems.reduce((sum, item) => sum + item.protein, 0);
           const totalFat = allFoodItems.reduce((sum, item) => sum + item.fat, 0);
           const totalCarbs = allFoodItems.reduce((sum, item) => sum + item.carbs, 0);
-          const contentNames = allFoodItems.map(item => item.name).join('、');
+          const contentNames = allFoodItems.map(item => item.name).join(MEAL_CONTENT_DELIMITER);
 
           await db.update(mealRecords)
             .set({

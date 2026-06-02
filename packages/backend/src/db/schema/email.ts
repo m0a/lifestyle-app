@@ -111,6 +111,14 @@ export const emailChangeRequests = sqliteTable(
  * any user-facing aggregate. Pruned by the retention cron (~90 days) using
  * idx_email_logs_created_at; recipient_email is PII, so retention is bounded
  * (#104). created_at is INTEGER epoch ms.
+ *
+ * Indexing (#106): the only query that touches this table is the cron's
+ * `WHERE created_at < cutoff` prune, so just one index — created_at — is kept.
+ * The former single-column user_id / status / email_type indexes were dropped
+ * (migration 0038): status/email_type are low-cardinality (2–3 values) and no
+ * read path filters on them, and user_id was never queried. See migration 0038
+ * for how to reintroduce a (user_id, created_at) composite if admin per-user
+ * lookups are added later.
  */
 export const emailDeliveryLogs = sqliteTable(
   'email_delivery_logs',
@@ -127,10 +135,7 @@ export const emailDeliveryLogs = sqliteTable(
     createdAt: integer('created_at').notNull(),
   },
   (table) => ({
-    userIdIdx: index('idx_email_logs_user_id').on(table.userId),
-    statusIdx: index('idx_email_logs_status').on(table.status),
     createdAtIdx: index('idx_email_logs_created_at').on(table.createdAt),
-    emailTypeIdx: index('idx_email_logs_email_type').on(table.emailType),
   })
 );
 

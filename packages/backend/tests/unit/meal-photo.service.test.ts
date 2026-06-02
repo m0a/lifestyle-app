@@ -37,6 +37,7 @@ describe('MealPhotoService', () => {
           fat: 5,
           carbs: 15,
           createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
         },
         {
           id: 'photo2',
@@ -49,6 +50,7 @@ describe('MealPhotoService', () => {
           fat: null,
           carbs: null,
           createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
         },
       ];
 
@@ -75,6 +77,7 @@ describe('MealPhotoService', () => {
           fat: 5,
           carbs: 15,
           createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
         },
       ];
 
@@ -91,6 +94,7 @@ describe('MealPhotoService', () => {
         fat: null,
         carbs: null,
         createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       };
 
       const mockInsert = {
@@ -121,6 +125,7 @@ describe('MealPhotoService', () => {
         fat: 5,
         carbs: 15,
         createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       }));
 
       mockDb.query.mealPhotos.findMany = vi.fn().mockResolvedValue(existingPhotos);
@@ -151,6 +156,7 @@ describe('MealPhotoService', () => {
           fat: 5,
           carbs: 15,
           createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
         },
         {
           id: 'photo2',
@@ -163,6 +169,7 @@ describe('MealPhotoService', () => {
           fat: 10,
           carbs: 30,
           createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
         },
         {
           id: 'photo3',
@@ -175,6 +182,7 @@ describe('MealPhotoService', () => {
           fat: null,
           carbs: null,
           createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
         },
       ];
 

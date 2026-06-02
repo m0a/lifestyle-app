@@ -1,3 +1,11 @@
+// Delimiter used when deriving a meal's `content` string by concatenating its
+// food-item names. `content` is non-normalized (a denormalized display label),
+// so every derivation path must use the same separator to stay consistent
+// across photo / chat / manual flows (#106). Note: `content` is dual-purpose —
+// for AI/photo meals it is this derived join, for manual meals it is the user's
+// free-text input — so this constant only governs the derived paths.
+export const MEAL_CONTENT_DELIMITER = '、';
+
 // Meal types
 export const MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
 

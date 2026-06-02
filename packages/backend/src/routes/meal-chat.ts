@@ -17,6 +17,8 @@ import type { Database } from '../db';
 import {
   sendChatMessageSchema,
   applyChatSuggestionSchema,
+  ANALYSIS_SOURCE,
+  MEAL_CONTENT_DELIMITER,
   type FoodItem,
   type ChatMessage,
   type NutritionTotals,
@@ -236,6 +238,14 @@ mealChat.post(
     const now = new Date().toISOString();
     let newRecordedAt: string | undefined;
     let newMealType: 'breakfast' | 'lunch' | 'dinner' | 'snack' | undefined;
+    // Track whether the AI chat actually touched the food items. Editing food
+    // items through the chat is an AI-driven change, so a meal that started out
+    // 'manual' must be promoted to 'ai' — otherwise the source badge keeps
+    // claiming "manual" while the nutrition data was AI-edited (#106). An add or
+    // a non-empty update counts as a touch; a remove counts only when it actually
+    // deleted a row (see the 'remove' case). Metadata-only changes (set_datetime
+    // / set_meal_type) never count.
+    let foodItemsChanged = false;
 
     console.log('[Chat Apply] Received changes:', JSON.stringify(changes, null, 2));
     console.log('[Chat Apply] Meal ID:', mealId);
@@ -247,6 +257,7 @@ mealChat.post(
         case 'add':
           // For 'add', foodItem is required by schema
           console.log('[Chat Apply] Adding food item:', change.foodItem.name);
+          foodItemsChanged = true;
           await db.insert(mealFoodItems).values({
             id: uuidv4(),
             mealId,
@@ -262,10 +273,14 @@ mealChat.post(
         case 'remove': {
           // For 'remove', foodItemId is required by schema
           console.log('[Chat Apply] Removing food item ID:', change.foodItemId);
-          const deleteResult = await db.delete(mealFoodItems).where(
-            and(eq(mealFoodItems.id, change.foodItemId), eq(mealFoodItems.mealId, mealId))
-          );
+          const deleteResult = await db
+            .delete(mealFoodItems)
+            .where(and(eq(mealFoodItems.id, change.foodItemId), eq(mealFoodItems.mealId, mealId)))
+            .run();
           console.log('[Chat Apply] Delete result:', deleteResult);
+          // Only count as an AI touch when a row was actually deleted — removing
+          // an already-absent item changes nothing and must not flip the source.
+          if ((deleteResult.meta?.changes ?? 0) > 0) foodItemsChanged = true;
           break;
         }
         case 'update': {
@@ -281,6 +296,7 @@ mealChat.post(
           if (item['carbs'] !== undefined) updateData['carbs'] = item['carbs'];
 
           if (Object.keys(updateData).length > 0) {
+            foodItemsChanged = true;
             await db
               .update(mealFoodItems)
               .set(updateData)
@@ -333,7 +349,7 @@ mealChat.post(
       totalProtein: totals.protein,
       totalFat: totals.fat,
       totalCarbs: totals.carbs,
-      content: foodItems.map((i) => i.name).join(', '),
+      content: foodItems.map((i) => i.name).join(MEAL_CONTENT_DELIMITER),
       updatedAt: now,
     };
     if (newRecordedAt) {
@@ -341,6 +357,12 @@ mealChat.post(
     }
     if (newMealType) {
       mealUpdateData['mealType'] = newMealType;
+    }
+    // Promote a manual meal to 'ai' once the chat has AI-edited its food items
+    // so the analysis-source badge reflects reality (#106). Only upgrade — never
+    // downgrade an already-'ai' meal.
+    if (foodItemsChanged && meal.analysisSource !== ANALYSIS_SOURCE.ai) {
+      mealUpdateData['analysisSource'] = ANALYSIS_SOURCE.ai;
     }
 
     await db
@@ -462,7 +484,7 @@ mealChat.post('/:mealId/chat/add-photo', async (c) => {
         const totalProtein = allFoodItems.reduce((sum, item) => sum + item.protein, 0);
         const totalFat = allFoodItems.reduce((sum, item) => sum + item.fat, 0);
         const totalCarbs = allFoodItems.reduce((sum, item) => sum + item.carbs, 0);
-        const contentNames = allFoodItems.map(item => item.name).join('、');
+        const contentNames = allFoodItems.map(item => item.name).join(MEAL_CONTENT_DELIMITER);
 
         await db.update(mealRecords)
           .set({
@@ -471,6 +493,9 @@ mealChat.post('/:mealId/chat/add-photo', async (c) => {
             totalProtein,
             totalFat,
             totalCarbs,
+            // A photo added via chat is AI analysis → reflect that in the source.
+            analysisSource: ANALYSIS_SOURCE.ai,
+            updatedAt: new Date().toISOString(),
           })
           .where(eq(mealRecords.id, mealId));
 

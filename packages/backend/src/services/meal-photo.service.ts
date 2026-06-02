@@ -2,7 +2,7 @@ import { nanoid } from 'nanoid';
 import { eq, asc } from 'drizzle-orm';
 import type { Database } from '../db';
 import { mealPhotos, mealFoodItems, mealRecords, type MealPhoto } from '../db/schema';
-import type { NutritionTotals } from '@lifestyle-app/shared';
+import { MEAL_CONTENT_DELIMITER, type NutritionTotals } from '@lifestyle-app/shared';
 import type { PhotoStorageService } from './photo-storage';
 
 export class MealPhotoService {
@@ -131,7 +131,7 @@ export async function recalculateMealTotals(
       totalProtein: totals.protein,
       totalFat: totals.fat,
       totalCarbs: totals.carbs,
-      content: items.map((i) => i.name).join(', '),
+      content: items.map((i) => i.name).join(MEAL_CONTENT_DELIMITER),
       updatedAt: new Date().toISOString(),
     })
     .where(eq(mealRecords.id, mealId));

@@ -21,6 +21,8 @@ import {
   updateFoodItemSchema,
   saveMealAnalysisSchema,
   textAnalysisRequestSchema,
+  ANALYSIS_SOURCE,
+  MEAL_CONTENT_DELIMITER,
   type FoodItem,
 } from '@lifestyle-app/shared';
 
@@ -145,12 +147,12 @@ mealAnalysis.post('/analyze', async (c) => {
       id: mealId,
       userId,
       mealType: 'lunch', // Default, will be set when saving
-      content: analysisResult.result.foodItems.map((f) => f.name).join(', '),
+      content: analysisResult.result.foodItems.map((f) => f.name).join(MEAL_CONTENT_DELIMITER),
       calories: analysisResult.result.totals.calories,
       totalProtein: analysisResult.result.totals.protein,
       totalFat: analysisResult.result.totals.fat,
       totalCarbs: analysisResult.result.totals.carbs,
-      analysisSource: 'ai',
+      analysisSource: ANALYSIS_SOURCE.ai,
       recordedAt,
       createdAt: now,
       updatedAt: now,
@@ -230,12 +232,12 @@ mealAnalysis.post(
       id: mealId,
       userId,
       mealType: analysisResult.result.inferredMealType,
-      content: analysisResult.result.foodItems.map((f) => f.name).join(', '),
+      content: analysisResult.result.foodItems.map((f) => f.name).join(MEAL_CONTENT_DELIMITER),
       calories: analysisResult.result.totals.calories,
       totalProtein: analysisResult.result.totals.protein,
       totalFat: analysisResult.result.totals.fat,
       totalCarbs: analysisResult.result.totals.carbs,
-      analysisSource: 'ai',
+      analysisSource: ANALYSIS_SOURCE.ai,
       recordedAt,
       createdAt: now,
       updatedAt: now,
@@ -301,7 +303,7 @@ mealAnalysis.post('/create-empty', zValidator('json', createEmptySchema), async 
     totalProtein: 0,
     totalFat: 0,
     totalCarbs: 0,
-    analysisSource: 'manual',
+    analysisSource: ANALYSIS_SOURCE.manual,
     recordedAt,
     createdAt: now,
     updatedAt: now,
@@ -607,7 +609,7 @@ mealAnalysis.post(
     const items = await db.query.mealFoodItems.findMany({
       where: eq(mealFoodItems.mealId, mealId),
     });
-    const content = items.map((i) => i.name).join(', ');
+    const content = items.map((i) => i.name).join(MEAL_CONTENT_DELIMITER);
 
     await db
       .update(mealRecords)

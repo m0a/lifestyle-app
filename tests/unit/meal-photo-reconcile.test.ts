@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+import { MEAL_CONTENT_DELIMITER } from '@lifestyle-app/shared';
 import {
   recalculateMealTotals,
   deletePhotosWithFoodItems,
@@ -43,7 +44,7 @@ describe('recalculateMealTotals (#101 SSoT)', () => {
       totalProtein: 15,
       totalFat: 8,
       totalCarbs: 30,
-      content: 'A, B',
+      content: `A${MEAL_CONTENT_DELIMITER}B`,
     });
   });
 
