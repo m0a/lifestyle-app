@@ -8,6 +8,8 @@
  * 4. Append-only logs past their retention window (#104):
  *    email_delivery_logs and ai_usage_records (detail; lifetime AI total is kept
  *    in ai_usage_totals so pruning detail does not affect the displayed total).
+ * 5. Expired email_rate_limits rows (#106): previously only swept lazily on the
+ *    next send from the same IP, so they lingered if email went idle.
  */
 
 import { drizzle } from 'drizzle-orm/d1';
@@ -30,6 +32,7 @@ interface CleanupResult {
   deletedExpiredChallenges: number;
   deletedEmailLogs: number;
   deletedAiUsageRecords: number;
+  deletedRateLimits: number;
 }
 
 /**
@@ -84,14 +87,10 @@ export async function executeScheduledCleanup(db: D1Database): Promise<CleanupRe
     const oldTokens = await orm
       .select({ id: emailSchema.passwordResetTokens.id })
       .from(emailSchema.passwordResetTokens)
-      .where(
-        and(
-          lt(emailSchema.passwordResetTokens.createdAt, tokenCutoffEpoch),
-          // Delete tokens that are used OR expired
-          // Used tokens have usedAt != null
-          // Expired tokens have expiresAt < now
-        )
-      )
+      // Age-based prune only (createdAt < cutoff), matching the other two token
+      // tables. A used/expired token younger than the window is kept until it
+      // ages out — by then it is harmless (single-use + past expiry) (#106).
+      .where(lt(emailSchema.passwordResetTokens.createdAt, tokenCutoffEpoch))
       .all();
 
     if (oldTokens.length > 0) {
@@ -214,6 +213,25 @@ export async function executeScheduledCleanup(db: D1Database): Promise<CleanupRe
     console.error('[Cleanup] Error deleting AI usage records:', error);
   }
 
+  // 8. Delete expired email rate-limit rows. expires_at is INTEGER epoch ms, so
+  //    compare against `now` directly. These were only ever cleaned lazily when
+  //    the same IP sent again, leaving stale rows if email usage went quiet (#106).
+  let deletedRateLimits = 0;
+  try {
+    const result = await orm
+      .delete(emailSchema.emailRateLimits)
+      .where(lt(emailSchema.emailRateLimits.expiresAt, now))
+      .run();
+    deletedRateLimits = result.meta?.changes ?? 0;
+    console.log(
+      deletedRateLimits > 0
+        ? `[Cleanup] Deleted ${deletedRateLimits} expired email rate-limit rows`
+        : '[Cleanup] No expired email rate-limit rows to delete'
+    );
+  } catch (error) {
+    console.error('[Cleanup] Error deleting email rate-limit rows:', error);
+  }
+
   const result = {
     deletedUsers,
     deletedPasswordResetTokens,
@@ -222,6 +240,7 @@ export async function executeScheduledCleanup(db: D1Database): Promise<CleanupRe
     deletedExpiredChallenges,
     deletedEmailLogs,
     deletedAiUsageRecords,
+    deletedRateLimits,
   };
 
   console.log('[Cleanup] Cleanup tasks completed:', result);

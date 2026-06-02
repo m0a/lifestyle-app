@@ -11,19 +11,44 @@
  *  - INTEGER epoch ms — the token / email family (schema/email.ts:
  *    password_reset_tokens, email_verification_tokens, email_change_requests,
  *    email_delivery_logs, email_rate_limits).
+ *
+ * Primary-key-type convention (#106).
+ *
+ * Two PK styles coexist by role; this is intentional, not drift:
+ *  - TEXT (uuid / nanoid) — domain rows whose id is exposed to clients in URLs
+ *    and the RPC API (users, weight_records, meal_records, meal_photos,
+ *    meal_food_items, exercise_records, ai_usage_records, …). Opaque,
+ *    unguessable, and stable across environments.
+ *  - INTEGER AUTOINCREMENT — internal-only log/token rows never surfaced by id
+ *    (schema/email.ts: password_reset_tokens, email_verification_tokens,
+ *    email_change_requests, email_delivery_logs). The token itself (a separate
+ *    unique column), not the numeric id, is the externally-meaningful handle.
  */
 import { sqliteTable, text, real, integer, index } from 'drizzle-orm/sqlite-core';
 
-export const users = sqliteTable('users', {
-  id: text('id').primaryKey(),
-  email: text('email').notNull().unique(),
-  passwordHash: text('password_hash').notNull(),
-  emailVerified: integer('email_verified').notNull().default(0), // 0 = false, 1 = true
-  goalWeight: real('goal_weight'),
-  goalCalories: integer('goal_calories').default(2000),
-  createdAt: text('created_at').notNull(),
-  updatedAt: text('updated_at').notNull(),
-});
+export const users = sqliteTable(
+  'users',
+  {
+    id: text('id').primaryKey(),
+    email: text('email').notNull().unique(),
+    passwordHash: text('password_hash').notNull(),
+    emailVerified: integer('email_verified').notNull().default(0), // 0 = false, 1 = true
+    goalWeight: real('goal_weight'),
+    goalCalories: integer('goal_calories').default(2000),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => ({
+    // The cleanup cron filters `email_verified = 0 AND created_at < cutoff`.
+    // A lone email_verified index is near-useless (2 distinct values); the
+    // composite lets that scan seek straight to old unverified rows (#106,
+    // replaces idx_users_email_verified in migration 0038).
+    idx_users_email_verified_created: index('idx_users_email_verified_created').on(
+      table.emailVerified,
+      table.createdAt
+    ),
+  })
+);
 
 export const weightRecords = sqliteTable(
   'weight_records',
@@ -81,6 +106,17 @@ export const mealPhotos = sqliteTable(
     fat: real('fat'),
     carbs: real('carbs'),
     createdAt: text('created_at').notNull(),
+    // Photos are UPDATEd in place (analysis result / status), so track the last
+    // change time. $onUpdate auto-bumps it on every Drizzle .update(); $defaultFn
+    // seeds it on insert — no call site needs to set it manually (#106).
+    // NOTE: migration 0037 gives the DB column a sentinel DEFAULT '1970-...' that
+    // is intentionally NOT modeled here (SQLite needs a constant default to ADD a
+    // NOT NULL column); the app always writes a real value, so the default never
+    // fires for new rows.
+    updatedAt: text('updated_at')
+      .notNull()
+      .$defaultFn(() => new Date().toISOString())
+      .$onUpdate(() => new Date().toISOString()),
   },
   (table) => ({
     idx_meal_photos_meal: index('idx_meal_photos_meal').on(table.mealId, table.displayOrder),
@@ -105,6 +141,14 @@ export const mealFoodItems = sqliteTable(
     fat: real('fat').notNull(),
     carbs: real('carbs').notNull(),
     createdAt: text('created_at').notNull(),
+    // Food items are UPDATEd in place (chat / manual edits), so track the last
+    // change time. $onUpdate auto-bumps on every Drizzle .update(); $defaultFn
+    // seeds it on insert (#106). As with meal_photos above, migration 0037's
+    // sentinel DB DEFAULT is intentionally not modeled here.
+    updatedAt: text('updated_at')
+      .notNull()
+      .$defaultFn(() => new Date().toISOString())
+      .$onUpdate(() => new Date().toISOString()),
   },
   (table) => ({
     idx_food_items_meal: index('idx_food_items_meal').on(table.mealId),

@@ -217,6 +217,19 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, o
       .map(item => item.exerciseType);
   }, [customTypes, selectedMuscleGroup]);
 
+  // Autocomplete suggestions for the free-text custom-name field: every known
+  // exercise name (presets + all previously-recorded custom types, regardless of
+  // muscle group), deduplicated. Surfacing existing names as the user types
+  // curbs spelling drift (e.g. "ベンチプレス" vs "ベンチ プレス") so the same
+  // exercise stays groupable in per-type aggregates (#106).
+  const exerciseTypeSuggestions = useMemo(() => {
+    const names = new Set<string>(EXERCISE_PRESETS.map(p => p.name));
+    for (const item of customTypes) {
+      if (item.exerciseType) names.add(item.exerciseType);
+    }
+    return Array.from(names);
+  }, [customTypes]);
+
   const handleSessionSelect = useCallback((session: Session) => {
     // Take the first exercise from the session and populate the form
     const firstExercise = session.exercises[0];
@@ -339,13 +352,21 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, o
         )}
 
         {showCustomInput && (
-          <input
-            type="text"
-            value={customExerciseName}
-            onChange={(e) => setCustomExerciseName(e.target.value)}
-            placeholder="種目名を入力"
-            className="mt-2 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
-          />
+          <>
+            <input
+              type="text"
+              value={customExerciseName}
+              onChange={(e) => setCustomExerciseName(e.target.value)}
+              placeholder="種目名を入力"
+              list="exercise-type-suggestions"
+              className="mt-2 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
+            />
+            <datalist id="exercise-type-suggestions">
+              {exerciseTypeSuggestions.map((name) => (
+                <option key={name} value={name} />
+              ))}
+            </datalist>
+          </>
         )}
 
         {/* Last Record Badge */}

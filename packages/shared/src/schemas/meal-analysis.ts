@@ -6,6 +6,13 @@ export type Portion = z.infer<typeof portionSchema>;
 
 export const analysisSourceSchema = z.enum(['ai', 'manual']);
 export type AnalysisSource = z.infer<typeof analysisSourceSchema>;
+/**
+ * Canonical `meal_records.analysis_source` values, derived from the schema enum.
+ * Use these at DB write boundaries instead of bare 'ai' / 'manual' string
+ * literals so the values stay validated against the single source of truth (#106).
+ *   ANALYSIS_SOURCE.ai === 'ai', ANALYSIS_SOURCE.manual === 'manual'
+ */
+export const ANALYSIS_SOURCE = analysisSourceSchema.enum;
 
 export const chatRoleSchema = z.enum(['user', 'assistant']);
 export type ChatRole = z.infer<typeof chatRoleSchema>;
