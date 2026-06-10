@@ -449,7 +449,7 @@ mealChat.post('/:mealId/chat/add-photo', async (c) => {
 
       if (analysisResult.success) {
         // Update photo with analysis results
-        await photoService.updateAnalysisResult(photo.id, analysisResult.result.totals);
+        await photoService.updateAnalysisResult(photo.id, photo.mealId, analysisResult.result.totals);
 
         // Automatically create food items from photo analysis
         console.log(`[Chat Photo] Creating ${analysisResult.result.foodItems.length} food items for photo ${photo.id}`);
@@ -531,7 +531,7 @@ mealChat.post('/:mealId/chat/add-photo', async (c) => {
       } else {
         // Mark analysis as failed
         console.error('[Chat Photo] Analysis failed:', analysisResult.failure);
-        await photoService.markAnalysisFailed(photo.id);
+        await photoService.markAnalysisFailed(photo.id, photo.mealId);
 
         // Update acknowledgment message to indicate failure
         await db.update(mealChatMessages)
@@ -549,7 +549,7 @@ mealChat.post('/:mealId/chat/add-photo', async (c) => {
     } catch (analysisError) {
       // Log error but don't fail the upload
       console.error('[Chat Photo] Photo analysis failed:', analysisError);
-      await photoService.markAnalysisFailed(photo.id);
+      await photoService.markAnalysisFailed(photo.id, photo.mealId);
 
       // Update acknowledgment message
       await db.update(mealChatMessages)

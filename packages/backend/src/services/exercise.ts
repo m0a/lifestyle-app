@@ -301,10 +301,13 @@ export class ExerciseService {
       updateData['recordedAt'] = input.recordedAt;
     }
 
+    // Scope by userId as well (defense in depth, #130): findById above already
+    // guarantees ownership, but the SQL itself should never be able to touch
+    // another user's row.
     await this.db
       .update(schema.exerciseRecords)
       .set(updateData)
-      .where(eq(schema.exerciseRecords.id, id));
+      .where(and(eq(schema.exerciseRecords.id, id), eq(schema.exerciseRecords.userId, userId)));
 
     return this.findById(id, userId);
   }
@@ -312,7 +315,9 @@ export class ExerciseService {
   async delete(id: string, userId: string) {
     await this.findById(id, userId);
 
-    await this.db.delete(schema.exerciseRecords).where(eq(schema.exerciseRecords.id, id));
+    await this.db
+      .delete(schema.exerciseRecords)
+      .where(and(eq(schema.exerciseRecords.id, id), eq(schema.exerciseRecords.userId, userId)));
   }
 
   async getExerciseTypes(userId: string): Promise<{ exerciseType: string; muscleGroup: string | null }[]> {

@@ -195,10 +195,13 @@ export class MealService {
       updateData['recordedAt'] = input.recordedAt;
     }
 
+    // Scope by userId as well (defense in depth, #130): findById above already
+    // guarantees ownership, but the SQL itself should never be able to touch
+    // another user's row.
     await this.db
       .update(schema.mealRecords)
       .set(updateData)
-      .where(eq(schema.mealRecords.id, id));
+      .where(and(eq(schema.mealRecords.id, id), eq(schema.mealRecords.userId, userId)));
 
     return this.findById(id, userId);
   }
@@ -206,7 +209,9 @@ export class MealService {
   async delete(id: string, userId: string) {
     await this.findById(id, userId);
 
-    await this.db.delete(schema.mealRecords).where(eq(schema.mealRecords.id, id));
+    await this.db
+      .delete(schema.mealRecords)
+      .where(and(eq(schema.mealRecords.id, id), eq(schema.mealRecords.userId, userId)));
   }
 
   /**

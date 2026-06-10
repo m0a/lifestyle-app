@@ -181,7 +181,7 @@ mealAnalysis.post('/analyze', async (c) => {
     });
 
     // Update photo with analysis results
-    await photoService.updateAnalysisResult(mealPhoto.id, analysisResult.result.totals);
+    await photoService.updateAnalysisResult(mealPhoto.id, mealPhoto.mealId, analysisResult.result.totals);
 
     // Record AI usage
     if (analysisResult.usage) {

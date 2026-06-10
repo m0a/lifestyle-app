@@ -1,5 +1,5 @@
 import { nanoid } from 'nanoid';
-import { eq, asc } from 'drizzle-orm';
+import { eq, and, asc } from 'drizzle-orm';
 import type { Database } from '../db';
 import { mealPhotos, mealFoodItems, mealRecords, type MealPhoto } from '../db/schema';
 import { MEAL_CONTENT_DELIMITER, type NutritionTotals } from '@lifestyle-app/shared';
@@ -47,8 +47,11 @@ export class MealPhotoService {
     return photo;
   }
 
+  // mealId scopes the UPDATE to the (ownership-verified) meal so the SQL can
+  // never touch another meal's photo, even if photoId were wrong (#130).
   async updateAnalysisResult(
     photoId: string,
+    mealId: string,
     result: {
       calories: number;
       protein: number;
@@ -65,7 +68,7 @@ export class MealPhotoService {
         fat: result.fat,
         carbs: result.carbs,
       })
-      .where(eq(mealPhotos.id, photoId))
+      .where(and(eq(mealPhotos.id, photoId), eq(mealPhotos.mealId, mealId)))
       .returning();
 
     if (!updated) {
@@ -75,13 +78,13 @@ export class MealPhotoService {
     return updated;
   }
 
-  async markAnalysisFailed(photoId: string): Promise<void> {
+  async markAnalysisFailed(photoId: string, mealId: string): Promise<void> {
     await this.db
       .update(mealPhotos)
       .set({
         analysisStatus: 'failed',
       })
-      .where(eq(mealPhotos.id, photoId));
+      .where(and(eq(mealPhotos.id, photoId), eq(mealPhotos.mealId, mealId)));
   }
 
   calculateTotals(photos: MealPhoto[]) {
@@ -156,8 +159,14 @@ export async function deletePhotosWithFoodItems(
     // Remove food items captured from this photo. (The FK is ON DELETE CASCADE
     // since #101, so deleting the photo row would also clear them; doing it
     // explicitly keeps the behavior correct regardless of FK enforcement.)
-    await db.delete(mealFoodItems).where(eq(mealFoodItems.photoId, photo.id));
-    await db.delete(mealPhotos).where(eq(mealPhotos.id, photo.id));
+    // Both DELETEs are additionally scoped to the (ownership-verified) mealId
+    // so the SQL can never touch another meal's rows (#130).
+    await db
+      .delete(mealFoodItems)
+      .where(and(eq(mealFoodItems.photoId, photo.id), eq(mealFoodItems.mealId, mealId)));
+    await db
+      .delete(mealPhotos)
+      .where(and(eq(mealPhotos.id, photo.id), eq(mealPhotos.mealId, mealId)));
     try {
       await photoStorage.deletePhoto(photo.photoKey);
     } catch (error) {

@@ -153,7 +153,7 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
           if (analysisResult.success) {
             // Update photo with analysis results
-            await photoService.updateAnalysisResult(mealPhoto.id, analysisResult.result.totals);
+            await photoService.updateAnalysisResult(mealPhoto.id, mealPhoto.mealId, analysisResult.result.totals);
 
             // Create food items for this photo
             console.log(`[Multi-Photo Upload] Creating ${analysisResult.result.foodItems.length} food items for photo ${mealPhoto.id}`);
@@ -423,7 +423,7 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
         if (analysisResult.success) {
           // Update photo with analysis results
-          await photoService.updateAnalysisResult(photo.id, analysisResult.result.totals);
+          await photoService.updateAnalysisResult(photo.id, photo.mealId, analysisResult.result.totals);
 
           // Automatically create food items from photo analysis
           console.log(`[Photo Analysis] Creating ${analysisResult.result.foodItems.length} food items for photo ${photo.id}`);
@@ -451,12 +451,12 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
         } else {
           // Mark analysis as failed
           console.error('[Photo Analysis] Analysis failed:', analysisResult.failure);
-          await photoService.markAnalysisFailed(photo.id);
+          await photoService.markAnalysisFailed(photo.id, photo.mealId);
         }
       } catch (analysisError) {
         // Log error but don't fail the upload
         console.error('Photo analysis failed:', analysisError);
-        await photoService.markAnalysisFailed(photo.id);
+        await photoService.markAnalysisFailed(photo.id, photo.mealId);
       }
 
       // Update meal totals and content from all food items
@@ -639,7 +639,7 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
             .where(eq(schema.mealFoodItems.photoId, photoId));
 
           // Update photo with analysis results
-          await photoService.updateAnalysisResult(photoId, analysisResult.result.totals);
+          await photoService.updateAnalysisResult(photoId, mealId, analysisResult.result.totals);
 
           // Insert new food items
           for (const item of analysisResult.result.foodItems) {
