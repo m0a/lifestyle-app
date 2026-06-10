@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { AnalysisResult } from './AnalysisResult';
 import { MealChat } from './MealChat';
 import { PhotoUploadButton } from './PhotoUploadButton';
@@ -9,6 +9,10 @@ import { validateNotFuture, toDateTimeLocal, getCurrentDateTimeLocal } from '../
 import { fromDatetimeLocal } from '../../lib/datetime';
 import { useMealPhotos } from '../../hooks/useMealPhotos';
 import type { FoodItem, NutritionTotals, MealRecord, MealType } from '@lifestyle-app/shared';
+
+// Photo analysis polling settings
+const ANALYSIS_POLL_INTERVAL_MS = 2000;
+const ANALYSIS_POLL_TIMEOUT_MS = 30000;
 
 interface MealEditModeProps {
   meal: MealRecord;
@@ -57,6 +61,15 @@ export function MealEditMode({
     uploadError,
     deleteError,
   } = useMealPhotos(meal.id);
+
+  // Track unmount to cancel photo analysis polling and avoid post-unmount setState
+  const isUnmountedRef = useRef(false);
+  useEffect(() => {
+    isUnmountedRef.current = false;
+    return () => {
+      isUnmountedRef.current = true;
+    };
+  }, []);
 
   // Notify parent of dirty state changes (T040)
   useEffect(() => {
@@ -211,20 +224,56 @@ export function MealEditMode({
     [meal.id, mealType, toast]
   );
 
+  // Poll the photo's analysis status until it completes (or fails / times out)
+  const waitForPhotoAnalysis = useCallback(
+    async (photoId: string): Promise<'complete' | 'failed' | 'timeout' | 'cancelled'> => {
+      const deadline = Date.now() + ANALYSIS_POLL_TIMEOUT_MS;
+      while (Date.now() < deadline) {
+        await new Promise(resolve => setTimeout(resolve, ANALYSIS_POLL_INTERVAL_MS));
+        if (isUnmountedRef.current) return 'cancelled';
+
+        try {
+          const { status } = await mealAnalysisApi.getPhotoStatus(meal.id, photoId);
+          if (status === 'complete') return 'complete';
+          if (status === 'failed') return 'failed';
+          // 'pending' / 'analyzing': keep polling
+        } catch (error) {
+          console.error('Failed to fetch photo analysis status:', error);
+          return 'failed';
+        }
+      }
+      return 'timeout';
+    },
+    [meal.id]
+  );
+
   // Handler for multiple photo upload (T028)
   const handlePhotoUpload = useCallback(
     async (file: File) => {
       try {
-        await uploadAsync(file);
+        const uploadResult = (await uploadAsync(file)) as { photo?: { id?: string } };
         setIsDirty(true);
         toast.success('写真をアップロードしました');
 
         // Reload food items and meal data after photo analysis completes
         if (onFoodItemsReload && onMealReload) {
-          // Wait to ensure backend processing is complete
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          // Poll analysis status instead of a fixed wait (AI analysis can take a while)
+          const photoId = uploadResult.photo?.id;
+          if (photoId) {
+            const status = await waitForPhotoAnalysis(photoId);
+            if (status === 'cancelled') return;
+            if (status === 'failed') {
+              toast.error('写真のAI分析に失敗しました');
+              return;
+            }
+            if (status === 'timeout') {
+              toast.warning('AI分析に時間がかかっています。しばらくしてから再読み込みしてください');
+              return;
+            }
+          }
 
           const updatedFoodItems = await onFoodItemsReload();
+          if (isUnmountedRef.current) return;
 
           // Force state update with new array reference
           setFoodItems([...updatedFoodItems]);
@@ -239,7 +288,7 @@ export function MealEditMode({
         toast.error('写真のアップロードに失敗しました');
       }
     },
-    [uploadAsync, toast, onFoodItemsReload, onMealReload]
+    [uploadAsync, toast, onFoodItemsReload, onMealReload, waitForPhotoAnalysis]
   );
 
   // Handler for photo deletion (T029)
