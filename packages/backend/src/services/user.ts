@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { users, weights, meals, exercises } from '../db/schema';
 import type { Database } from '../db';
 
@@ -190,29 +190,35 @@ export class UserService {
   }
 
   async getStats(userId: string) {
+    // Count in SQL instead of fetching every row with SELECT * and using
+    // .length in JS (#120) — only a single integer per table crosses the wire.
     const weightCount = await this.db
-      .select()
+      .select({ count: sql<number>`COUNT(*)` })
       .from(weights)
       .where(eq(weights.userId, userId))
       .all();
 
     const mealCount = await this.db
-      .select()
+      .select({ count: sql<number>`COUNT(*)` })
       .from(meals)
       .where(eq(meals.userId, userId))
       .all();
 
     const exerciseCount = await this.db
-      .select()
+      .select({ count: sql<number>`COUNT(*)` })
       .from(exercises)
       .where(eq(exercises.userId, userId))
       .all();
 
+    const weightRecords = weightCount[0]?.count ?? 0;
+    const mealRecords = mealCount[0]?.count ?? 0;
+    const exerciseRecords = exerciseCount[0]?.count ?? 0;
+
     return {
-      weightRecords: weightCount.length,
-      mealRecords: mealCount.length,
-      exerciseRecords: exerciseCount.length,
-      totalRecords: weightCount.length + mealCount.length + exerciseCount.length,
+      weightRecords,
+      mealRecords,
+      exerciseRecords,
+      totalRecords: weightRecords + mealRecords + exerciseRecords,
     };
   }
 }
