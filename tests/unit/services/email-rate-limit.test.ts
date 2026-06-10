@@ -17,6 +17,10 @@ import {
   getClientIP,
 } from '../../../packages/backend/src/services/rate-limit/email-rate-limit';
 
+// サービスの引数型から D1Database を導出する
+// （ルートtests/からは @cloudflare/workers-types を直接importできないため）
+type ServiceD1Database = Parameters<typeof checkEmailRateLimit>[0];
+
 // Mock D1 database
 interface D1PreparedStatement {
   bind(...values: unknown[]): D1PreparedStatement;
@@ -24,11 +28,11 @@ interface D1PreparedStatement {
   run(): Promise<{ success: boolean }>;
 }
 
-interface D1Database {
+interface MockD1Database {
   prepare(query: string): D1PreparedStatement;
 }
 
-function createMockDatabase(): D1Database {
+function createMockDatabase(): MockD1Database {
   const records = new Map<
     string,
     { count: number; expires_at: number }
@@ -111,10 +115,10 @@ function createMockDatabase(): D1Database {
 }
 
 describe('Email Rate Limiting Service', () => {
-  let mockDb: D1Database;
+  let mockDb: ServiceD1Database;
 
   beforeEach(() => {
-    mockDb = createMockDatabase();
+    mockDb = createMockDatabase() as unknown as ServiceD1Database;
   });
 
   describe('checkEmailRateLimit', () => {
