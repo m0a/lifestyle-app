@@ -1,14 +1,11 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it } from 'vitest';
 
 // Note: This test file requires @testing-library/react setup
 // Skipping for now as it's not configured in the current environment
 // E2E tests in tests/e2e/meal-history-carousel.spec.ts cover the actual UI behavior
 
 describe.skip('PhotoCarousel Component', () => {
-  it('placeholder test', () => {
-    // Placeholder to prevent empty test suite errors
-    expect(true).toBe(true);
-  });
+  it.todo('placeholder test');
 
   // TODO: Enable these tests when @testing-library/react is properly configured
   /*

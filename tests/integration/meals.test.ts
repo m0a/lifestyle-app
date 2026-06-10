@@ -44,27 +44,15 @@ describe('Meal API Integration Tests', () => {
       expect(data.meal.calories).toBe(350);
     });
 
-    it('should create meal record without calories', async () => {
-      // Expected: calories is optional
-      expect(true).toBe(true);
-    });
+    it.todo('should create meal record without calories');
 
-    it('should return 401 when not authenticated', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should return 401 when not authenticated');
 
-    it('should return 400 for invalid mealType', async () => {
-      // Expected: 400 for mealType not in enum
-      expect(true).toBe(true);
-    });
+    it.todo('should return 400 for invalid mealType');
 
-    it('should return 400 for empty content', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should return 400 for empty content');
 
-    it('should return 400 for negative calories', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should return 400 for negative calories');
 
     it.skip('should create meal with multiple photos (multipart/form-data)', async () => {
       // T053: Test multi-photo meal creation
@@ -193,75 +181,41 @@ describe('Meal API Integration Tests', () => {
   });
 
   describe('GET /api/meals', () => {
-    it('should return all meal records for authenticated user', async () => {
-      // Expected:
-      // - GET /api/meals with valid session
-      // - Response: 200 with { meals: [...] }
-      expect(true).toBe(true);
-    });
+    it.todo('should return all meal records for authenticated user');
 
-    it('should support date range query parameters', async () => {
-      // GET /api/meals?startDate=2024-01-01&endDate=2024-01-31
-      expect(true).toBe(true);
-    });
+    it.todo('should support date range query parameters');
 
-    it('should support mealType filter', async () => {
-      // GET /api/meals?mealType=breakfast
-      expect(true).toBe(true);
-    });
+    it.todo('should support mealType filter');
 
-    it('should return 401 when not authenticated', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should return 401 when not authenticated');
   });
 
   describe('GET /api/meals/summary', () => {
-    it('should return calorie summary for date range', async () => {
-      // Expected: { totalCalories, averageCalories, count }
-      expect(true).toBe(true);
-    });
+    it.todo('should return calorie summary for date range');
   });
 
   describe('GET /api/meals/:id', () => {
-    it('should return specific meal record', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should return specific meal record');
 
-    it('should return 404 for non-existent record', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should return 404 for non-existent record');
 
-    it('should return 403 for record belonging to different user', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should return 403 for record belonging to different user');
   });
 
   describe('PATCH /api/meals/:id', () => {
-    it('should update meal record', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should update meal record');
 
-    it('should return 404 for non-existent record', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should return 404 for non-existent record');
 
-    it('should return 403 for record belonging to different user', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should return 403 for record belonging to different user');
   });
 
   describe('DELETE /api/meals/:id', () => {
-    it('should delete meal record', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should delete meal record');
 
-    it('should return 404 for non-existent record', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should return 404 for non-existent record');
 
-    it('should return 403 for record belonging to different user', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should return 403 for record belonging to different user');
   });
 
   // #103: the date-range filter is pushed into SQL (gte(start) + lt(nextDay(end))

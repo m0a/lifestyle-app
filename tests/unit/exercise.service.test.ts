@@ -24,110 +24,59 @@ describe('ExerciseService', () => {
   });
 
   describe('create', () => {
-    it('should create a new exercise record with sets/reps/weight', async () => {
-      const input = {
-        exerciseType: 'ベンチプレス',
-        sets: 3,
-        reps: 10,
-        weight: 60,
-        recordedAt: new Date().toISOString(),
-      };
-      const userId = 'user-123';
+    it.todo('should create a new exercise record with sets/reps/weight');
 
-      expect(true).toBe(true);
-    });
+    it.todo('should validate sets is positive');
 
-    it('should validate sets is positive', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should validate reps is positive');
 
-    it('should validate reps is positive', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should allow null weight for bodyweight exercises');
 
-    it('should allow null weight for bodyweight exercises', async () => {
-      expect(true).toBe(true);
-    });
-
-    it('should validate exerciseType is not empty', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should validate exerciseType is not empty');
   });
 
   describe('findById', () => {
-    it('should return exercise record by id', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should return exercise record by id');
 
-    it('should return null if record not found', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should return null if record not found');
 
-    it('should not return record belonging to different user', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should not return record belonging to different user');
   });
 
   describe('findByUserId', () => {
-    it('should return all exercise records for user', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should return all exercise records for user');
 
-    it('should return records ordered by recordedAt descending', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should return records ordered by recordedAt descending');
 
-    it('should support date range filtering', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should support date range filtering');
   });
 
   describe('getWeeklySummary', () => {
-    it('should calculate total sets and reps for the week', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should calculate total sets and reps for the week');
 
-    it('should group exercises by type with sets and reps', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should group exercises by type with sets and reps');
 
-    it('should count number of exercise sessions', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should count number of exercise sessions');
   });
 
   describe('getLastByType', () => {
-    it('should return the last record for a specific exercise type', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should return the last record for a specific exercise type');
 
-    it('should return null if no records exist for the type', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should return null if no records exist for the type');
   });
 
   describe('update', () => {
-    it('should update exercise record', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should update exercise record');
 
-    it('should update updatedAt timestamp', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should update updatedAt timestamp');
 
-    it('should not update record belonging to different user', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should not update record belonging to different user');
   });
 
   describe('delete', () => {
-    it('should delete exercise record', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should delete exercise record');
 
-    it('should not delete record belonging to different user', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should not delete record belonging to different user');
   });
 
   describe('getMaxRMs', () => {

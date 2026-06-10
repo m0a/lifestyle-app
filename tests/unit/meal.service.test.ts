@@ -24,85 +24,31 @@ describe('MealService', () => {
   });
 
   describe('create', () => {
-    it('should create a new meal record', async () => {
-      const input = {
-        mealType: 'breakfast' as const,
-        content: '卵かけご飯',
-        calories: 350,
-        recordedAt: new Date().toISOString(),
-      };
-      const userId = 'user-123';
+    it.todo('should create a new meal record');
 
-      // Expected: MealService.create(userId, input) creates a record
-      expect(true).toBe(true);
-    });
+    it.todo('should create meal record without calories');
 
-    it('should create meal record without calories', async () => {
-      const input = {
-        mealType: 'lunch' as const,
-        content: 'サラダ',
-        recordedAt: new Date().toISOString(),
-      };
+    it.todo('should validate mealType is valid enum value');
 
-      // Expected: Calories field is optional
-      expect(true).toBe(true);
-    });
-
-    it('should validate mealType is valid enum value', async () => {
-      // Expected: Only 'breakfast', 'lunch', 'dinner', 'snack' allowed
-      expect(true).toBe(true);
-    });
-
-    it('should validate content is not empty', async () => {
-      // Expected: Content must be at least 1 character
-      expect(true).toBe(true);
-    });
+    it.todo('should validate content is not empty');
   });
 
   describe('findById', () => {
-    it('should return meal record by id', async () => {
-      const mealId = 'meal-123';
-      const userId = 'user-123';
+    it.todo('should return meal record by id');
 
-      // Expected: MealService.findById(mealId, userId) returns the record
-      expect(true).toBe(true);
-    });
+    it.todo('should return null if record not found');
 
-    it('should return null if record not found', async () => {
-      expect(true).toBe(true);
-    });
-
-    it('should not return record belonging to different user', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should not return record belonging to different user');
   });
 
   describe('findByUserId', () => {
-    it('should return all meal records for user', async () => {
-      const userId = 'user-123';
+    it.todo('should return all meal records for user');
 
-      // Expected: MealService.findByUserId(userId) returns array
-      expect(true).toBe(true);
-    });
+    it.todo('should return records ordered by recordedAt descending');
 
-    it('should return records ordered by recordedAt descending', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should support date range filtering');
 
-    it('should support date range filtering', async () => {
-      const userId = 'user-123';
-      const startDate = '2024-01-01';
-      const endDate = '2024-01-31';
-
-      expect(true).toBe(true);
-    });
-
-    it('should support filtering by mealType', async () => {
-      const userId = 'user-123';
-      const mealType = 'breakfast';
-
-      expect(true).toBe(true);
-    });
+    it.todo('should support filtering by mealType');
 
     it('fetches only the user\'s photos via a WHERE filter and groups them ordered by displayOrder (#102)', async () => {
       const userId = 'user-123';
@@ -140,46 +86,23 @@ describe('MealService', () => {
   });
 
   describe('getCalorieSummary', () => {
-    it('should calculate total calories for date range', async () => {
-      // Expected: Returns { totalCalories, averageCalories, count }
-      expect(true).toBe(true);
-    });
+    it.todo('should calculate total calories for date range');
 
-    it('should handle meals without calories', async () => {
-      // Expected: Only count meals with calories value
-      expect(true).toBe(true);
-    });
+    it.todo('should handle meals without calories');
   });
 
   describe('update', () => {
-    it('should update meal record', async () => {
-      const mealId = 'meal-123';
-      const userId = 'user-123';
-      const updates = { content: '味噌汁追加' };
+    it.todo('should update meal record');
 
-      expect(true).toBe(true);
-    });
+    it.todo('should update updatedAt timestamp');
 
-    it('should update updatedAt timestamp', async () => {
-      expect(true).toBe(true);
-    });
-
-    it('should not update record belonging to different user', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should not update record belonging to different user');
   });
 
   describe('delete', () => {
-    it('should delete meal record', async () => {
-      const mealId = 'meal-123';
-      const userId = 'user-123';
+    it.todo('should delete meal record');
 
-      expect(true).toBe(true);
-    });
-
-    it('should not delete record belonging to different user', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should not delete record belonging to different user');
   });
 
   describe('getTodaysSummary', () => {
@@ -213,41 +136,12 @@ describe('MealService', () => {
   });
 
   describe('getMealDates', () => {
-    it('should return unique dates with meal records for a given month', async () => {
-      const userId = 'user-123';
-      const year = 2026;
-      const month = 1;
+    it.todo('should return unique dates with meal records for a given month');
 
-      // Expected: Returns array of unique date strings like ["2026-01-01", "2026-01-05"]
-      expect(true).toBe(true);
-    });
+    it.todo('should return empty array when no meals exist in the month');
 
-    it('should return empty array when no meals exist in the month', async () => {
-      const userId = 'user-123';
-      const year = 2026;
-      const month = 12;
+    it.todo('should respect timezone offset when calculating dates');
 
-      // Expected: Returns []
-      expect(true).toBe(true);
-    });
-
-    it('should respect timezone offset when calculating dates', async () => {
-      const userId = 'user-123';
-      const year = 2026;
-      const month = 1;
-      const timezoneOffset = -540; // JST (UTC+9)
-
-      // Expected: Dates are calculated in user's local timezone
-      expect(true).toBe(true);
-    });
-
-    it('should return dates sorted in ascending order', async () => {
-      const userId = 'user-123';
-      const year = 2026;
-      const month = 1;
-
-      // Expected: ["2026-01-01", "2026-01-05", "2026-01-15"] not shuffled
-      expect(true).toBe(true);
-    });
+    it.todo('should return dates sorted in ascending order');
   });
 });
