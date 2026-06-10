@@ -4,6 +4,7 @@ import { RouterProvider } from 'react-router-dom';
 import { QueryProvider } from './providers/QueryProvider';
 import { ToastProvider } from './components/ui/Toast';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
+import { PwaUpdatePrompt } from './components/ui/PwaUpdatePrompt';
 import { router } from './router';
 import { setupGlobalErrorHandler } from './lib/errorLogger';
 import './index.css';
@@ -16,6 +17,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <ErrorBoundary>
       <QueryProvider>
         <ToastProvider>
+          <PwaUpdatePrompt />
           <RouterProvider router={router} />
         </ToastProvider>
       </QueryProvider>
