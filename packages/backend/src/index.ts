@@ -151,7 +151,7 @@ export default {
     console.log('[Cron] Scheduled event triggered at:', new Date(event.scheduledTime).toISOString());
 
     try {
-      const result = await executeScheduledCleanup(env.DB);
+      const result = await executeScheduledCleanup(env.DB, env.PHOTOS);
       console.log('[Cron] Cleanup completed successfully:', result);
     } catch (error) {
       console.error('[Cron] Cleanup failed:', error);
