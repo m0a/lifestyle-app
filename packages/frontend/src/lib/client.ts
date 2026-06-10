@@ -3,6 +3,7 @@ import type { AppType } from '@lifestyle-app/backend';
 import { generateRequestId } from './requestId';
 import { setCurrentRequestId } from './errorLogger';
 import { useAuthStore } from '../stores/authStore';
+import { clearApiCache } from './clearApiCache';
 
 // In production (empty VITE_API_URL), use same origin
 // In development, use localhost:8787
@@ -51,6 +52,9 @@ export const client = hc<AppType>(API_BASE_URL, {
         const isAuthPath = AUTH_PATHS.some(path => url.includes(path));
         if (!isAuthPath && useAuthStore.getState().isAuthenticated) {
           useAuthStore.getState().logout();
+          // 遷移前にService WorkerのAPIキャッシュ削除の完了を待つ
+          // （ナビゲーションで削除処理が中断されないように。失敗時もリダイレクトは継続）
+          await clearApiCache();
           window.location.href = '/login';
         }
       }
