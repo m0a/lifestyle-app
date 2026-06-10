@@ -625,18 +625,12 @@ mealAnalysis.post(
       where: eq(mealRecords.id, mealId),
     });
 
-    // Get first photo key for response
-    const updatedPhotos = await photoService.getMealPhotos(mealId);
-    const firstPhoto = updatedPhotos[0];
-    const firstPhotoKey = firstPhoto ? firstPhoto.photoKey : null;
-
     return c.json({
       meal: {
         id: updatedMeal!.id,
         mealType: updatedMeal!.mealType,
         content: updatedMeal!.content,
         calories: updatedMeal!.calories,
-        photoKey: firstPhotoKey,
         totalProtein: updatedMeal!.totalProtein,
         totalFat: updatedMeal!.totalFat,
         totalCarbs: updatedMeal!.totalCarbs,
