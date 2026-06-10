@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { loginAsTestUser } from '../helpers/e2e';
 
-const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:8787';
+const BACKEND_URL = process.env['BACKEND_URL'] ?? 'http://localhost:8787';
 
 /**
  * Request ID Tracing Tests
