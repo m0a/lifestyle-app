@@ -67,4 +67,4 @@ database_id = "1c90e1fa-f2b7-4518-94b4-0ae192ff6a7b"
 
 [[env.preview.r2_buckets]]
 binding = "PHOTOS"
-bucket_name = "lifestyle-app-photos"
+bucket_name = "lifestyle-app-photos-preview"
