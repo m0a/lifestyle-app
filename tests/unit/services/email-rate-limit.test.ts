@@ -10,7 +10,7 @@
  * - Client IP extraction from headers
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   checkEmailRateLimit,
   incrementEmailRateLimit,
@@ -69,24 +69,38 @@ function createMockDatabase(): D1Database {
         async run() {
           // INSERT or UPDATE rate limit
           if (query.includes('INSERT INTO email_rate_limits')) {
-            // bind(ip, expiresAt, now, expiresAt)
+            // bind(ip, expiresAt, now, max, now, expiresAt)
             const ip = bindings[0] as string;
             const expiresAt = bindings[1] as number;
             const now = bindings[2] as number;
+            const max = bindings[3] as number;
 
             const existing = records.get(ip);
 
+            let next: { count: number; expires_at: number };
             if (existing) {
               // ON CONFLICT DO UPDATE
-              const newExpiresAt = existing.expires_at < now ? expiresAt : existing.expires_at;
-              records.set(ip, {
-                count: existing.count + 1,
-                expires_at: newExpiresAt,
-              });
+              if (existing.expires_at < now) {
+                // Expired window: reset count together with expiration
+                next = { count: 1, expires_at: expiresAt };
+              } else {
+                // Active window: clamped increment
+                next = {
+                  count: Math.min(existing.count + 1, max),
+                  expires_at: existing.expires_at,
+                };
+              }
             } else {
               // INSERT new record with count = 1
-              records.set(ip, { count: 1, expires_at: expiresAt });
+              next = { count: 1, expires_at: expiresAt };
             }
+
+            // Emulate DDL: CHECK (count >= 0 AND count <= 10)
+            if (next.count < 0 || next.count > 10) {
+              throw new Error('D1_ERROR: CHECK constraint failed: count');
+            }
+
+            records.set(ip, next);
           }
 
           return { success: true };
@@ -190,6 +204,46 @@ describe('Email Rate Limiting Service', () => {
 
       // Expiration should remain same (within 1 second tolerance)
       expect(Math.abs(secondCheck.resetsAt - firstCheck.resetsAt)).toBeLessThan(1000);
+    });
+
+    it('should clamp count at 10 and never violate the CHECK constraint (#132)', async () => {
+      const ip = '192.168.1.8';
+
+      // 15 increments without any check in between (simulates concurrent
+      // requests that all passed the check before incrementing).
+      // With the old unconditional `count = count + 1` this would push the
+      // count past 10 and the DDL CHECK (count <= 10) would throw.
+      for (let i = 0; i < 15; i++) {
+        await expect(incrementEmailRateLimit(mockDb, ip)).resolves.toBeUndefined();
+      }
+
+      const result = await checkEmailRateLimit(mockDb, ip);
+
+      expect(result.currentCount).toBe(10); // clamped, not 15
+      expect(result.allowed).toBe(false); // still blocked at the limit
+    });
+
+    it('should reset count to 1 when incrementing after the window expired', async () => {
+      vi.useFakeTimers();
+      try {
+        const ip = '192.168.1.9';
+
+        // Fill up the window completely
+        for (let i = 0; i < 10; i++) {
+          await incrementEmailRateLimit(mockDb, ip);
+        }
+
+        // Advance past the 1-hour window, then increment WITHOUT a check
+        // in between (no DELETE cleanup ran)
+        vi.advanceTimersByTime(61 * 60 * 1000);
+        await incrementEmailRateLimit(mockDb, ip);
+
+        const result = await checkEmailRateLimit(mockDb, ip);
+        expect(result.currentCount).toBe(1); // fresh window, not 10 (clamped)
+        expect(result.allowed).toBe(true);
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 
