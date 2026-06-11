@@ -11,7 +11,7 @@
  */
 
 import type { D1Database } from '@cloudflare/workers-types';
-import { eq, and, isNull, gt } from 'drizzle-orm';
+import { eq, and, isNull, gt, ne } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 import * as schema from '../../db/schema';
 import { generateSecureToken, hashToken } from '../token/crypto';
@@ -19,6 +19,63 @@ import { sendEmail } from './email.service';
 import { emailVerificationTemplate } from './templates/email-verification';
 
 const EMAIL_VERIFICATION_TOKEN_EXPIRATION_MS = 24 * 60 * 60 * 1000; // 24 hours
+const RESEND_RATE_LIMIT_PER_HOUR = 3; // max tokens issued per user per hour
+const RESEND_RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+
+type Orm = ReturnType<typeof drizzle<typeof schema>>;
+
+/**
+ * Generate a new verification token and insert its hash into the database.
+ * Only the SHA-256 hash is stored; the raw token goes in the verification
+ * link (#98).
+ */
+async function insertVerificationToken(
+  orm: Orm,
+  userId: string
+): Promise<{ token: string; tokenHash: string }> {
+  const token = await generateSecureToken();
+  const tokenHash = await hashToken(token);
+  const now = Date.now();
+
+  await orm.insert(schema.emailVerificationTokens).values({
+    userId,
+    token: tokenHash,
+    expiresAt: now + EMAIL_VERIFICATION_TOKEN_EXPIRATION_MS,
+    usedAt: null,
+    createdAt: now,
+  });
+
+  return { token, tokenHash };
+}
+
+/**
+ * Send the verification email carrying the raw token.
+ */
+async function deliverVerificationEmail(
+  db: D1Database,
+  userId: string,
+  email: string,
+  resendApiKey: string,
+  fromEmail: string,
+  frontendUrl: string,
+  token: string
+): Promise<{ success: true } | { success: false; error: string }> {
+  const verificationLink = `${frontendUrl}/verify-email?token=${token}`;
+
+  const emailResult = await sendEmail(db, resendApiKey, fromEmail, {
+    to: email,
+    subject: 'メールアドレスの確認',
+    html: emailVerificationTemplate(verificationLink, email),
+    emailType: 'email_verification',
+    userId,
+  });
+
+  if (!emailResult.success) {
+    return { success: false, error: emailResult.error || 'メール送信に失敗しました' };
+  }
+
+  return { success: true };
+}
 
 /**
  * Send verification email to newly registered user
@@ -42,36 +99,20 @@ export async function sendVerificationEmail(
   const orm = drizzle(db, { schema });
 
   try {
-    // Generate secure token. Only its SHA-256 hash is stored; the raw token
-    // goes in the verification link (#98).
-    const token = await generateSecureToken();
-    const tokenHash = await hashToken(token);
-    const now = Date.now();
-    const expiresAt = now + EMAIL_VERIFICATION_TOKEN_EXPIRATION_MS;
+    const { token } = await insertVerificationToken(orm, userId);
 
-    // Insert token hash into database
-    await orm.insert(schema.emailVerificationTokens).values({
+    const emailResult = await deliverVerificationEmail(
+      db,
       userId,
-      token: tokenHash,
-      expiresAt,
-      usedAt: null,
-      createdAt: now,
-    });
-
-    // Generate verification link (carries the raw token)
-    const verificationLink = `${frontendUrl}/verify-email?token=${token}`;
-
-    // Send email
-    const emailResult = await sendEmail(db, resendApiKey, fromEmail, {
-      to: email,
-      subject: 'メールアドレスの確認',
-      html: emailVerificationTemplate(verificationLink, email),
-      emailType: 'email_verification',
-      userId,
-    });
+      email,
+      resendApiKey,
+      fromEmail,
+      frontendUrl,
+      token
+    );
 
     if (!emailResult.success) {
-      return { success: false, error: emailResult.error || 'メール送信に失敗しました' };
+      return { success: false, error: emailResult.error };
     }
 
     return { success: true, token }; // Return token for testing
@@ -172,8 +213,18 @@ export async function resendVerificationEmail(
       return { success: false, error: 'メールアドレスは既に確認済みです' };
     }
 
-    // Check rate limit: max 3 resends per hour
-    const oneHourAgo = Date.now() - 60 * 60 * 1000;
+    // Rate limit: max 3 tokens per user per hour.
+    //
+    // A pre-insert COUNT check alone is racy (#132): two concurrent requests
+    // can both pass the check and over-issue. D1 has no interactive
+    // transactions, so instead the limit is enforced self-correctingly:
+    // insert the new token FIRST, then count tokens created in the last hour
+    // INCLUDING the new one. Every request that sees the count above the
+    // limit invalidates its own just-inserted token and bails out before any
+    // email is sent, so concurrent over-issuance corrects itself.
+    const { token, tokenHash } = await insertVerificationToken(orm, userId);
+
+    const oneHourAgo = Date.now() - RESEND_RATE_LIMIT_WINDOW_MS;
     const recentTokens = await db
       .prepare(
         `SELECT COUNT(*) as count
@@ -183,32 +234,41 @@ export async function resendVerificationEmail(
       .bind(userId, oneHourAgo)
       .first<{ count: number }>();
 
-    if (recentTokens && recentTokens.count >= 3) {
+    if (recentTokens && recentTokens.count > RESEND_RATE_LIMIT_PER_HOUR) {
+      // Over the limit: invalidate the token we just inserted. Older tokens
+      // stay valid, so a rate-limited resend does not kill previous links.
+      await orm
+        .update(schema.emailVerificationTokens)
+        .set({ usedAt: Date.now() })
+        .where(eq(schema.emailVerificationTokens.token, tokenHash));
+
       return {
         success: false,
         error: '確認メールの送信回数が上限に達しました。しばらくしてから再度お試しください',
       };
     }
 
-    // Invalidate old unused tokens for this user
+    // Within the limit: invalidate old unused tokens (the new one stays valid)
     await orm
       .update(schema.emailVerificationTokens)
       .set({ usedAt: Date.now() })
       .where(
         and(
           eq(schema.emailVerificationTokens.userId, userId),
-          isNull(schema.emailVerificationTokens.usedAt)
+          isNull(schema.emailVerificationTokens.usedAt),
+          ne(schema.emailVerificationTokens.token, tokenHash)
         )
       );
 
     // Send new verification email
-    const result = await sendVerificationEmail(
+    const result = await deliverVerificationEmail(
       db,
       userId,
       email,
       resendApiKey,
       fromEmail,
-      frontendUrl
+      frontendUrl,
+      token
     );
 
     return result.success ? { success: true } : { success: false, error: result.error };

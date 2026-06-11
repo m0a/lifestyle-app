@@ -102,19 +102,27 @@ export async function incrementEmailRateLimit(
   const now = Date.now();
   const expiresAt = now + RATE_LIMIT_WINDOW_MS;
 
-  // UPSERT: Insert new record or increment existing
+  // UPSERT: Insert new record or increment existing.
+  //
+  // The count is clamped with MIN(count + 1, max) so a concurrent request
+  // slipping between check and increment can never push the value past the
+  // CHECK (count >= 0 AND count <= 10) constraint (#132). When the window has
+  // expired, the count restarts at 1 together with the expiration reset.
   await db
     .prepare(
       `INSERT INTO email_rate_limits (ip, count, expires_at)
        VALUES (?, 1, ?)
        ON CONFLICT(ip) DO UPDATE SET
-         count = count + 1,
+         count = CASE
+           WHEN expires_at < ? THEN 1
+           ELSE MIN(count + 1, ?)
+         END,
          expires_at = CASE
            WHEN expires_at < ? THEN ?
            ELSE expires_at
          END`
     )
-    .bind(ip, expiresAt, now, expiresAt)
+    .bind(ip, expiresAt, now, RATE_LIMIT_MAX, now, expiresAt)
     .run();
 }
 
