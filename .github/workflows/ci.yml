@@ -277,6 +277,8 @@ jobs:
         with:
           script: |
             const fs = require('fs');
+            // Keep in sync with MAX_UNUSED_EXPORTS in scripts/check-deadcode-threshold.js
+            const THRESHOLD = 30;
             try {
               const report = JSON.parse(fs.readFileSync('knip-report.json', 'utf8'));
               let count = 0;
@@ -291,7 +293,7 @@ jobs:
                 issue_number: context.issue.number,
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                body: `## 🔍 Dead Code Analysis\n\n**Unused Exports**: ${count} (Threshold: 40)\n\n${count > 40 ? '❌ **FAILED**: Exceeds threshold' : '✅ **PASSED**: Within threshold'}\n\n_Current baseline: 36 unused exports. Roadmap: 40 → 30 → 20 → 10 → 0_`
+                body: `## 🔍 Dead Code Analysis\n\n**Unused Exports**: ${count} (Threshold: ${THRESHOLD})\n\n${count > THRESHOLD ? '❌ **FAILED**: Exceeds threshold' : '✅ **PASSED**: Within threshold'}\n\n_Roadmap: 40 → 30 → 20 → 10 → 0_`
               });
             } catch (error) {
               console.error('Failed to post comment:', error);
@@ -366,7 +368,7 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
-    needs: [lint-and-typecheck, test]
+    needs: [lint-and-typecheck, test, deadcode-check, bundle-size-check]
     steps:
       - uses: actions/checkout@v4
 
