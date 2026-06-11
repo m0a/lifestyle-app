@@ -46,6 +46,16 @@ export function MealChat({ mealId, currentFoodItems, onUpdate }: MealChatProps) 
   const [pendingChanges, setPendingChanges] = useState<ChatChange[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const photoResultTimersRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
+
+  // Cancel pending photo-result timers on unmount
+  useEffect(() => {
+    const timers = photoResultTimersRef.current;
+    return () => {
+      timers.forEach(timer => clearTimeout(timer));
+      timers.clear();
+    };
+  }, []);
 
   // Load chat history on mount
   useEffect(() => {
@@ -248,7 +258,8 @@ export function MealChat({ mealId, currentFoodItems, onUpdate }: MealChatProps) 
         const foodItems = result.foodItems;
         const updatedTotals = result.updatedTotals;
 
-        setTimeout(() => {
+        const timer = setTimeout(() => {
+          photoResultTimersRef.current.delete(timer);
           setMessages((prev) => [
             ...prev,
             {
@@ -264,6 +275,7 @@ export function MealChat({ mealId, currentFoodItems, onUpdate }: MealChatProps) 
 
           toast.success('写真を追加し、AI分析が完了しました');
         }, 2000);
+        photoResultTimersRef.current.add(timer);
       }
     } catch (error) {
       console.error('Photo upload error:', error);

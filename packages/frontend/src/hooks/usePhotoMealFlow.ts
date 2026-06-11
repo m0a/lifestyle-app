@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type {
   FoodItem,
@@ -72,12 +72,18 @@ export function usePhotoMealFlow(): UsePhotoMealFlowReturn {
   const [result, setResult] = useState<PhotoMealFlowResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Keep the latest preview URLs in a ref so the unmount cleanup below
+  // revokes URLs created after mount (empty deps would capture the initial array)
+  const photoPreviewUrlsRef = useRef<string[]>([]);
+  useEffect(() => {
+    photoPreviewUrlsRef.current = photoPreviewUrls;
+  }, [photoPreviewUrls]);
+
   // Cleanup preview URLs on unmount
   useEffect(() => {
     return () => {
-      photoPreviewUrls.forEach(url => URL.revokeObjectURL(url));
+      photoPreviewUrlsRef.current.forEach(url => URL.revokeObjectURL(url));
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const openSelector = useCallback(() => {
