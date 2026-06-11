@@ -1,103 +1,60 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it } from 'vitest';
 
 describe('Exercise API Integration Tests', () => {
-  const API_BASE = 'http://localhost:8787';
 
   describe('POST /api/exercises', () => {
-    it('should create an exercise record when authenticated', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should create an exercise record when authenticated');
 
-    it('should return 401 when not authenticated', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should return 401 when not authenticated');
 
-    it('should return 400 for empty exerciseType', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should return 400 for empty exerciseType');
 
-    it('should return 400 for invalid sets', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should return 400 for invalid sets');
 
-    it('should return 400 for invalid reps', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should return 400 for invalid reps');
 
-    it('should accept null weight for bodyweight exercises', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should accept null weight for bodyweight exercises');
   });
 
   describe('GET /api/exercises', () => {
-    it('should return all exercise records for authenticated user', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should return all exercise records for authenticated user');
 
-    it('should support date range query parameters', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should support date range query parameters');
 
-    it('should support exerciseType filter query parameter', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should support exerciseType filter query parameter');
 
-    it('should return 401 when not authenticated', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should return 401 when not authenticated');
   });
 
   describe('GET /api/exercises/last/:exerciseType', () => {
-    it('should return the last record for a specific exercise type', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should return the last record for a specific exercise type');
 
-    it('should return null if no records exist for the type', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should return null if no records exist for the type');
   });
 
   describe('GET /api/exercises/summary', () => {
-    it('should return weekly exercise summary', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should return weekly exercise summary');
 
-    it('should group by exercise type', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should group by exercise type');
   });
 
   describe('GET /api/exercises/:id', () => {
-    it('should return specific exercise record', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should return specific exercise record');
 
-    it('should return 404 for non-existent record', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should return 404 for non-existent record');
 
-    it('should return 403 for record belonging to different user', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should return 403 for record belonging to different user');
   });
 
   describe('PATCH /api/exercises/:id', () => {
-    it('should update exercise record', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should update exercise record');
 
-    it('should return 404 for non-existent record', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should return 404 for non-existent record');
   });
 
   describe('DELETE /api/exercises/:id', () => {
-    it('should delete exercise record', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should delete exercise record');
 
-    it('should return 404 for non-existent record', async () => {
-      expect(true).toBe(true);
-    });
+    it.todo('should return 404 for non-existent record');
   });
 });

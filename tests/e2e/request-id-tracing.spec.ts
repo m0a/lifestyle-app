@@ -1,6 +1,8 @@
 import { test, expect } from '@playwright/test';
 import { loginAsTestUser } from '../helpers/e2e';
 
+const BACKEND_URL = process.env['BACKEND_URL'] ?? 'http://localhost:8787';
+
 /**
  * Request ID Tracing Tests
  *
@@ -14,7 +16,7 @@ test.describe('Request ID Tracing', () => {
 
   test('should include X-Request-ID in API responses', async ({ request }) => {
     // Make a direct API call
-    const response = await request.get('http://localhost:8787/api/health');
+    const response = await request.get(`${BACKEND_URL}/api/health`);
 
     expect(response.ok()).toBe(true);
 
@@ -32,7 +34,7 @@ test.describe('Request ID Tracing', () => {
     const testRequestId = crypto.randomUUID();
 
     // Make API call with custom Request ID
-    const response = await request.get('http://localhost:8787/api/health', {
+    const response = await request.get(`${BACKEND_URL}/api/health`, {
       headers: {
         'X-Request-ID': testRequestId,
       },
@@ -51,7 +53,7 @@ test.describe('Request ID Tracing', () => {
     const testRequestId = crypto.randomUUID();
 
     // Make an unauthorized API call to trigger an error
-    const response = await request.get('http://localhost:8787/api/dashboard', {
+    const response = await request.get(`${BACKEND_URL}/api/dashboard`, {
       headers: {
         'X-Request-ID': testRequestId,
       },
