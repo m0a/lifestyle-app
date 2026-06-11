@@ -10,6 +10,9 @@
  *    in ai_usage_totals so pruning detail does not affect the displayed total).
  * 5. Expired email_rate_limits rows (#106): previously only swept lazily on the
  *    next send from the same IP, so they lingered if email went idle.
+ * 6. Orphaned temp/ R2 objects older than 24 hours (#129): photo analysis
+ *    uploads to temp/<uuid> and /save moves them to photos/...; if the user
+ *    abandons before saving, the temp object stays forever.
  */
 
 import { drizzle } from 'drizzle-orm/d1';
@@ -23,6 +26,8 @@ const UNVERIFIED_ACCOUNT_RETENTION_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 const TOKEN_CLEANUP_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 const EMAIL_LOG_RETENTION_MS = 90 * 24 * 60 * 60 * 1000; // 90 days (operational logs, recipient PII)
 const AI_USAGE_RETENTION_MS = 90 * 24 * 60 * 60 * 1000; // 90 days (detail; total kept in rollup)
+const TEMP_PHOTO_RETENTION_MS = 24 * 60 * 60 * 1000; // 24 hours (analysis review flow is minutes)
+const R2_DELETE_BATCH_SIZE = 1000; // R2 bucket.delete() accepts up to 1000 keys per call
 
 interface CleanupResult {
   deletedUsers: number;
@@ -33,12 +38,52 @@ interface CleanupResult {
   deletedEmailLogs: number;
   deletedAiUsageRecords: number;
   deletedRateLimits: number;
+  deletedTempPhotos: number;
+}
+
+/**
+ * Delete temp/ R2 objects older than the retention window (#129).
+ *
+ * temp/<uuid> objects are created by POST /api/meals/analyze and normally
+ * moved to photos/{userId}/{mealId}/... (and deleted) by /save. If the user
+ * abandons the review flow, the object is never removed. The review flow
+ * lives for minutes, so anything past 24 hours is safe to delete — a
+ * meal_photos row may still reference the key, but such a row belongs to a
+ * meal that was never saved.
+ *
+ * Exported for unit testing.
+ */
+export async function cleanupTempPhotos(bucket: R2Bucket, now: number): Promise<number> {
+  const cutoff = now - TEMP_PHOTO_RETENTION_MS;
+
+  // Collect keys of expired temp objects, paginating with truncated/cursor.
+  const expiredKeys: string[] = [];
+  let cursor: string | undefined;
+  do {
+    const listed = await bucket.list({ prefix: 'temp/', cursor });
+    for (const object of listed.objects) {
+      if (object.uploaded.getTime() < cutoff) {
+        expiredKeys.push(object.key);
+      }
+    }
+    cursor = listed.truncated ? listed.cursor : undefined;
+  } while (cursor);
+
+  // Batch delete (R2 supports up to 1000 keys per delete call).
+  for (let i = 0; i < expiredKeys.length; i += R2_DELETE_BATCH_SIZE) {
+    await bucket.delete(expiredKeys.slice(i, i + R2_DELETE_BATCH_SIZE));
+  }
+
+  return expiredKeys.length;
 }
 
 /**
  * Execute all scheduled cleanup tasks
  */
-export async function executeScheduledCleanup(db: D1Database): Promise<CleanupResult> {
+export async function executeScheduledCleanup(
+  db: D1Database,
+  photosBucket: R2Bucket
+): Promise<CleanupResult> {
   const orm = drizzle(db, { schema: { ...schema, ...emailSchema, ...webauthnSchema } });
   const now = Date.now();
   // Each cutoff uses the helper matching its column's storage type so the
@@ -232,6 +277,22 @@ export async function executeScheduledCleanup(db: D1Database): Promise<CleanupRe
     console.error('[Cleanup] Error deleting email rate-limit rows:', error);
   }
 
+  // 9. Delete temp/ R2 objects older than 24 hours (#129). These are analysis
+  //    uploads that were never saved; nothing else cleans them up. DB rows in
+  //    meal_photos that still reference such keys belong to never-saved meals
+  //    and are intentionally left to the existing record-level logic.
+  let deletedTempPhotos = 0;
+  try {
+    deletedTempPhotos = await cleanupTempPhotos(photosBucket, now);
+    console.log(
+      deletedTempPhotos > 0
+        ? `[Cleanup] Deleted ${deletedTempPhotos} orphaned temp photos from R2`
+        : '[Cleanup] No orphaned temp photos to delete'
+    );
+  } catch (error) {
+    console.error('[Cleanup] Error deleting orphaned temp photos:', error);
+  }
+
   const result = {
     deletedUsers,
     deletedPasswordResetTokens,
@@ -241,6 +302,7 @@ export async function executeScheduledCleanup(db: D1Database): Promise<CleanupRe
     deletedEmailLogs,
     deletedAiUsageRecords,
     deletedRateLimits,
+    deletedTempPhotos,
   };
 
   console.log('[Cleanup] Cleanup tasks completed:', result);
