@@ -1,4 +1,4 @@
-import { eq, desc, and, sql, gte, lt } from 'drizzle-orm';
+import { eq, desc, and, sql, gte, lt, inArray, isNotNull } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import type { Database } from '../db';
 import { schema } from '../db';
@@ -350,23 +350,39 @@ export class ExerciseService {
     userId: string,
     exerciseTypes?: string[]
   ): Promise<{ exerciseType: string; maxRM: number; achievedAt: string }[]> {
-    // Get all records for the user (filtered by exercise types if specified)
-    const records = await this.db
-      .select()
-      .from(schema.exerciseRecords)
-      .where(eq(schema.exerciseRecords.userId, userId))
-      .all();
+    // Push the exerciseTypes filter into the WHERE clause (inArray) so the
+    // idx_exercise_user_type_date index narrows the scan, instead of fetching
+    // the user's whole history and filtering in JS (#120). Weight-less
+    // (bodyweight) records were always skipped in JS, so exclude them in SQL
+    // too. The 1RM value itself is a JS formula (calculate1RM), so the
+    // per-record computation stays in JS — but only the relevant rows are
+    // fetched now. Empty/undefined exerciseTypes keeps the "all types"
+    // behavior (inArray with [] would match nothing, so it's guarded).
+    const conditions = [
+      eq(schema.exerciseRecords.userId, userId),
+      isNotNull(schema.exerciseRecords.weight),
+    ];
+    if (exerciseTypes && exerciseTypes.length > 0) {
+      conditions.push(inArray(schema.exerciseRecords.exerciseType, exerciseTypes));
+    }
 
-    // Filter by exercise types if specified
-    const filtered = exerciseTypes && exerciseTypes.length > 0
-      ? records.filter(r => exerciseTypes.includes(r.exerciseType))
-      : records;
+    const filtered = await this.db
+      .select({
+        exerciseType: schema.exerciseRecords.exerciseType,
+        weight: schema.exerciseRecords.weight,
+        reps: schema.exerciseRecords.reps,
+        recordedAt: schema.exerciseRecords.recordedAt,
+      })
+      .from(schema.exerciseRecords)
+      .where(and(...conditions))
+      .all();
 
     // Group by exercise type and find max 1RM for each
     const maxByType = new Map<string, { maxRM: number; achievedAt: string }>();
 
     for (const record of filtered) {
-      // Skip records without weight (bodyweight exercises)
+      // Skip records without weight (bodyweight exercises) — already excluded
+      // by the SQL filter, kept as a type guard.
       if (record.weight === null) continue;
 
       const estimated1RM = calculate1RM(record.weight, record.reps);
@@ -395,10 +411,55 @@ export class ExerciseService {
   ) {
     const limit = options?.limit ?? 10;
 
+    // Resolve the page's session dates in SQL instead of fetching the user's
+    // whole exercise history and grouping/paginating in JS (#120). Sessions
+    // are local-date groups, and recordedAt's first 10 chars are the local
+    // date, so GROUP BY substr(recorded_at, 1, 10) with ORDER BY ... DESC and
+    // LIMIT limit+1 yields exactly the page's dates plus a has-more probe.
+    // The cursor (a session date the API itself returned as nextCursor) is
+    // pushed down as lt(recordedAt, cursor): every record on or after the
+    // cursor day sorts lexicographically >= the bare "YYYY-MM-DD" cursor, so
+    // this starts the page strictly after the cursor session — same as the
+    // old slice(cursorIndex + 1). Both queries are range scans on
+    // idx_exercise_user_date.
+    const localDate = sql<string>`substr(${schema.exerciseRecords.recordedAt}, 1, 10)`;
+    const dateConditions = [eq(schema.exerciseRecords.userId, userId)];
+    if (options?.cursor) {
+      dateConditions.push(lt(schema.exerciseRecords.recordedAt, options.cursor));
+    }
+
+    const dateRows = await this.db
+      .select({ date: localDate })
+      .from(schema.exerciseRecords)
+      .where(and(...dateConditions))
+      .groupBy(localDate)
+      .orderBy(desc(localDate))
+      .limit(limit + 1)
+      .all();
+
+    const hasMore = dateRows.length > limit;
+    const pageDates = dateRows.slice(0, limit);
+
+    if (pageDates.length === 0) {
+      return { sessions: [], nextCursor: null };
+    }
+
+    // Fetch only the page's records: the [oldest, newest] date window covers
+    // exactly the pageDates (they are consecutive distinct dates), so a
+    // single index range scan replaces the previous full fetch.
+    const newestDate = pageDates[0]!.date;
+    const oldestDate = pageDates[pageDates.length - 1]!.date;
+
     const records = await this.db
       .select()
       .from(schema.exerciseRecords)
-      .where(eq(schema.exerciseRecords.userId, userId))
+      .where(
+        and(
+          eq(schema.exerciseRecords.userId, userId),
+          gte(schema.exerciseRecords.recordedAt, oldestDate),
+          lt(schema.exerciseRecords.recordedAt, nextLocalDate(newestDate))
+        )
+      )
       .orderBy(desc(schema.exerciseRecords.recordedAt))
       .all();
 
@@ -416,21 +477,10 @@ export class ExerciseService {
       sessionMap.get(dateStr)!.exercises.push(record);
     }
 
-    // Convert to array and sort by date desc
-    let sessions = Array.from(sessionMap.values())
+    // Convert to array and sort by date desc (records are already DESC, so
+    // insertion order matches; the sort is kept as a cheap invariant guard)
+    const sessions = Array.from(sessionMap.values())
       .sort((a, b) => b.date.localeCompare(a.date));
-
-    // Apply cursor pagination
-    if (options?.cursor) {
-      const cursorIndex = sessions.findIndex(s => s.date === options.cursor);
-      if (cursorIndex !== -1) {
-        sessions = sessions.slice(cursorIndex + 1);
-      }
-    }
-
-    // Apply limit
-    const hasMore = sessions.length > limit;
-    sessions = sessions.slice(0, limit);
 
     // Format sessions for response
     const formattedSessions = sessions.map(session => {

@@ -216,13 +216,6 @@ export class MealService {
    * we simply extract the local date using slice(0, 10).
    */
   async getTodaysSummary(userId: string, clientTodayDate?: string) {
-    // 全ての食事を取得し、今日のローカル日付でフィルタ
-    const records = await this.db
-      .select()
-      .from(schema.mealRecords)
-      .where(eq(schema.mealRecords.userId, userId))
-      .all();
-
     // クライアントから渡された「今日」の日付を使用
     // フォールバック: サーバーの日付（UTCなので不正確だが後方互換性のため）
     let todayDate: string;
@@ -233,7 +226,24 @@ export class MealService {
       todayDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     }
 
-    const todayMeals = records.filter((r) => extractLocalDate(r.recordedAt) === todayDate);
+    // Push the local-date filter into SQL so the idx_meal_user_date range scan
+    // is used instead of fetching the user's whole meal history and filtering
+    // in JS (#120). Because recordedAt is an offset-aware ISO string whose
+    // first 10 chars are the local date, gte(todayDate) + lt(nextLocalDate) is
+    // exactly equivalent to the previous extractLocalDate(...) === todayDate
+    // comparison (see lib/localDate.ts). todayDate is always "YYYY-MM-DD" here
+    // (validated by todayQuerySchema, or built from the server date fallback).
+    const todayMeals = await this.db
+      .select()
+      .from(schema.mealRecords)
+      .where(
+        and(
+          eq(schema.mealRecords.userId, userId),
+          gte(schema.mealRecords.recordedAt, todayDate),
+          lt(schema.mealRecords.recordedAt, nextLocalDate(todayDate))
+        )
+      )
+      .all();
 
     const mealsWithCalories = todayMeals.filter((m) => m.calories !== null);
     const totalCalories = mealsWithCalories.reduce((sum, m) => sum + (m.calories ?? 0), 0);

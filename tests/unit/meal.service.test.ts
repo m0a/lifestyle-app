@@ -182,6 +182,36 @@ describe('MealService', () => {
     });
   });
 
+  describe('getTodaysSummary', () => {
+    it('filters today\'s meals via a DB-side date range instead of scanning all records (#120)', async () => {
+      const userId = 'user-123';
+      // The DB now returns only today's rows (the gte/lt local-date range is
+      // pushed into the WHERE clause and uses idx_meal_user_date).
+      mockDb.all.mockResolvedValueOnce([
+        { id: 'm1', userId, mealType: 'breakfast', content: 'a', calories: 300, totalProtein: 10, totalFat: 5, totalCarbs: 40, recordedAt: '2026-01-15T08:00:00+09:00' },
+        { id: 'm2', userId, mealType: 'lunch', content: 'b', calories: 500, totalProtein: 20, totalFat: 15, totalCarbs: 60, recordedAt: '2026-01-15T12:30:00+09:00' },
+        { id: 'm3', userId, mealType: 'snack', content: 'c', calories: null, totalProtein: null, totalFat: null, totalCarbs: null, recordedAt: '2026-01-15T15:00:00+09:00' },
+      ]);
+
+      const service = new MealService(mockDb as never);
+      const summary = await service.getTodaysSummary(userId, '2026-01-15');
+
+      expect(summary).toEqual({
+        totalCalories: 800,
+        averageCalories: 400,
+        count: 2, // only meals with calories
+        totalMeals: 3,
+        totalProtein: 30,
+        totalFat: 20,
+        totalCarbs: 100,
+      });
+
+      // Single filtered SELECT — no JS date filtering over the whole history
+      expect(mockDb.all).toHaveBeenCalledTimes(1);
+      expect(mockDb.where).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('getMealDates', () => {
     it('should return unique dates with meal records for a given month', async () => {
       const userId = 'user-123';
