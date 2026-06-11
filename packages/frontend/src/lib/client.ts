@@ -1,7 +1,7 @@
 import { hc } from 'hono/client';
 import type { AppType } from '@lifestyle-app/backend';
 import { generateRequestId } from './requestId';
-import { setCurrentRequestId } from './errorLogger';
+import { setLastRequestId } from './errorLogger';
 import { useAuthStore } from '../stores/authStore';
 import { clearApiCache } from './clearApiCache';
 
@@ -30,8 +30,10 @@ export const client = hc<AppType>(API_BASE_URL, {
     // Generate unique Request ID for this request
     const requestId = generateRequestId();
 
-    // Store requestId for error correlation
-    setCurrentRequestId(requestId);
+    // Record as the most recent request id (best-effort fallback for error
+    // correlation only — concurrent requests overwrite each other here, so
+    // errors thrown below carry their exact requestId on the Error object).
+    setLastRequestId(requestId);
 
     // Create new Headers object to properly merge headers
     const headers = new Headers(init?.headers);
@@ -62,10 +64,13 @@ export const client = hc<AppType>(API_BASE_URL, {
       return response;
     } catch (error) {
       console.error('[RPC] Fetch error:', error);
+      // Attach this request's exact id to the error so error logging
+      // (ErrorBoundary, unhandledrejection, manual logError calls) reports
+      // the right requestId even when other requests ran concurrently.
+      if (error instanceof Error) {
+        (error as Error & { requestId?: string }).requestId = requestId;
+      }
       throw error;
-    } finally {
-      // Clear requestId after request completes
-      setCurrentRequestId(undefined);
     }
   },
 });
