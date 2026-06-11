@@ -96,10 +96,13 @@ export class WeightService {
       updateData['recordedAt'] = input.recordedAt;
     }
 
+    // Scope by userId as well (defense in depth, #130): findById above already
+    // guarantees ownership, but the SQL itself should never be able to touch
+    // another user's row.
     await this.db
       .update(schema.weightRecords)
       .set(updateData)
-      .where(eq(schema.weightRecords.id, id));
+      .where(and(eq(schema.weightRecords.id, id), eq(schema.weightRecords.userId, userId)));
 
     return this.findById(id, userId);
   }
@@ -108,7 +111,9 @@ export class WeightService {
     // First check if record exists and belongs to user
     await this.findById(id, userId);
 
-    await this.db.delete(schema.weightRecords).where(eq(schema.weightRecords.id, id));
+    await this.db
+      .delete(schema.weightRecords)
+      .where(and(eq(schema.weightRecords.id, id), eq(schema.weightRecords.userId, userId)));
   }
 
   async getLatest(userId: string) {
