@@ -71,6 +71,17 @@ git push origin v1.0.0
 | 本番 | health-tracker-db |
 | プレビュー | health-tracker-preview-db |
 
+プレビュー（mainプレビュー・PRプレビュー）はすべて同一のプレビュー用データベースを共有する。
+
+## R2 ストレージ（食事写真）
+
+| 環境 | バケット名 |
+|------|-----------|
+| 本番 | lifestyle-app-photos |
+| プレビュー | lifestyle-app-photos-preview |
+
+`temp/` プレフィックスの未保存写真は、cronにより24時間経過後に自動削除される。
+
 ### マイグレーション
 
 ```bash
@@ -96,6 +107,8 @@ pnpm --filter @lifestyle-app/backend exec wrangler d1 migrations apply DB --remo
 | シークレット | 説明 |
 |-------------|------|
 | GOOGLE_GENERATIVE_AI_API_KEY | Google AI API キー |
+| RESEND_API_KEY | Resend（メール送信）API キー |
+| SESSION_SECRET | セッショントークン署名用シークレット |
 
 ### GitHub Secrets
 
@@ -104,3 +117,5 @@ pnpm --filter @lifestyle-app/backend exec wrangler d1 migrations apply DB --remo
 | CLOUDFLARE_API_TOKEN | Cloudflare API トークン |
 | CLOUDFLARE_ACCOUNT_ID | Cloudflare アカウント ID |
 | GOOGLE_GENERATIVE_AI_API_KEY | Google AI API キー |
+| RESEND_API_KEY | Resend API キー |
+| SESSION_SECRET | セッショントークン署名用シークレット |
