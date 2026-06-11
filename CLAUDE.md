@@ -112,7 +112,7 @@ tests/
 - **Main Preview**: mainブランチのプレビュー環境（main pushで自動デプロイ）
 - **PR Preview**: PR別のプレビュー環境（PR作成で自動デプロイ、クローズで削除）
 
-Preview環境は別のD1データベース（`health-tracker-preview-db`）を使用。
+Preview環境は別のD1データベース（`health-tracker-preview-db`）と別のR2バケット（`lifestyle-app-photos-preview`）を使用。Main PreviewとすべてのPR Previewは同一のpreview用D1/R2を共有する。
 
 **⚠ PR Previewではマイグレーションが自動実行されない。** DBスキーマ変更を含むPRをpreviewでテストするには手動適用が必要：
 ```bash
@@ -145,3 +145,26 @@ gh run list --branch main --limit 3
 - `packages/frontend/src/lib/errorLogger.ts` - エラーロギング
 - `packages/backend/src/routes/logs.ts` - ログ受信API
 - 本番ログ: Cloudflare Dashboard > Workers & Pages > lifestyle-app-backend > Logs
+
+`/api/logs/error` は未認証で受け付ける（ログイン前のエラーも拾うため）が、以下で保護されている:
+
+- ログのuserIdはクライアント送信値ではなく**セッションcookieから導出**（未ログインは `anonymous`）
+- フィールド長上限は `ERROR_LOG_LIMITS`（`packages/shared/src/schemas/log.ts`）で定義、リクエストボディは32KB上限
+- `logValidationError` のformDataはパスワード等のキーを自動マスクして送信
+
+## Scheduled Cron (Cleanup)
+
+`packages/backend/src/cron/cleanup.ts` が定期実行され、期限切れトークン類・未認証ユーザー・古いログ・レート制限行に加え、**24時間経過した `temp/` プレフィックスのR2オブジェクト**（保存されなかった分析用写真）を削除する。
+
+ローカルでの動作確認:
+```bash
+cd packages/backend
+pnpm exec wrangler dev --test-scheduled --port 8799
+curl "http://localhost:8799/__scheduled?cron=0+15+*+*+*"
+```
+
+## PWA Update Flow
+
+Service Workerは `registerType: 'prompt'` 方式（`packages/frontend/vite.config.ts`）。新バージョンのデプロイ後、開いているタブには `PwaUpdatePrompt`（`components/ui/PwaUpdatePrompt.tsx`）が「新しいバージョンがあります」バナーを表示し、「更新」でSKIP_WAITING→リロードする。無条件の `skipWaiting()` は行わない。
+
+また、ログアウト時（明示的ログアウトと401自動ログアウトの両方）にSWの `api-cache` を削除する（`lib/clearApiCache.ts`）。キャッシュ名は vite.config.ts の `cacheName` と一致させること。
