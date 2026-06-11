@@ -459,56 +459,6 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
         await photoService.markAnalysisFailed(photo.id);
       }
 
-      // Re-analyze all pending photos (including legacy photo if pending)
-      const allPhotos = await photoService.getMealPhotos(mealId);
-      const pendingPhotos = allPhotos.filter((p) => p.analysisStatus === 'pending');
-
-      for (const pendingPhoto of pendingPhotos) {
-        try {
-          // Get photo data from R2 using getPhotoForAnalysis
-          const photoData = await photoStorage.getPhotoForAnalysis(pendingPhoto.photoKey);
-          if (photoData) {
-            const analysisResult = await aiService.analyzeMealPhoto(
-              photoData.data,
-              photoData.mimeType
-            );
-
-            if (analysisResult.success) {
-              await photoService.updateAnalysisResult(pendingPhoto.id, analysisResult.result.totals);
-
-              // Automatically create food items from pending photo analysis
-              console.log(`[Pending Photo Analysis] Creating ${analysisResult.result.foodItems.length} food items for pending photo ${pendingPhoto.id}`);
-              for (const item of analysisResult.result.foodItems) {
-                const foodItemId = nanoid();
-                await db.insert(schema.mealFoodItems).values({
-                  id: foodItemId,
-                  mealId,
-                  photoId: pendingPhoto.id,
-                  name: item.name,
-                  portion: item.portion,
-                  calories: item.calories,
-                  protein: item.protein,
-                  fat: item.fat,
-                  carbs: item.carbs,
-                  createdAt: new Date().toISOString(),
-                });
-                console.log(`[Pending Photo Analysis] Created food item: ${foodItemId} - ${item.name}`);
-              }
-
-              if (analysisResult.usage) {
-                await aiUsageService.recordUsage(user.id, 'image_analysis', analysisResult.usage);
-              }
-            } else {
-              console.error('[Pending Photo Analysis] Analysis failed:', analysisResult.failure);
-              await photoService.markAnalysisFailed(pendingPhoto.id);
-            }
-          }
-        } catch (error) {
-          console.error(`Failed to analyze pending photo ${pendingPhoto.id}:`, error);
-          await photoService.markAnalysisFailed(pendingPhoto.id);
-        }
-      }
-
       // Update meal totals and content from all food items
       const allFoodItems = await db.query.mealFoodItems.findMany({
         where: eq(schema.mealFoodItems.mealId, mealId),
