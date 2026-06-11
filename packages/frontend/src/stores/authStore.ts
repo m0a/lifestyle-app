@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { User } from '@lifestyle-app/shared';
+import { clearApiCache } from '../lib/clearApiCache';
 
 interface AuthState {
   user: User | null;
@@ -26,12 +27,16 @@ export const useAuthStore = create<AuthState>()(
           isLoading: false,
         }),
       setLoading: (loading) => set({ isLoading: loading }),
-      logout: () =>
+      logout: () => {
+        // Service WorkerのAPIキャッシュを削除（前ユーザーのデータ露出防止）
+        // fire-and-forget: 失敗してもログアウトは妨げない
+        void clearApiCache();
         set({
           user: null,
           isAuthenticated: false,
           isLoading: false,
-        }),
+        });
+      },
     }),
     {
       name: 'auth-storage',
