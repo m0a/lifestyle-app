@@ -152,6 +152,13 @@ describe('formatDateForImage', () => {
     expect(formatDateForImage('2026-01-02')).toBe('2026/01/02');
   });
 
+  it.each(['2026-01-17T00:30:00+09:00', '2026-01-17T23:30:00-05:00'])(
+    'should preserve the recorded local date for %s',
+    (recordedAt) => {
+      expect(formatDateForImage(recordedAt)).toBe('2026/01/17');
+    }
+  );
+
   it('should pad single digit months and days', () => {
     expect(formatDateForImage('2026-03-05')).toBe('2026/03/05');
   });

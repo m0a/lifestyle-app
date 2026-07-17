@@ -1,11 +1,43 @@
 import { describe, it, expect } from 'vitest';
-import { extractLocalDate, nextLocalDate } from '../../packages/backend/src/lib/localDate';
+import {
+  extractLocalDate,
+  getWeekDateRange,
+  nextLocalDate,
+} from '../../packages/backend/src/lib/localDate';
 
 describe('extractLocalDate', () => {
   it('takes the first 10 chars (local date) of an offset-aware ISO string', () => {
     expect(extractLocalDate('2026-01-17T08:00:00+09:00')).toBe('2026-01-17');
+    expect(extractLocalDate('2026-01-17T23:30:00-05:00')).toBe('2026-01-17');
     expect(extractLocalDate('2026-01-16T23:00:00Z')).toBe('2026-01-16');
     expect(extractLocalDate('2026-01-17')).toBe('2026-01-17');
+  });
+});
+
+describe('getWeekDateRange', () => {
+  it('returns an inclusive Sunday-through-Saturday range', () => {
+    expect(getWeekDateRange('2026-01-14')).toEqual({
+      startDate: '2026-01-11',
+      endDate: '2026-01-17',
+    });
+  });
+
+  it('keeps Sunday and Saturday in the same seven-day range', () => {
+    expect(getWeekDateRange('2026-01-11')).toEqual({
+      startDate: '2026-01-11',
+      endDate: '2026-01-17',
+    });
+    expect(getWeekDateRange('2026-01-17')).toEqual({
+      startDate: '2026-01-11',
+      endDate: '2026-01-17',
+    });
+  });
+
+  it('handles month and year boundaries', () => {
+    expect(getWeekDateRange('2026-01-01')).toEqual({
+      startDate: '2025-12-28',
+      endDate: '2026-01-03',
+    });
   });
 });
 

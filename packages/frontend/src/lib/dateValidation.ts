@@ -66,12 +66,16 @@ export function toDateTimeLocal(isoString: string): string {
  * 今日の日付をYYYY-MM-DD形式で取得（ローカルタイムゾーン）
  * @returns "YYYY-MM-DD" 形式の文字列
  */
-export function getTodayDateString(): string {
-  const now = new Date();
+export function getTodayDateString(now = new Date()): string {
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const day = String(now.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+/** Offset-aware ISO stringに記録されたローカル日付を取得する。 */
+export function extractLocalDate(dateTime: string): string {
+  return dateTime.slice(0, 10);
 }
 
 /**

@@ -4,12 +4,13 @@ import { StrengthInput } from '../components/exercise/StrengthInput';
 import { ExerciseList } from '../components/exercise/ExerciseList';
 import { ExerciseSummary } from '../components/exercise/ExerciseSummary';
 import { RestTimer } from '../components/exercise/RestTimer';
+import { getTodayDateString } from '../lib/dateValidation';
 
 export function Exercise() {
   const navigate = useNavigate();
 
   // Get today's date for the image generation link
-  const today = new Date().toISOString().split('T')[0];
+  const today = getTodayDateString();
 
   const {
     exercises,

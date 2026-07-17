@@ -52,7 +52,19 @@ describe('ExerciseService', () => {
   });
 
   describe('getWeeklySummary', () => {
-    it.todo('should calculate total sets and reps for the week');
+    it('queries exactly seven local dates and returns the inclusive range', async () => {
+      const service = new ExerciseService(mockDb as never);
+      const findByUserId = vi.spyOn(service, 'findByUserId').mockResolvedValue([]);
+
+      const result = await service.getWeeklySummary('user-123', '2026-01-14');
+
+      expect(findByUserId).toHaveBeenCalledWith('user-123', {
+        startDate: '2026-01-11',
+        endDate: '2026-01-17',
+      });
+      expect(result.weekStart).toBe('2026-01-11');
+      expect(result.weekEnd).toBe('2026-01-17');
+    });
 
     it.todo('should group exercises by type with sets and reps');
 
@@ -63,6 +75,29 @@ describe('ExerciseService', () => {
     it.todo('should return the last record for a specific exercise type');
 
     it.todo('should return null if no records exist for the type');
+  });
+
+  describe('getLastSessionByType', () => {
+    it.each(['2026-01-17T00:30:00+09:00', '2026-01-17T23:30:00-05:00'])(
+      'queries the local date encoded in %s',
+      async (recordedAt) => {
+        const service = new ExerciseService(mockDb as never);
+        vi.spyOn(service, 'getLastByType').mockResolvedValue({ recordedAt } as never);
+        const findByUserId = vi.spyOn(service, 'findByUserId').mockResolvedValue([
+          { id: 'set-2', setNumber: 2 },
+          { id: 'set-1', setNumber: 1 },
+        ] as never);
+
+        const result = await service.getLastSessionByType('user-123', 'スクワット');
+
+        expect(findByUserId).toHaveBeenCalledWith('user-123', {
+          startDate: '2026-01-17',
+          endDate: '2026-01-17',
+          exerciseType: 'スクワット',
+        });
+        expect(result.map((record) => record.id)).toEqual(['set-1', 'set-2']);
+      }
+    );
   });
 
   describe('update', () => {
