@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/client';
+import { getTodayDateString } from '../lib/dateValidation';
 import type {
   CreateExerciseSetsInput,
   UpdateExerciseInput,
@@ -15,6 +16,7 @@ interface UseExercisesOptions {
 
 export function useExercises(options?: UseExercisesOptions) {
   const queryClient = useQueryClient();
+  const todayDate = getTodayDateString();
 
   const exercisesQuery = useQuery({
     queryKey: ['exercises', options],
@@ -35,12 +37,14 @@ export function useExercises(options?: UseExercisesOptions) {
   });
 
   const weeklySummaryQuery = useQuery({
-    queryKey: ['exercises', 'weekly-summary'],
+    queryKey: ['exercises', 'weekly-summary', todayDate],
     queryFn: async () => {
-      const res = await api.exercises.weekly.$get();
+      const res = await api.exercises.weekly.$get({ query: { todayDate } });
       if (!res.ok) {
         const error = await res.json().catch(() => ({ message: 'Failed to fetch weekly summary' }));
-        throw new Error((error as { message?: string }).message || 'Failed to fetch weekly summary');
+        throw new Error(
+          (error as { message?: string }).message || 'Failed to fetch weekly summary'
+        );
       }
       return res.json();
     },

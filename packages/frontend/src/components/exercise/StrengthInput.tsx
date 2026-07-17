@@ -65,6 +65,8 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, o
   const [customExerciseName, setCustomExerciseName] = useState('');
   const [sets, setSets] = useState<SetInput[]>([{ reps: 10, weight: null }]);
   const [validationError, setValidationError] = useState<string | null>(null);
+  // Index of the set currently being performed. null = 実行中のセットなし
+  const [activeSetIndex, setActiveSetIndex] = useState<number | null>(null);
 
   const actualExerciseType = showCustomInput ? customExerciseName : exerciseType;
 
@@ -118,6 +120,7 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, o
         variation: record.variation || undefined,
       }));
       setSets(newSets);
+      setActiveSetIndex(null);
     } else if (lastRecord) {
       // Fallback: copy single record to first set
       const newSets = [...sets];
@@ -140,7 +143,16 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, o
   const removeSet = (index: number) => {
     if (sets.length > 1) {
       setSets(sets.filter((_, i) => i !== index));
+      // 削除で後続セットの番号が繰り上がるので、追従させる
+      setActiveSetIndex((prev) => {
+        if (prev === null || prev === index) return null;
+        return prev > index ? prev - 1 : prev;
+      });
     }
+  };
+
+  const handleActivateSet = (index: number) => {
+    setActiveSetIndex((prev) => (prev === index ? null : index));
   };
 
   const updateSet = (index: number, field: keyof SetInput, value: number | string | null) => {
@@ -200,6 +212,7 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, o
     setExerciseType('');
     setCustomExerciseName('');
     setSets([{ reps: 10, weight: null }]);
+    setActiveSetIndex(null);
     setShowCustomInput(false);
     setSuccessMessage('運動を記録しました');
     setTimeout(() => setSuccessMessage(null), 3000);
@@ -256,6 +269,7 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, o
       weight: s.weight,
       variation: s.variation || undefined,
     })));
+    setActiveSetIndex(null);
 
     setSuccessMessage(`「${firstExercise.exerciseType}」のセット構成を取り込みました`);
     setTimeout(() => setSuccessMessage(null), 3000);
@@ -421,6 +435,8 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, o
               onMemoChange={(memo) => updateSet(index, 'memo', memo)}
               onRemove={() => removeSet(index)}
               isRemovable={sets.length > 1}
+              isActive={activeSetIndex === index}
+              onActivate={() => handleActivateSet(index)}
             />
           ))}
         </div>

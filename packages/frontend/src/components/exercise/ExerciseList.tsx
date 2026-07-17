@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import type { ExerciseRecord, UpdateExerciseInput } from '@lifestyle-app/shared';
 import { calculateRM } from '../../lib/exercise-utils';
+import { extractLocalDate } from '../../lib/dateValidation';
 
 interface ExerciseListProps {
   exercises: ExerciseRecord[];
@@ -38,8 +39,9 @@ export function ExerciseList({
     const groupMap = new Map<string, GroupedExercise>();
 
     for (const exercise of exercises) {
-      const date = new Date(exercise.recordedAt);
-      const dateStr = date.toISOString().split('T')[0] ?? '';
+      const dateStr = extractLocalDate(exercise.recordedAt);
+      const [year, month, day] = dateStr.split('-').map(Number);
+      const date = new Date(year!, month! - 1, day!);
       const key = `${exercise.exerciseType}|${dateStr}`;
 
       if (!groupMap.has(key)) {
@@ -52,10 +54,7 @@ export function ExerciseList({
             month: 'long',
             day: 'numeric',
           }),
-          timeLabel: date.toLocaleTimeString('ja-JP', {
-            hour: '2-digit',
-            minute: '2-digit',
-          }),
+          timeLabel: exercise.recordedAt.slice(11, 16),
           sets: [],
         };
         groupMap.set(key, group);

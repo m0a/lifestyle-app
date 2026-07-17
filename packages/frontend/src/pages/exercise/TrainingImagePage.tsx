@@ -5,6 +5,7 @@ import { useShareImage } from '../../hooks/useShareImage';
 import { TrainingImagePreview, type ColorTheme } from '../../components/exercise/TrainingImagePreview';
 import { ShareButton } from '../../components/exercise/ShareButton';
 import { SaveButton } from '../../components/exercise/SaveButton';
+import { getTodayDateString } from '../../lib/dateValidation';
 
 const colorOptions: { value: ColorTheme; label: string; bgClass: string }[] = [
   { value: 'blue', label: '青', bgClass: 'bg-blue-600' },
@@ -24,7 +25,7 @@ function TrainingImagePage() {
 
   // Get date from URL params (default to today)
   const dateParam = searchParams.get('date');
-  const date = dateParam || new Date().toISOString().split('T')[0] || '';
+  const date = dateParam || getTodayDateString();
 
   // Ref for the image preview element
   const imageRef = useRef<HTMLDivElement>(null);

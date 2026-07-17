@@ -1,6 +1,15 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
-import { createExerciseSetsSchema, updateExerciseSchema, dateRangeSchema, exerciseQuerySchema, maxRMQuerySchema, exerciseImportQuerySchema, recentExercisesQuerySchema } from '@lifestyle-app/shared';
+import { z } from 'zod';
+import {
+  createExerciseSetsSchema,
+  updateExerciseSchema,
+  dateRangeSchema,
+  exerciseQuerySchema,
+  maxRMQuerySchema,
+  exerciseImportQuerySchema,
+  recentExercisesQuerySchema,
+} from '@lifestyle-app/shared';
 import { ExerciseService } from '../services/exercise';
 import { authMiddleware } from '../middleware/auth';
 import type { Database } from '../db';
@@ -13,6 +22,13 @@ type Variables = {
   db: Database;
   user: { id: string; email: string };
 };
+
+const weeklySummaryQuerySchema = z.object({
+  todayDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+});
 
 // Chain format for RPC type inference
 // All exercise routes require authentication
@@ -44,12 +60,13 @@ export const exercises = new Hono<{ Bindings: Bindings; Variables: Variables }>(
 
     return c.json({ exercises: exercisesList });
   })
-  .get('/weekly', async (c) => {
+  .get('/weekly', zValidator('query', weeklySummaryQuerySchema), async (c) => {
+    const query = c.req.valid('query');
     const db = c.get('db');
     const user = c.get('user');
 
     const exerciseService = new ExerciseService(db);
-    const summary = await exerciseService.getWeeklySummary(user.id);
+    const summary = await exerciseService.getWeeklySummary(user.id, query.todayDate);
 
     return c.json({ summary });
   })

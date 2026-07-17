@@ -3,8 +3,14 @@ import { v4 as uuidv4 } from 'uuid';
 import type { Database } from '../db';
 import { schema } from '../db';
 import { AppError } from '../middleware/error';
-import { extractLocalDate, nextLocalDate } from '../lib/localDate';
-import type { CreateExerciseInput, UpdateExerciseInput, ExerciseImportSummary, ExerciseRecord, RecentExerciseItem } from '@lifestyle-app/shared';
+import { extractLocalDate, getWeekDateRange, nextLocalDate } from '../lib/localDate';
+import type {
+  CreateExerciseInput,
+  UpdateExerciseInput,
+  ExerciseImportSummary,
+  ExerciseRecord,
+  RecentExerciseItem,
+} from '@lifestyle-app/shared';
 import { z } from 'zod';
 import { createExerciseSetsSchema, calculate1RM } from '@lifestyle-app/shared';
 
@@ -172,38 +178,22 @@ export class ExerciseService {
       return [];
     }
 
-    // Extract the date part (YYYY-MM-DD) from recordedAt
-    const lastDate = lastRecord.recordedAt.split('T')[0];
+    const lastDate = extractLocalDate(lastRecord.recordedAt);
+    const records = await this.findByUserId(userId, {
+      startDate: lastDate,
+      endDate: lastDate,
+      exerciseType,
+    });
 
-    // Get all records from the same date for this exercise type
-    const records = await this.db
-      .select()
-      .from(schema.exerciseRecords)
-      .where(
-        and(
-          eq(schema.exerciseRecords.userId, userId),
-          eq(schema.exerciseRecords.exerciseType, exerciseType),
-          sql`date(${schema.exerciseRecords.recordedAt}) = ${lastDate}`
-        )
-      )
-      .orderBy(schema.exerciseRecords.setNumber)
-      .all();
-
-    return records;
+    return records.sort((a, b) => a.setNumber - b.setNumber);
   }
 
-  async getWeeklySummary(userId: string) {
-    const now = new Date();
-    const startOfWeek = new Date(now);
-    startOfWeek.setDate(now.getDate() - now.getDay());
-    startOfWeek.setHours(0, 0, 0, 0);
-
-    const endOfWeek = new Date(startOfWeek);
-    endOfWeek.setDate(startOfWeek.getDate() + 7);
+  async getWeeklySummary(userId: string, todayDate = extractLocalDate(new Date().toISOString())) {
+    const { startDate, endDate } = getWeekDateRange(todayDate);
 
     const exercises = await this.findByUserId(userId, {
-      startDate: startOfWeek.toISOString(),
-      endDate: endOfWeek.toISOString(),
+      startDate,
+      endDate,
     });
 
     // Each record is now 1 set
@@ -228,8 +218,8 @@ export class ExerciseService {
       totalReps,
       count,
       byType,
-      weekStart: startOfWeek.toISOString(),
-      weekEnd: endOfWeek.toISOString(),
+      weekStart: startDate,
+      weekEnd: endDate,
     };
   }
 

@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   validateNotFuture,
   getCurrentDateTimeLocal,
+  getTodayDateString,
+  extractLocalDate,
   toISOString,
   toDateTimeLocal,
 } from '../../packages/frontend/src/lib/dateValidation';
@@ -63,6 +65,26 @@ describe('dateValidation', () => {
       const result = getCurrentDateTimeLocal();
       expect(result).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/);
     });
+  });
+
+  describe('getTodayDateString', () => {
+    it('UTC文字列ではなくローカル日付のgetterを使用する', () => {
+      const now = new Date('2026-01-16T15:30:00Z');
+      vi.spyOn(now, 'getFullYear').mockReturnValue(2026);
+      vi.spyOn(now, 'getMonth').mockReturnValue(0);
+      vi.spyOn(now, 'getDate').mockReturnValue(17);
+
+      expect(getTodayDateString(now)).toBe('2026-01-17');
+    });
+  });
+
+  describe('extractLocalDate', () => {
+    it.each(['2026-01-17T00:30:00+09:00', '2026-01-17T23:30:00-05:00'])(
+      'オフセットにかかわらず記録されたローカル日付を返す: %s',
+      (recordedAt) => {
+        expect(extractLocalDate(recordedAt)).toBe('2026-01-17');
+      }
+    );
   });
 
   describe('toISOString', () => {

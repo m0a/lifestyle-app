@@ -13,6 +13,8 @@ interface SetRowProps {
   onRemove?: () => void;
   showVariation?: boolean;
   isRemovable?: boolean;
+  isActive?: boolean;
+  onActivate?: () => void;
 }
 
 export function SetRow({
@@ -28,15 +30,35 @@ export function SetRow({
   onRemove,
   showVariation = false,
   isRemovable = true,
+  isActive = false,
+  onActivate,
 }: SetRowProps) {
   const estimatedRM = calculateRM(weight, reps);
 
   return (
-    <div className="py-2 border-b border-gray-100 last:border-b-0">
+    <div
+      className={`py-2 pr-1 border-b border-gray-100 last:border-b-0 border-l-4 transition-colors ${
+        isActive
+          ? 'border-l-orange-500 bg-orange-50 rounded-r-md'
+          : 'border-l-transparent'
+      }`}
+    >
       <div className="flex items-center gap-2">
         {/* Set Number */}
-        <div className="w-8 text-center text-sm font-medium text-gray-500">
-          {setNumber}
+        <div className="w-8 flex justify-center">
+          <button
+            type="button"
+            onClick={onActivate}
+            aria-pressed={isActive}
+            aria-label={`セット${setNumber}を実行中にする`}
+            className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
+              isActive
+                ? 'bg-orange-600 text-white'
+                : 'text-gray-500 hover:bg-gray-200'
+            }`}
+          >
+            {setNumber}
+          </button>
         </div>
 
         {/* Reps Input */}

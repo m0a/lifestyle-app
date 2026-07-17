@@ -86,9 +86,6 @@ export function transformToImageData(
  * @returns Formatted date string (e.g., "2026/01/02")
  */
 export function formatDateForImage(dateStr: string): string {
-  const date = new Date(dateStr);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
+  const [year, month, day] = dateStr.slice(0, 10).split('-');
   return `${year}/${month}/${day}`;
 }

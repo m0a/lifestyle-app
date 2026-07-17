@@ -31,3 +31,18 @@ export function nextLocalDate(localDate: string): string {
   d.setUTCDate(d.getUTCDate() + 1);
   return d.toISOString().slice(0, 10);
 }
+
+/** Sunday-through-Saturday range containing the supplied local date. */
+export function getWeekDateRange(localDate: string): { startDate: string; endDate: string } {
+  const date = new Date(`${extractLocalDate(localDate)}T00:00:00Z`);
+  const start = new Date(date);
+  start.setUTCDate(date.getUTCDate() - date.getUTCDay());
+
+  const end = new Date(start);
+  end.setUTCDate(start.getUTCDate() + 6);
+
+  return {
+    startDate: start.toISOString().slice(0, 10),
+    endDate: end.toISOString().slice(0, 10),
+  };
+}
