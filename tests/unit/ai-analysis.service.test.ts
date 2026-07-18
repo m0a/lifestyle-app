@@ -16,7 +16,7 @@ vi.mock('../../packages/backend/src/lib/ai-provider', () => ({
 }));
 
 // Import service after mocks
-import { AIAnalysisService } from '../../packages/backend/src/services/ai-analysis';
+import { AIAnalysisService, getLocalHour } from '../../packages/backend/src/services/ai-analysis';
 
 describe('AIAnalysisService', () => {
   let service: AIAnalysisService;
@@ -130,4 +130,33 @@ describe('AIAnalysisService', () => {
   // - Calculating totals (tested above)
   // - Handling non-food detection
   // - Error handling for API failures
+
+  describe('getLocalHour', () => {
+    // Regression guard: Cloudflare Workers runs in UTC, so getHours() would
+    // return the UTC hour. getLocalHour must honor the offset in the string.
+    it('returns the local wall-clock hour for a JST (+09:00) evening', () => {
+      // JST 18:00 == UTC 09:00. getUTCHours() would wrongly return 9 (breakfast).
+      expect(getLocalHour('2026-07-18T18:00:00+09:00')).toBe(18);
+    });
+
+    it('returns the local hour for a JST morning', () => {
+      expect(getLocalHour('2026-07-18T08:00:00+09:00')).toBe(8);
+    });
+
+    it('honors a negative offset (America/New_York -04:00)', () => {
+      expect(getLocalHour('2026-07-18T18:00:00-04:00')).toBe(18);
+    });
+
+    it('handles a UTC (Z) string', () => {
+      expect(getLocalHour('2026-07-18T09:00:00Z')).toBe(9);
+    });
+
+    it('handles a naive (offset-less) string', () => {
+      expect(getLocalHour('2026-07-18T18:00:00')).toBe(18);
+    });
+
+    it('handles midnight boundary', () => {
+      expect(getLocalHour('2026-07-18T00:30:00+09:00')).toBe(0);
+    });
+  });
 });

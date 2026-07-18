@@ -432,12 +432,35 @@ export class AIAnalysisService {
 }
 
 /**
+ * Extract the user's local wall-clock hour (0-23) from an ISO 8601 string
+ * that carries a timezone offset (e.g. "2026-07-18T18:00:00+09:00").
+ *
+ * Why this exists: Cloudflare Workers runs in UTC, so `new Date(iso).getHours()`
+ * returns the UTC hour, not the user's local hour. For JST 18:00 that would be 9,
+ * making inferMealType() wrongly pick "breakfast". We must honor the offset that
+ * `toLocalISOString` embedded in the string instead of relying on the runtime TZ.
+ *
+ * @param isoString ISO 8601 string with an offset (falls back to UTC hour if none)
+ * @returns hour in 0-23 range
+ */
+export function getLocalHour(isoString: string): number {
+  // The user's wall-clock time is embedded directly in the string (the "18" in
+  // "2026-07-18T18:00:00+09:00"), so reading it needs no offset arithmetic and
+  // is immune to the runtime timezone.
+  const match = isoString.match(/T(\d{2}):/);
+  if (match) {
+    return parseInt(match[1]!, 10);
+  }
+  // Malformed / no time component: best-effort fallback.
+  return new Date(isoString).getUTCHours();
+}
+
+/**
  * Infer meal type from current time (T006).
  * 6-10 → breakfast, 11-14 → lunch, 17-21 → dinner, else → snack
  */
 function inferMealType(currentTime?: string): 'breakfast' | 'lunch' | 'dinner' | 'snack' {
-  const date = currentTime ? new Date(currentTime) : new Date();
-  const hour = date.getHours();
+  const hour = currentTime ? getLocalHour(currentTime) : new Date().getHours();
 
   if (hour >= 6 && hour < 10) {
     return 'breakfast';
