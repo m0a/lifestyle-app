@@ -170,6 +170,47 @@ export class MealService {
     };
   }
 
+  /**
+   * Fetch individual food items across a date range, scoped to one user.
+   *
+   * Food items are normally read one meal at a time (by mealId), but coaching
+   * analysis needs them across a period — protein-source ranking, per-item PFC.
+   * Drive from meal_food_items and INNER JOIN meal_records so the user/date
+   * filter lives on meal_records (recordedAt is the offset-aware local-date
+   * string, filtered with the same extractLocalDate/nextLocalDate range as the
+   * other queries). Each row carries its parent meal's context (type, time).
+   */
+  async getFoodItemsByUserId(
+    userId: string,
+    options?: { startDate?: string; endDate?: string }
+  ) {
+    const conditions = [eq(schema.mealRecords.userId, userId)];
+    if (options?.startDate) {
+      conditions.push(gte(schema.mealRecords.recordedAt, extractLocalDate(options.startDate)));
+    }
+    if (options?.endDate) {
+      conditions.push(lt(schema.mealRecords.recordedAt, nextLocalDate(options.endDate)));
+    }
+
+    return this.db
+      .select({
+        mealId: schema.mealRecords.id,
+        mealType: schema.mealRecords.mealType,
+        recordedAt: schema.mealRecords.recordedAt,
+        name: schema.mealFoodItems.name,
+        portion: schema.mealFoodItems.portion,
+        calories: schema.mealFoodItems.calories,
+        protein: schema.mealFoodItems.protein,
+        fat: schema.mealFoodItems.fat,
+        carbs: schema.mealFoodItems.carbs,
+      })
+      .from(schema.mealFoodItems)
+      .innerJoin(schema.mealRecords, eq(schema.mealFoodItems.mealId, schema.mealRecords.id))
+      .where(and(...conditions))
+      .orderBy(desc(schema.mealRecords.recordedAt))
+      .all();
+  }
+
   async update(id: string, userId: string, input: UpdateMealInput) {
     await this.findById(id, userId);
 

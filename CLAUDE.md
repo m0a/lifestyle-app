@@ -174,7 +174,14 @@ Service Workerは `registerType: 'prompt'` 方式（`packages/frontend/vite.conf
 記録データ（体重・食事・運動）を **read-only の MCPツール** として公開し、Claude Code などのMCPクライアントから自然言語で参照できる。
 
 - **エンドポイント**: `POST /api/mcp`（`packages/backend/src/routes/mcp.ts`）。`@hono/mcp` の `StreamableHTTPTransport` + `@modelcontextprotocol/sdk` の `McpServer` を使い、リクエスト毎にステートレスにサーバーを組み立てる（Workers向け）。
-- **公開ツール**: `get_latest_weight` / `get_weight_trend` / `get_daily_summary` / `get_meals`。いずれも既存サービス層（`WeightService` / `MealService` / `ExerciseService`）を認証済みユーザーにスコープして直呼びする。出力はLLM向けにトークン効率重視で要約する。
+- **公開ツール**: 要約系4つ（`get_latest_weight` / `get_weight_trend` / `get_daily_summary` / `get_meals`）に加え、健康コーチング向けの分析系6つ：
+  - `get_food_items` — 食事を1品ごとに分解しP/F/C・カロリー（food item単位）
+  - `get_protein_sources` — 期間のたんぱく源を食材名で集約しランキング
+  - `get_protein_gap` — たんぱく質を目標（`target` g/食, 引数必須）と比較しギャップを食事別/日別に
+  - `get_weight_moving_average` — 体重の移動平均（既定7日, 暦日トレーリング窓）＋週平均
+  - `get_nutrition_trend` — カロリー/PFCを週別・月別に集計
+  - `get_exercise_breakdown` — 運動を部位別/種目別にセット数・回数・総重量(Σreps×kg)
+  いずれも既存サービス層（`WeightService` / `MealService` / `ExerciseService`）を認証済みユーザーにスコープして直呼びする。集計の純関数は `lib/mcpAggregate.ts`（単体テスト `tests/unit/mcpAggregate.test.ts`）、food item横断取得は `MealService.getFoodItemsByUserId`。出力はLLM向けにトークン効率重視で要約する。**分析系6ツールはread-only追加のみでスキーマ変更なし**（マイグレーション不要）。
 - **認証**: 個人用Bearerトークン（`middleware/mcpAuth.ts`）。`Authorization: Bearer <token>` を `mcp_tokens` 表のSHA-256ハッシュと照合し、`c.set('user', …)` を cookie セッションの `authMiddleware` と同形で積むため下流は無改修。OAuthは使わない。
 - **トークン発行はパスキー step-up 必須**（`routes/mcp-tokens.ts`）。発行操作時に新鮮なWebAuthnアサーション（本人のパスキー）を検証してからミントする。平文トークンは発行時に1回だけ返し、以降は `prefix` のみ表示。個別失効可（`revoked_at`）。UIは設定画面「MCP連携」（`components/mcp/McpTokenManagement.tsx`）。
 - **接続方法（ヘッドレスLinuxのClaude Code等）**: 設定画面で発行 → 表示された `claude mcp add --transport http lifestyle <origin>/api/mcp --header "Authorization: Bearer <token>"` を実行。パスキーもブラウザも不要（ランタイムはトークン1本）。
