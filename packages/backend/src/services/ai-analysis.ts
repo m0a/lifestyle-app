@@ -12,6 +12,7 @@ import type {
   MealTypeSource,
   DateTimeSource,
 } from '@lifestyle-app/shared';
+import { inferMealTypeFromHour } from '@lifestyle-app/shared';
 
 // Helper to format date with timezone offset from original ISO string
 // If originalIsoString has offset (e.g., +09:00), apply it to the date
@@ -456,20 +457,13 @@ export function getLocalHour(isoString: string): number {
 }
 
 /**
- * Infer meal type from current time (T006).
- * 6-10 → breakfast, 11-14 → lunch, 17-21 → dinner, else → snack
+ * Infer meal type from current time (T006). The hour→type thresholds live in
+ * the shared `inferMealTypeFromHour` so this backend path and the frontend photo
+ * flow classify the same time identically. `getLocalHour` reads the wall-clock
+ * hour from the offset-aware string — never the Workers UTC hour (#159).
  */
 function inferMealType(currentTime?: string): 'breakfast' | 'lunch' | 'dinner' | 'snack' {
   const hour = currentTime ? getLocalHour(currentTime) : new Date().getHours();
-
-  if (hour >= 6 && hour < 10) {
-    return 'breakfast';
-  } else if (hour >= 11 && hour < 14) {
-    return 'lunch';
-  } else if (hour >= 17 && hour < 21) {
-    return 'dinner';
-  } else {
-    return 'snack';
-  }
+  return inferMealTypeFromHour(hour);
 }
 
