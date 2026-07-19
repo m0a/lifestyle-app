@@ -13,9 +13,18 @@ import { Hono } from 'hono';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPTransport } from '@hono/mcp';
 import { z } from 'zod';
-import { MEAL_TYPE_LABELS } from '@lifestyle-app/shared';
+import { MEAL_TYPE_LABELS, MUSCLE_GROUP_LABELS, type MuscleGroup } from '@lifestyle-app/shared';
 import type { Database } from '../db';
 import { toJstDisplay, extractJstDate } from '../lib/localDate';
+import {
+  rankProteinSources,
+  proteinGap,
+  dailyWeightSeries,
+  movingAverageSeries,
+  weeklyWeightAverages,
+  nutritionTrend,
+  exerciseBreakdown,
+} from '../lib/mcpAggregate';
 import { mcpAuth } from '../middleware/mcpAuth';
 import { WeightService } from '../services/weight';
 import { MealService } from '../services/meal';
@@ -29,6 +38,17 @@ type Bindings = {
 function textResult(text: string) {
   return { content: [{ type: 'text' as const, text }] };
 }
+
+/** Round to 1 decimal place for display (protein/fat/carbs grams, weights). */
+const r1 = (n: number) => (Math.round(n * 10) / 10).toFixed(1);
+/** Signed 1-decimal string, e.g. +2.5 / -1.0 / ±0.0 — for gaps vs a target. */
+const signed = (n: number) => {
+  const rounded = Math.round(n * 10) / 10;
+  if (rounded === 0) return '±0.0';
+  return `${rounded > 0 ? '+' : ''}${rounded.toFixed(1)}`;
+};
+/** Human label for a meal type, falling back to the raw value. */
+const mealLabel = (t: string) => MEAL_TYPE_LABELS[t as keyof typeof MEAL_TYPE_LABELS] ?? t;
 
 /**
  * Summarize weight records into a compact, LLM-friendly string.
@@ -150,12 +170,224 @@ function buildMcpServer(db: Database, userId: string): McpServer {
         return textResult('対象期間に食事の記録はありません。');
       }
       const lines = meals.map((m) => {
-        const label =
-          MEAL_TYPE_LABELS[m.mealType as keyof typeof MEAL_TYPE_LABELS] ?? m.mealType;
         const kcal = m.calories != null ? `${m.calories}kcal` : 'カロリー未計算';
-        return `- ${toJstDisplay(m.recordedAt)} [${label}] ${m.content ?? ''} (${kcal})`;
+        return `- ${toJstDisplay(m.recordedAt)} [${mealLabel(m.mealType)}] ${m.content ?? ''} (${kcal})`;
       });
       return textResult(lines.join('\n'));
+    }
+  );
+
+  server.registerTool(
+    'get_food_items',
+    {
+      description:
+        '指定日(date)または from〜to 期間の食事を「1品ごと」に分解し、各食材の P/F/C・カロリーを返す。すべて YYYY-MM-DD。',
+      inputSchema: {
+        date: z.string().optional().describe('対象日 YYYY-MM-DD（単日指定）'),
+        from: z.string().optional().describe('開始日 YYYY-MM-DD'),
+        to: z.string().optional().describe('終了日 YYYY-MM-DD'),
+      },
+    },
+    async ({ date, from, to }) => {
+      const items = await new MealService(db).getFoodItemsByUserId(userId, {
+        startDate: date ?? from,
+        endDate: date ?? to,
+      });
+      if (items.length === 0) {
+        return textResult('対象期間に食材レベルの記録はありません。');
+      }
+      const lines = items.map(
+        (it) =>
+          `- ${extractJstDate(it.recordedAt)} ${mealLabel(it.mealType)} ${it.name}: P${r1(
+            it.protein
+          )}/F${r1(it.fat)}/C${r1(it.carbs)} ${it.calories}kcal`
+      );
+      return textResult(lines.join('\n'));
+    }
+  );
+
+  server.registerTool(
+    'get_protein_sources',
+    {
+      description:
+        '指定期間に食べた食材を「たんぱく源」として名前で集約し、累計たんぱく質の多い順にランキングして返す。date 単日 or from〜to。',
+      inputSchema: {
+        date: z.string().optional().describe('対象日 YYYY-MM-DD（単日指定）'),
+        from: z.string().optional().describe('開始日 YYYY-MM-DD'),
+        to: z.string().optional().describe('終了日 YYYY-MM-DD'),
+        top: z.number().int().min(1).max(50).optional().describe('上位何件を返すか（既定10）'),
+      },
+    },
+    async ({ date, from, to, top }) => {
+      const items = await new MealService(db).getFoodItemsByUserId(userId, {
+        startDate: date ?? from,
+        endDate: date ?? to,
+      });
+      const ranked = rankProteinSources(items, top ?? 10);
+      if (ranked.length === 0) {
+        return textResult('対象期間に食材レベルの記録はありません。');
+      }
+      const lines = ranked.map(
+        (s, i) =>
+          `${i + 1}. ${s.name} — 累計P${r1(s.totalProtein)}g（${s.count}回, 平均${r1(
+            s.avgProtein
+          )}g/回, 累計${s.totalCalories}kcal）`
+      );
+      return textResult(`たんぱく源ランキング（上位${ranked.length}）\n${lines.join('\n')}`);
+    }
+  );
+
+  server.registerTool(
+    'get_protein_gap',
+    {
+      description:
+        'たんぱく質の摂取量を目標(target: 1食あたりg)と比較し、不足(ギャップ)を返す。date 単日なら食事別の内訳も付く。from〜to で期間の日別集計。',
+      inputSchema: {
+        target: z.number().positive().describe('1食あたりのたんぱく質目標(g)。例: 25'),
+        date: z.string().optional().describe('対象日 YYYY-MM-DD（単日指定）'),
+        from: z.string().optional().describe('開始日 YYYY-MM-DD'),
+        to: z.string().optional().describe('終了日 YYYY-MM-DD'),
+      },
+    },
+    async ({ target, date, from, to }) => {
+      const meals = await new MealService(db).findByUserId(userId, {
+        startDate: date ?? from,
+        endDate: date ?? to,
+      });
+      if (meals.length === 0) {
+        return textResult('対象期間に食事の記録はありません。');
+      }
+      const { byMeal, byDay } = proteinGap(meals, target);
+
+      // Single day: show the per-meal breakdown, then the day rollup.
+      if (date) {
+        const mealLines = byMeal.map(
+          (m) =>
+            `  - ${mealLabel(m.mealType)}: P${r1(m.protein)}（${signed(m.gap)}, ${
+              m.met ? '達成✓' : '未達'
+            }）`
+        );
+        const d = byDay[0];
+        const dayLine = d
+          ? `日合計: P${r1(d.totalProtein)} / 目標${r1(d.dayTarget)}（${signed(d.gap)}, ${d.mealCount}食中${d.mealsMetTarget}食達成）`
+          : '';
+        return textResult(
+          `【${date} たんぱく質ギャップ】目標 ${r1(target)}g/食\n食事別:\n${mealLines.join('\n')}\n${dayLine}`
+        );
+      }
+
+      // Range: per-day rollup only (keeps output bounded for long spans).
+      const lines = byDay.map(
+        (d) =>
+          `- ${d.date}: P${r1(d.totalProtein)}/目標${r1(d.dayTarget)}（${signed(d.gap)}, ${d.mealCount}食中${d.mealsMetTarget}食達成）`
+      );
+      return textResult(`たんぱく質ギャップ（目標 ${r1(target)}g/食）\n${lines.join('\n')}`);
+    }
+  );
+
+  server.registerTool(
+    'get_weight_moving_average',
+    {
+      description:
+        '体重の移動平均(既定7日)と週平均を返す。日々±1kgのノイズを均してトレンドを評価するための「要石」。from〜to 省略時は全期間。',
+      inputSchema: {
+        from: z.string().optional().describe('開始日 YYYY-MM-DD（含む）'),
+        to: z.string().optional().describe('終了日 YYYY-MM-DD（含む）'),
+        window: z.number().int().min(2).max(30).optional().describe('移動平均の窓(日数, 既定7)'),
+      },
+    },
+    async ({ from, to, window }) => {
+      const win = window ?? 7;
+      const records = await new WeightService(db).findByUserId(userId, {
+        startDate: from,
+        endDate: to,
+      });
+      const daily = dailyWeightSeries(records);
+      if (daily.length === 0) {
+        return textResult('対象期間に体重の記録はありません。');
+      }
+      const ma = movingAverageSeries(daily, win);
+      const weekly = weeklyWeightAverages(daily);
+
+      const maLines = ma.map(
+        (p) => `- ${p.date}: ${r1(p.weight)}kg（MA${r1(p.movingAvg)}）`
+      );
+      const weeklyLines = weekly.map(
+        (w) => `- ${w.weekStart}〜${w.weekEnd}: ${r1(w.avg)}kg（${w.count}日）`
+      );
+      return textResult(
+        `体重移動平均（window=${win}日, ${daily.length}日分）\n${maLines.join(
+          '\n'
+        )}\n週平均:\n${weeklyLines.join('\n')}`
+      );
+    }
+  );
+
+  server.registerTool(
+    'get_nutrition_trend',
+    {
+      description:
+        '期間のカロリー・PFCを週別または月別に集計して推移を返す。groupBy は "week"(既定) か "month"。from〜to 省略時は全期間。',
+      inputSchema: {
+        from: z.string().optional().describe('開始日 YYYY-MM-DD'),
+        to: z.string().optional().describe('終了日 YYYY-MM-DD'),
+        groupBy: z.enum(['week', 'month']).optional().describe('集計単位（既定 week）'),
+      },
+    },
+    async ({ from, to, groupBy }) => {
+      const unit = groupBy ?? 'week';
+      const meals = await new MealService(db).findByUserId(userId, {
+        startDate: from,
+        endDate: to,
+      });
+      const buckets = nutritionTrend(meals, unit);
+      if (buckets.length === 0) {
+        return textResult('対象期間に食事の記録はありません。');
+      }
+      const suffix = unit === 'week' ? '週' : '';
+      const lines = buckets.map(
+        (b) =>
+          `- ${b.label}${suffix}: ${b.days}日/${b.meals}食 計${b.totalCalories}kcal（P${r1(
+            b.totalProtein
+          )} F${r1(b.totalFat)} C${r1(b.totalCarbs)}）日平均${Math.round(b.avgCalories)}kcal P${r1(
+            b.avgProtein
+          )}`
+      );
+      return textResult(`栄養集計（${unit === 'week' ? '週別' : '月別'}）\n${lines.join('\n')}`);
+    }
+  );
+
+  server.registerTool(
+    'get_exercise_breakdown',
+    {
+      description:
+        '運動記録を部位別(muscle, 既定)または種目別(type)に集計し、セット数・回数・総重量(Σreps×kg)を返す。date 単日 or from〜to。',
+      inputSchema: {
+        date: z.string().optional().describe('対象日 YYYY-MM-DD（単日指定）'),
+        from: z.string().optional().describe('開始日 YYYY-MM-DD'),
+        to: z.string().optional().describe('終了日 YYYY-MM-DD'),
+        groupBy: z.enum(['muscle', 'type']).optional().describe('集計軸（既定 muscle）'),
+      },
+    },
+    async ({ date, from, to, groupBy }) => {
+      const axis = groupBy ?? 'muscle';
+      const records = await new ExerciseService(db).findByUserId(userId, {
+        startDate: date ?? from,
+        endDate: date ?? to,
+      });
+      const groups = exerciseBreakdown(records, axis);
+      if (groups.length === 0) {
+        return textResult('対象期間に運動の記録はありません。');
+      }
+      const lines = groups.map((g) => {
+        const label =
+          axis === 'muscle'
+            ? MUSCLE_GROUP_LABELS[g.key as MuscleGroup] ?? g.key
+            : g.key;
+        const volume = g.volume > 0 ? `, 総重量${r1(g.volume)}kg` : '';
+        return `- ${label}: ${g.sets}セット/${g.reps}回${volume}`;
+      });
+      return textResult(`運動内訳（${axis === 'muscle' ? '部位別' : '種目別'}）\n${lines.join('\n')}`);
     }
   );
 
