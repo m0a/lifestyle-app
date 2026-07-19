@@ -2,8 +2,10 @@ import { useState, useCallback, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { useMeals } from '../hooks/useMeals';
+import { useWeeklyMealSummary } from '../hooks/useWeeklyMealSummary';
 import { MealList } from '../components/meal/MealList';
 import { CalorieSummary } from '../components/meal/CalorieSummary';
+import { WeeklyMealSummaryCard } from '../components/meal/WeeklyMealSummaryCard';
 import { SmartMealInput } from '../components/meal/SmartMealInput';
 import { AIUsageBanner } from '../components/meal/AIUsageBanner';
 import { useAIDailyUsage } from '../hooks/useAIDailyUsage';
@@ -47,6 +49,9 @@ export function Meal() {
     isDeleting,
   } = useMeals(mealsOptions);
 
+  // Weekly ("この1週間") evaluation for the 7 days ending today.
+  const { data: weeklySummary } = useWeeklyMealSummary(todayDate);
+
   // Save meal from SmartMealInput
   const handleSmartSave = useCallback(async (mealId: string, mealType: MealType, recordedAt?: string) => {
     await mealAnalysisApi.saveMealAnalysis(mealId, mealType, recordedAt);
@@ -85,6 +90,9 @@ export function Meal() {
           totalCarbs={todaySummary.totalCarbs ?? 0}
         />
       )}
+
+      {/* Weekly trend evaluation (separate question from the today card) */}
+      {weeklySummary && <WeeklyMealSummaryCard summary={weeklySummary} />}
 
       {/* Smart Meal Input */}
       <div>

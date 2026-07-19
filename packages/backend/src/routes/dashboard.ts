@@ -1,9 +1,20 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
+import { WEEKLY_MEAL_TARGETS, weeklyMealSummaryQuerySchema } from '@lifestyle-app/shared';
 import { DashboardService } from '../services/dashboard';
+import { MealService } from '../services/meal';
+import { WeightService } from '../services/weight';
+import { computeWeeklyMealSummary } from '../lib/weeklyMealSummary';
 import { authMiddleware } from '../middleware/auth';
 import type { Bindings, Variables } from '../types';
+
+/** Shift a YYYY-MM-DD date by whole days (UTC date math is safe on date-only strings). */
+function shiftDate(dateStr: string, deltaDays: number): string {
+  const d = new Date(`${dateStr}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + deltaDays);
+  return d.toISOString().slice(0, 10);
+}
 
 // Period presets
 const PERIOD_DAYS = {
@@ -96,4 +107,33 @@ export const dashboard = new Hono<{ Bindings: Bindings; Variables: Variables }>(
     const activity = await service.getDailyActivity(user.id, days);
 
     return c.json(activity);
-  });
+  })
+  .get(
+    '/weekly-meal-summary',
+    zValidator('query', weeklyMealSummaryQuerySchema),
+    async (c) => {
+      const user = c.get('user');
+      const { today } = c.req.valid('query');
+      const db = c.get('db');
+
+      // The 7-day window ends on the client's local "today".
+      const endDate = today;
+      const startDate = shiftDate(today, -(WEEKLY_MEAL_TARGETS.windowDays - 1));
+      // Widen the weight fetch so the moving average at startDate is smoothed by
+      // the preceding week rather than starting cold.
+      const weightStart = shiftDate(startDate, -WEEKLY_MEAL_TARGETS.weightMaWindow);
+
+      const [meals, weights] = await Promise.all([
+        new MealService(db).findByUserId(user.id, { startDate, endDate }),
+        new WeightService(db).findByUserId(user.id, { startDate: weightStart, endDate }),
+      ]);
+
+      const summary = computeWeeklyMealSummary(meals, weights, {
+        startDate,
+        endDate,
+        targets: WEEKLY_MEAL_TARGETS,
+      });
+
+      return c.json(summary);
+    }
+  );

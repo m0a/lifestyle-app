@@ -122,6 +122,21 @@ export const DASHBOARD_PERIOD_LABELS: Record<(typeof DASHBOARD_PERIODS)[number],
   month: '月間',
 };
 
+// Targets for the meal tab's "この1週間" weekly evaluation card. Tuned for the
+// user's fatty-liver plan where fat SHARE (not total calories) is the lever, so
+// the PFC band is the primary signal. Adjust here — the values are echoed to the
+// client via the weekly-summary API so the card renders bands without its own copy.
+export const WEEKLY_MEAL_TARGETS = {
+  windowDays: 7,
+  dailyCalorieLimit: 1750, // metric 1: green if avg daily calories ≤ this
+  proteinPct: 20, // metric 2: protein should be ≥ this share of macro-kcal
+  fatPct: 30, // metric 2/4: fat should be ≤ this share; a day above it is "high-fat"
+  carbsPct: 50, // metric 2: reference band (~50%), not pass/fail
+  proteinFloorPerDay: 90, // metric 3: a day "achieves" when total protein ≥ this (g)
+  highFatDaysLimit: 2, // metric 4: at most this many high-fat days per week
+  weightMaWindow: 7, // metric 5: window for the weight moving average
+} as const;
+
 // Date formats
 export const DATE_FORMATS = {
   display: 'YYYY/MM/DD',
