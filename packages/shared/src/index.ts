@@ -9,3 +9,4 @@ export * from './constants';
 
 // Utils
 export * from './utils/rm-calculator';
+export * from './utils/meal-type';

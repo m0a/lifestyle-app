@@ -4,7 +4,7 @@ import type {
   NutritionTotals,
   MealType,
 } from '@lifestyle-app/shared';
-import { MEAL_TYPE_LABELS } from '@lifestyle-app/shared';
+import { MEAL_TYPE_LABELS, inferMealTypeFromHour } from '@lifestyle-app/shared';
 import { mealAnalysisApi } from '../../lib/api';
 import { AnalysisResult } from './AnalysisResult';
 import { MealChat } from './MealChat';
@@ -41,7 +41,14 @@ export function PhotoAnalysisReview({
   const [totals, setTotals] = useState<NutritionTotals>(initialTotals);
   const [photoInfos, setPhotoInfos] = useState<PhotoInfo[]>(initialPhotoInfos ?? []);
 
-  const [mealType, setMealType] = useState<MealType>('lunch');
+  // Photo analysis returns no meal type, so default to the one inferred from the
+  // current local time (the photo is being taken/reviewed now). Lazy init reads
+  // the browser-local hour once on mount. Without this the flow hard-coded
+  // 'lunch', mislabeling e.g. a 19:00 dinner photo as 昼食 (follow-up to #159).
+  const [mealType, setMealType] = useState<MealType>(() =>
+    inferMealTypeFromHour(new Date().getHours())
+  );
+  const [mealTypeSource, setMealTypeSource] = useState<'text' | 'time'>('time');
   const [showChat, setShowChat] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [reanalyzingIds, setReanalyzingIds] = useState<Set<string>>(new Set());
@@ -78,6 +85,7 @@ export function PhotoAnalysisReview({
     }
     if (newMealType) {
       setMealType(newMealType);
+      setMealTypeSource('text');
     }
   }, [setRecordedAt, setDateTimeSource, setDateError]);
 
@@ -289,7 +297,10 @@ export function PhotoAnalysisReview({
         <label className="text-sm font-medium text-gray-700">食事タイプ:</label>
         <select
           value={mealType}
-          onChange={(e) => setMealType(e.target.value as MealType)}
+          onChange={(e) => {
+            setMealType(e.target.value as MealType);
+            setMealTypeSource('text');
+          }}
           className="rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
         >
           {Object.entries(MEAL_TYPE_LABELS).map(([value, label]) => (
@@ -298,6 +309,9 @@ export function PhotoAnalysisReview({
             </option>
           ))}
         </select>
+        <span className="text-xs text-gray-400">
+          ({mealTypeSource === 'text' ? '手動で変更' : '時刻から推測'})
+        </span>
       </div>
 
       {/* Action buttons */}

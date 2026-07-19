@@ -11,7 +11,7 @@ import {
   type MealRow,
   type WeightRow,
   type ExerciseRow,
-} from '../../src/lib/mcpAggregate';
+} from '../../packages/backend/src/lib/mcpAggregate';
 
 const foodItem = (over: Partial<FoodItemRow>): FoodItemRow => ({
   mealType: 'lunch',
