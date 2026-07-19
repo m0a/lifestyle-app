@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/client';
 import { useAuthStore } from '../stores/authStore';
 import { PasskeyManagement } from '../components/auth/PasskeyManagement';
+import { McpTokenManagement } from '../components/mcp/McpTokenManagement';
 
 export function Settings() {
   const navigate = useNavigate();
@@ -188,6 +189,9 @@ export function Settings() {
 
       {/* Passkey Management */}
       <PasskeyManagement />
+
+      {/* MCP Integration */}
+      <McpTokenManagement />
 
       {/* Goals Section */}
       <div className="card p-5">
