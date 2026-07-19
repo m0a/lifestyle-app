@@ -168,3 +168,26 @@ curl "http://localhost:8799/__scheduled?cron=0+15+*+*+*"
 Service Workerは `registerType: 'prompt'` 方式（`packages/frontend/vite.config.ts`）。新バージョンのデプロイ後、開いているタブには `PwaUpdatePrompt`（`components/ui/PwaUpdatePrompt.tsx`）が「新しいバージョンがあります」バナーを表示し、「更新」でSKIP_WAITING→リロードする。無条件の `skipWaiting()` は行わない。
 
 また、ログアウト時（明示的ログアウトと401自動ログアウトの両方）にSWの `api-cache` を削除する（`lib/clearApiCache.ts`）。キャッシュ名は vite.config.ts の `cacheName` と一致させること。
+
+## MCP Server (外部AIクライアント連携)
+
+記録データ（体重・食事・運動）を **read-only の MCPツール** として公開し、Claude Code などのMCPクライアントから自然言語で参照できる。
+
+- **エンドポイント**: `POST /api/mcp`（`packages/backend/src/routes/mcp.ts`）。`@hono/mcp` の `StreamableHTTPTransport` + `@modelcontextprotocol/sdk` の `McpServer` を使い、リクエスト毎にステートレスにサーバーを組み立てる（Workers向け）。
+- **公開ツール**: `get_latest_weight` / `get_weight_trend` / `get_daily_summary` / `get_meals`。いずれも既存サービス層（`WeightService` / `MealService` / `ExerciseService`）を認証済みユーザーにスコープして直呼びする。出力はLLM向けにトークン効率重視で要約する。
+- **認証**: 個人用Bearerトークン（`middleware/mcpAuth.ts`）。`Authorization: Bearer <token>` を `mcp_tokens` 表のSHA-256ハッシュと照合し、`c.set('user', …)` を cookie セッションの `authMiddleware` と同形で積むため下流は無改修。OAuthは使わない。
+- **トークン発行はパスキー step-up 必須**（`routes/mcp-tokens.ts`）。発行操作時に新鮮なWebAuthnアサーション（本人のパスキー）を検証してからミントする。平文トークンは発行時に1回だけ返し、以降は `prefix` のみ表示。個別失効可（`revoked_at`）。UIは設定画面「MCP連携」（`components/mcp/McpTokenManagement.tsx`）。
+- **接続方法（ヘッドレスLinuxのClaude Code等）**: 設定画面で発行 → 表示された `claude mcp add --transport http lifestyle <origin>/api/mcp --header "Authorization: Bearer <token>"` を実行。パスキーもブラウザも不要（ランタイムはトークン1本）。
+
+新規env varは不要（WebAuthnの `RP_ID` / `RP_ORIGIN` を流用）。スキーマは `mcp_tokens`（`db/schema/mcp.ts`, migration `0039`）で `passkey_credentials` に倣う（TEXT id / ISO8601 / user cascade）。
+
+ローカル疎通確認:
+```bash
+pnpm --filter @lifestyle-app/backend db:migrate:local   # 0039適用
+pnpm dev:backend                                        # localhost:8787
+# mcp_tokens に token_hash=SHA256(raw) の行を1件seedし、Accept に text/event-stream を含めて:
+curl -X POST http://localhost:8787/api/mcp \
+  -H "Authorization: Bearer <raw>" -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+```

@@ -260,3 +260,6 @@ export * from './schema/email';
 
 // WebAuthn / Passkey tables
 export * from './schema/webauthn';
+
+// MCP access tokens
+export * from './schema/mcp';

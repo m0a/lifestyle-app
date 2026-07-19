@@ -13,6 +13,8 @@ import { user } from './routes/user';
 import { logs } from './routes/logs';
 import { mealAnalysis } from './routes/meal-analysis';
 import { mealChat } from './routes/meal-chat';
+import { mcp } from './routes/mcp';
+import { mcpTokens } from './routes/mcp-tokens';
 import { emailVerify } from './routes/email/verify';
 import { emailChange } from './routes/email/change';
 import { requestContext } from './middleware/requestContext';
@@ -125,6 +127,8 @@ const routes = app
   .route('/api/exercises', exercises)
   .route('/api/dashboard', dashboard)
   .route('/api/user', user)
+  .route('/api/mcp/tokens', mcpTokens)
+  .route('/api/mcp', mcp)
   .route('/api/logs', logs)
   .route('/api/email', emailVerify)
   .route('/api/email', emailChange);
