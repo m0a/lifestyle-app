@@ -32,6 +32,51 @@ export function nextLocalDate(localDate: string): string {
   return d.toISOString().slice(0, 10);
 }
 
+/** Japan Standard Time is a fixed UTC+9 (no DST) — the app's implicit local zone. */
+const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
+
+function jstParts(iso: string): { y: number; mo: number; d: number; h: number; mi: number } | null {
+  const ms = Date.parse(iso);
+  if (Number.isNaN(ms)) return null;
+  // Shift the absolute instant by +9h, then read UTC fields to get JST wall clock.
+  const t = new Date(ms + JST_OFFSET_MS);
+  return {
+    y: t.getUTCFullYear(),
+    mo: t.getUTCMonth() + 1,
+    d: t.getUTCDate(),
+    h: t.getUTCHours(),
+    mi: t.getUTCMinutes(),
+  };
+}
+
+/**
+ * Normalize any ISO timestamp to a JST wall-clock string "YYYY-MM-DD HH:mm".
+ *
+ * Most recorded_at values carry a "+09:00" offset and pass through unchanged in
+ * wall-clock terms; a few legacy rows are stored as bare UTC "Z" (pre-#159) and
+ * would otherwise display 9 hours early. Parsing to an absolute instant and
+ * re-rendering at +09:00 makes both forms consistent. Falls back to the raw
+ * input if unparseable.
+ */
+export function toJstDisplay(iso: string): string {
+  const p = jstParts(iso);
+  if (!p) return iso;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${p.y}-${pad(p.mo)}-${pad(p.d)} ${pad(p.h)}:${pad(p.mi)}`;
+}
+
+/**
+ * The JST local date (YYYY-MM-DD) of any ISO timestamp, whether it is offset-aware
+ * ("+09:00") or bare UTC ("Z"). Unlike extractLocalDate (which trusts the string's
+ * first 10 chars and is therefore wrong for "Z" rows), this converts to JST first.
+ */
+export function extractJstDate(iso: string): string {
+  const p = jstParts(iso);
+  if (!p) return iso.slice(0, 10);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${p.y}-${pad(p.mo)}-${pad(p.d)}`;
+}
+
 /** Sunday-through-Saturday range containing the supplied local date. */
 export function getWeekDateRange(localDate: string): { startDate: string; endDate: string } {
   const date = new Date(`${extractLocalDate(localDate)}T00:00:00Z`);

@@ -15,6 +15,7 @@ import { StreamableHTTPTransport } from '@hono/mcp';
 import { z } from 'zod';
 import { MEAL_TYPE_LABELS } from '@lifestyle-app/shared';
 import type { Database } from '../db';
+import { toJstDisplay, extractJstDate } from '../lib/localDate';
 import { mcpAuth } from '../middleware/mcpAuth';
 import { WeightService } from '../services/weight';
 import { MealService } from '../services/meal';
@@ -54,10 +55,9 @@ function summarizeWeightTrend(
   const delta = latest.weight - start.weight;
   const dir = Math.abs(delta) < 0.1 ? '横ばい' : delta < 0 ? '減少' : '増加';
   const sign = delta > 0 ? '+' : '';
-  const localDate = (iso: string) => iso.slice(0, 10);
 
   return [
-    `体重推移（${localDate(start.recordedAt)}〜${localDate(latest.recordedAt)}, ${count}件）`,
+    `体重推移（${extractJstDate(start.recordedAt)}〜${extractJstDate(latest.recordedAt)}, ${count}件）`,
     `開始 ${start.weight}kg → 最新 ${latest.weight}kg（${sign}${delta.toFixed(1)}kg, ${dir}）`,
     `平均 ${avg.toFixed(1)}kg / 最小 ${min}kg / 最大 ${max}kg`,
   ].join('\n');
@@ -78,7 +78,7 @@ function buildMcpServer(db: Database, userId: string): McpServer {
     if (!latest) {
       return textResult('体重の記録はまだありません。');
     }
-    return textResult(`最新体重: ${latest.weight}kg（記録日時: ${latest.recordedAt}）`);
+    return textResult(`最新体重: ${latest.weight}kg（記録日時: ${toJstDisplay(latest.recordedAt)}）`);
     }
   );
 
@@ -153,7 +153,7 @@ function buildMcpServer(db: Database, userId: string): McpServer {
         const label =
           MEAL_TYPE_LABELS[m.mealType as keyof typeof MEAL_TYPE_LABELS] ?? m.mealType;
         const kcal = m.calories != null ? `${m.calories}kcal` : 'カロリー未計算';
-        return `- ${m.recordedAt} [${label}] ${m.content ?? ''} (${kcal})`;
+        return `- ${toJstDisplay(m.recordedAt)} [${label}] ${m.content ?? ''} (${kcal})`;
       });
       return textResult(lines.join('\n'));
     }
