@@ -217,6 +217,47 @@ export const mealDatesResponseSchema = z.object({
 export type MealDatesQuery = z.infer<typeof mealDatesQuerySchema>;
 export type MealDatesResponse = z.infer<typeof mealDatesResponseSchema>;
 
+// Weekly meal summary schema (食事タブ「この1週間」評価カード)
+// Answers "is the weekly trend right?" (as opposed to the today card's "did I
+// stay in budget?"). Evaluated over the 7 days ending on `today`.
+export const weeklyMealSummaryQuerySchema = z.object({
+  today: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+});
+
+export const weeklyMealSummarySchema = z.object({
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  windowDays: z.number().int(),
+  // metric 6: completeness — distinct days in the window with a record
+  recordedMealDays: z.number().int(),
+  recordedWeightDays: z.number().int(),
+  // metric 1: average daily calories over the days that HAVE a meal record
+  avgCalories: z.number(),
+  // metric 2: PFC balance as % of macro-derived kcal (P*4 + F*9 + C*4)
+  proteinPct: z.number(),
+  fatPct: z.number(),
+  carbsPct: z.number(),
+  // metric 3: days whose total protein reached the floor
+  proteinFloorDays: z.number().int(),
+  // metric 4: days whose fat share exceeded the fat band
+  highFatDays: z.number().int(),
+  // metric 5: 7-day weight moving-average direction over the window
+  weightDirection: z.enum(['down', 'flat', 'up', 'none']),
+  weightDeltaKg: z.number(),
+  // Targets echoed so the client renders bands/levers without duplicating them.
+  targets: z.object({
+    dailyCalorieLimit: z.number(),
+    proteinPct: z.number(),
+    fatPct: z.number(),
+    carbsPct: z.number(),
+    proteinFloorPerDay: z.number(),
+    highFatDaysLimit: z.number(),
+  }),
+});
+
+export type WeeklyMealSummaryQuery = z.infer<typeof weeklyMealSummaryQuerySchema>;
+export type WeeklyMealSummary = z.infer<typeof weeklyMealSummarySchema>;
+
 // Meal analysis schemas
 export * from './meal-analysis';
 
