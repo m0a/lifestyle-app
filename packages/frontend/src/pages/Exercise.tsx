@@ -3,7 +3,6 @@ import { useExercises } from '../hooks/useExercises';
 import { StrengthInput } from '../components/exercise/StrengthInput';
 import { ExerciseList } from '../components/exercise/ExerciseList';
 import { ExerciseSummary } from '../components/exercise/ExerciseSummary';
-import { RestTimer } from '../components/exercise/RestTimer';
 import { getTodayDateString } from '../lib/dateValidation';
 
 export function Exercise() {
@@ -61,10 +60,7 @@ export function Exercise() {
 
       {/* Input Form */}
       <div className="card p-5">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-gray-900">筋トレを記録</h2>
-          <RestTimer defaultSeconds={60} incrementSeconds={60} />
-        </div>
+        <h2 className="text-sm font-semibold text-gray-900 mb-3">筋トレを記録</h2>
         <StrengthInput
           onSubmit={create}
           isLoading={isCreating}
