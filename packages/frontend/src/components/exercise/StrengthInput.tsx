@@ -1,6 +1,8 @@
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { Fragment, useState, useCallback, useMemo, useEffect } from 'react';
 import { EXERCISE_PRESETS, MUSCLE_GROUPS, MUSCLE_GROUP_LABELS, type MuscleGroup, type ExerciseRecord } from '@lifestyle-app/shared';
 import { SetRow } from './SetRow';
+import { RestTimer } from './RestTimer';
+import { useRestTimer } from '../../hooks/useRestTimer';
 import { LastRecordBadge } from './LastRecordBadge';
 import { SessionListModal } from './SessionListModal';
 import { logValidationError } from '../../lib/errorLogger';
@@ -67,6 +69,10 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, o
   const [validationError, setValidationError] = useState<string | null>(null);
   // Index of the set currently being performed. null = 実行中のセットなし
   const [activeSetIndex, setActiveSetIndex] = useState<number | null>(null);
+
+  // インターバルタイマー。状態はここに置き、表示はアクティブなセット行の
+  // 直下へ移動する（未選択時はセット枠の先頭）。
+  const timer = useRestTimer({ defaultSeconds: 60, incrementSeconds: 60 });
 
   const actualExerciseType = showCustomInput ? customExerciseName : exerciseType;
 
@@ -151,6 +157,7 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, o
     }
   };
 
+  // タイマーとは意図的に連動させない（開始・リセットは常にユーザーのタップ）
   const handleActivateSet = (index: number) => {
     setActiveSetIndex((prev) => (prev === index ? null : index));
   };
@@ -422,22 +429,35 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, o
 
         {/* Set Rows */}
         <div className="bg-gray-50 rounded-lg p-2">
+          {/* 実行中のセットが無いときの定位置 */}
+          {activeSetIndex === null && (
+            <div className="flex justify-center border-b border-gray-100 pb-2 mb-1">
+              <RestTimer timer={timer} />
+            </div>
+          )}
           {sets.map((set, index) => (
-            <SetRow
-              key={index}
-              setNumber={index + 1}
-              reps={set.reps}
-              weight={set.weight}
-              variation={set.variation}
-              memo={set.memo}
-              onRepsChange={(reps) => updateSet(index, 'reps', reps)}
-              onWeightChange={(weight) => updateSet(index, 'weight', weight)}
-              onMemoChange={(memo) => updateSet(index, 'memo', memo)}
-              onRemove={() => removeSet(index)}
-              isRemovable={sets.length > 1}
-              isActive={activeSetIndex === index}
-              onActivate={() => handleActivateSet(index)}
-            />
+            <Fragment key={index}>
+              <SetRow
+                setNumber={index + 1}
+                reps={set.reps}
+                weight={set.weight}
+                variation={set.variation}
+                memo={set.memo}
+                onRepsChange={(reps) => updateSet(index, 'reps', reps)}
+                onWeightChange={(weight) => updateSet(index, 'weight', weight)}
+                onMemoChange={(memo) => updateSet(index, 'memo', memo)}
+                onRemove={() => removeSet(index)}
+                isRemovable={sets.length > 1}
+                isActive={activeSetIndex === index}
+                onActivate={() => handleActivateSet(index)}
+              />
+              {/* 実行中のセットの直下にタイマーを追従させる */}
+              {activeSetIndex === index && (
+                <div className="flex justify-center border-l-4 border-l-orange-500 bg-orange-50 rounded-br-md py-2">
+                  <RestTimer timer={timer} />
+                </div>
+              )}
+            </Fragment>
           ))}
         </div>
       </div>
