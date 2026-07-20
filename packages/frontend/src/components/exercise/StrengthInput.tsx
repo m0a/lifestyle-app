@@ -124,6 +124,7 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, o
         reps: record.reps,
         weight: record.weight,
         variation: record.variation || undefined,
+        memo: record.memo || undefined,
       }));
       setSets(newSets);
       setActiveSetIndex(null);
@@ -134,6 +135,8 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, o
         newSets[0] = {
           reps: lastRecord.reps,
           weight: lastRecord.weight,
+          variation: lastRecord.variation || undefined,
+          memo: lastRecord.memo || undefined,
         };
         setSets(newSets);
       }
@@ -431,7 +434,7 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, o
         <div className="bg-gray-50 rounded-lg p-2">
           {/* 実行中のセットが無いときの定位置 */}
           {activeSetIndex === null && (
-            <div className="flex justify-center border-b border-gray-100 pb-2 mb-1">
+            <div className="flex border-b border-gray-100 pb-2 mb-1 pl-1">
               <RestTimer timer={timer} />
             </div>
           )}
@@ -453,7 +456,7 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, o
               />
               {/* 実行中のセットの直下にタイマーを追従させる */}
               {activeSetIndex === index && (
-                <div className="flex justify-center border-l-4 border-l-orange-500 bg-orange-50 rounded-br-md py-2">
+                <div className="flex border-l-4 border-l-orange-500 bg-orange-50 rounded-br-md py-2 pl-1">
                   <RestTimer timer={timer} />
                 </div>
               )}
