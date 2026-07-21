@@ -71,6 +71,18 @@ export function RestTimer({ timer }: RestTimerProps) {
         >
           {formattedTime}
         </span>
+
+        {/* 使い方ヒント: 左寄せタイマーの右側の余白を操作説明で埋める。
+            タップの動作は状態で変わるので文言も連動させる。 */}
+        <div className="ml-1 flex flex-col text-[10px] leading-tight text-gray-400">
+          <span>
+            タップで
+            <span className={`font-medium ${isRunning ? 'text-orange-600' : 'text-gray-500'}`}>
+              {isRunning ? 'リセット' : seconds === 0 ? '再スタート' : 'スタート'}
+            </span>
+          </span>
+          <span>スワイプで ±1分</span>
+        </div>
       </div>
     </div>
   );
