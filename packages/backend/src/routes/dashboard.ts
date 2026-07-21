@@ -1,11 +1,12 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import { WEEKLY_MEAL_TARGETS, weeklyMealSummaryQuerySchema } from '@lifestyle-app/shared';
+import { WEEKLY_MEAL_TARGETS, resolveWeeklyMealTargets, weeklyMealSummaryQuerySchema } from '@lifestyle-app/shared';
 import { DashboardService } from '../services/dashboard';
 import { MealService } from '../services/meal';
 import { WeightService } from '../services/weight';
 import { ExerciseService } from '../services/exercise';
+import { UserService } from '../services/user';
 import { computeWeeklyMealSummary } from '../lib/weeklyMealSummary';
 import { authMiddleware } from '../middleware/auth';
 import type { Bindings, Variables } from '../types';
@@ -124,16 +125,28 @@ export const dashboard = new Hono<{ Bindings: Bindings; Variables: Variables }>(
       // the preceding week rather than starting cold.
       const weightStart = shiftDate(startDate, -WEEKLY_MEAL_TARGETS.weightMaWindow);
 
-      const [meals, weights, exercises] = await Promise.all([
+      const [meals, weights, exercises, profile] = await Promise.all([
         new MealService(db).findByUserId(user.id, { startDate, endDate }),
         new WeightService(db).findByUserId(user.id, { startDate: weightStart, endDate }),
         new ExerciseService(db).findByUserId(user.id, { startDate, endDate }),
+        new UserService(db).getProfile(user.id),
       ]);
+
+      // Layer this user's saved overrides (#170) onto the global defaults; unset
+      // fields (NULL) fall back to WEEKLY_MEAL_TARGETS.
+      const targets = resolveWeeklyMealTargets({
+        dailyCalorieLimit: profile?.targetDailyCalorieLimit,
+        proteinPct: profile?.targetProteinPct,
+        fatPct: profile?.targetFatPct,
+        proteinFloorPerDay: profile?.targetProteinFloorPerDay,
+        highFatDaysLimit: profile?.targetHighFatDaysLimit,
+        exerciseDaysTarget: profile?.targetExerciseDays,
+      });
 
       const summary = computeWeeklyMealSummary(meals, weights, exercises, {
         startDate,
         endDate,
-        targets: WEEKLY_MEAL_TARGETS,
+        targets,
       });
 
       return c.json(summary);

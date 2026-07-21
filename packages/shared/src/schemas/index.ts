@@ -61,6 +61,13 @@ export const updateUserSchema = z.object({
 export const updateGoalsSchema = z.object({
   goalWeight: z.number().min(20).max(300).nullable().optional(),
   goalCalories: z.number().int().min(500).max(10000).nullable().optional(),
+  // Weekly evaluation targets (#170). null clears an override back to the default.
+  targetDailyCalorieLimit: z.number().int().min(500).max(10000).nullable().optional(),
+  targetProteinPct: z.number().int().min(0).max(100).nullable().optional(),
+  targetFatPct: z.number().int().min(0).max(100).nullable().optional(),
+  targetProteinFloorPerDay: z.number().int().min(0).max(400).nullable().optional(),
+  targetHighFatDaysLimit: z.number().int().min(0).max(7).nullable().optional(),
+  targetExerciseDays: z.number().int().min(0).max(7).nullable().optional(),
 });
 
 // Weight schemas

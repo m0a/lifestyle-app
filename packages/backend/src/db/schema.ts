@@ -35,6 +35,14 @@ export const users = sqliteTable(
     emailVerified: integer('email_verified').notNull().default(0), // 0 = false, 1 = true
     goalWeight: real('goal_weight'),
     goalCalories: integer('goal_calories').default(2000),
+    // Per-user weekly evaluation targets (#170). Nullable with no default:
+    // NULL = unset → backend falls back to WEEKLY_MEAL_TARGETS.
+    targetDailyCalorieLimit: integer('target_daily_calorie_limit'),
+    targetProteinPct: integer('target_protein_pct'),
+    targetFatPct: integer('target_fat_pct'),
+    targetProteinFloorPerDay: integer('target_protein_floor_per_day'),
+    targetHighFatDaysLimit: integer('target_high_fat_days_limit'),
+    targetExerciseDays: integer('target_exercise_days'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
