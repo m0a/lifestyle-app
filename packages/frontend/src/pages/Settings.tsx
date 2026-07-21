@@ -1,10 +1,33 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { WEEKLY_MEAL_TARGETS } from '@lifestyle-app/shared';
 import { api } from '../lib/client';
 import { useAuthStore } from '../stores/authStore';
 import { PasskeyManagement } from '../components/auth/PasskeyManagement';
 import { McpTokenManagement } from '../components/mcp/McpTokenManagement';
+
+type GoalsPayload = {
+  goalWeight?: number | null;
+  goalCalories?: number | null;
+  targetDailyCalorieLimit?: number | null;
+  targetProteinPct?: number | null;
+  targetFatPct?: number | null;
+  targetProteinFloorPerDay?: number | null;
+  targetHighFatDaysLimit?: number | null;
+  targetExerciseDays?: number | null;
+};
+
+// The per-user weekly-evaluation targets (#170). `def` is the fallback shown as a
+// placeholder so an empty field visibly means "use the recommended default".
+const WEEKLY_TARGET_FIELDS = [
+  { key: 'targetDailyCalorieLimit', label: '週の平均カロリー上限 (kcal)', hint: '減量ペースの週平均ライン', def: WEEKLY_MEAL_TARGETS.dailyCalorieLimit, min: 500, max: 10000, step: 50 },
+  { key: 'targetProteinPct', label: 'たんぱく質の目標 (%)', hint: '摂取カロリーに占める割合の下限', def: WEEKLY_MEAL_TARGETS.proteinPct, min: 0, max: 100, step: 1 },
+  { key: 'targetFatPct', label: '脂質の上限 (%)', hint: 'これを超えた日が「脂質過多」', def: WEEKLY_MEAL_TARGETS.fatPct, min: 0, max: 100, step: 1 },
+  { key: 'targetProteinFloorPerDay', label: 'たんぱく質の下限 (g/日)', hint: '1日でこのgに届いた日を達成とみなす', def: WEEKLY_MEAL_TARGETS.proteinFloorPerDay, min: 0, max: 400, step: 5 },
+  { key: 'targetHighFatDaysLimit', label: '脂質過多の許容日数 (日/週)', hint: '週にこの日数までは許容', def: WEEKLY_MEAL_TARGETS.highFatDaysLimit, min: 0, max: 7, step: 1 },
+  { key: 'targetExerciseDays', label: '運動の目標 (日/週)', hint: '週にこの日数以上で達成', def: WEEKLY_MEAL_TARGETS.exerciseDaysTarget, min: 0, max: 7, step: 1 },
+] as const;
 
 export function Settings() {
   const navigate = useNavigate();
@@ -17,6 +40,9 @@ export function Settings() {
   // Goal settings state
   const [goalWeight, setGoalWeight] = useState<string>('');
   const [goalCalories, setGoalCalories] = useState<string>('');
+  // Weekly-evaluation targets (#170) — kept as strings keyed by field so an empty
+  // string round-trips to null ("unset → use default").
+  const [weeklyTargets, setWeeklyTargets] = useState<Record<string, string>>({});
   const [goalsSaved, setGoalsSaved] = useState(false);
 
   // Fetch user profile
@@ -60,12 +86,20 @@ export function Settings() {
     if (profile) {
       setGoalWeight(profile.goalWeight?.toString() ?? '');
       setGoalCalories(profile.goalCalories?.toString() ?? '');
+      setWeeklyTargets({
+        targetDailyCalorieLimit: profile.targetDailyCalorieLimit?.toString() ?? '',
+        targetProteinPct: profile.targetProteinPct?.toString() ?? '',
+        targetFatPct: profile.targetFatPct?.toString() ?? '',
+        targetProteinFloorPerDay: profile.targetProteinFloorPerDay?.toString() ?? '',
+        targetHighFatDaysLimit: profile.targetHighFatDaysLimit?.toString() ?? '',
+        targetExerciseDays: profile.targetExerciseDays?.toString() ?? '',
+      });
     }
   }, [profile]);
 
   // Update goals mutation
   const goalsMutation = useMutation({
-    mutationFn: async (goals: { goalWeight?: number | null; goalCalories?: number | null }) => {
+    mutationFn: async (goals: GoalsPayload) => {
       const res = await api.user.goals.$patch({ json: goals });
       if (!res.ok) {
         throw new Error('Failed to update goals');
@@ -133,7 +167,7 @@ export function Settings() {
   };
 
   const handleSaveGoals = () => {
-    const goals: { goalWeight?: number | null; goalCalories?: number | null } = {};
+    const goals: GoalsPayload = {};
 
     if (goalWeight.trim() === '') {
       goals.goalWeight = null;
@@ -150,6 +184,19 @@ export function Settings() {
       const calories = parseInt(goalCalories, 10);
       if (!isNaN(calories) && calories >= 500 && calories <= 10000) {
         goals.goalCalories = calories;
+      }
+    }
+
+    // Weekly targets: blank → null (clear); otherwise an in-range integer.
+    for (const f of WEEKLY_TARGET_FIELDS) {
+      const raw = (weeklyTargets[f.key] ?? '').trim();
+      if (raw === '') {
+        goals[f.key] = null;
+      } else {
+        const n = parseInt(raw, 10);
+        if (!isNaN(n) && n >= f.min && n <= f.max) {
+          goals[f.key] = n;
+        }
       }
     }
 
@@ -231,6 +278,38 @@ export function Settings() {
             />
             <p className="mt-1 text-[10px] text-gray-400">500〜10000kcalの範囲</p>
           </div>
+
+          {/* Weekly evaluation targets (#170) — the "この1週間" card thresholds */}
+          <div className="border-t border-gray-100 pt-4">
+            <h3 className="text-xs font-semibold text-gray-700">週次評価の目標（「この1週間」カード）</h3>
+            <p className="mt-0.5 text-[10px] text-gray-400">
+              空欄はおすすめ値（かっこ内）を使用します。あなたの計画に合わせて上書きできます。
+            </p>
+            <div className="mt-3 space-y-4">
+              {WEEKLY_TARGET_FIELDS.map((f) => (
+                <div key={f.key}>
+                  <label htmlFor={f.key} className="block text-xs font-medium text-gray-600">
+                    {f.label}
+                  </label>
+                  <input
+                    type="number"
+                    id={f.key}
+                    value={weeklyTargets[f.key] ?? ''}
+                    onChange={(e) => setWeeklyTargets((prev) => ({ ...prev, [f.key]: e.target.value }))}
+                    placeholder={`おすすめ: ${f.def}`}
+                    min={f.min}
+                    max={f.max}
+                    step={f.step}
+                    className="mt-1 block w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 sm:w-48 transition-colors"
+                  />
+                  <p className="mt-1 text-[10px] text-gray-400">
+                    {f.hint}（{f.min}〜{f.max}）
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <div className="flex items-center gap-3">
             <button
               onClick={handleSaveGoals}

@@ -45,6 +45,12 @@ export class UserService {
         email: users.email,
         goalWeight: users.goalWeight,
         goalCalories: users.goalCalories,
+        targetDailyCalorieLimit: users.targetDailyCalorieLimit,
+        targetProteinPct: users.targetProteinPct,
+        targetFatPct: users.targetFatPct,
+        targetProteinFloorPerDay: users.targetProteinFloorPerDay,
+        targetHighFatDaysLimit: users.targetHighFatDaysLimit,
+        targetExerciseDays: users.targetExerciseDays,
         createdAt: users.createdAt,
       })
       .from(users)
@@ -54,7 +60,19 @@ export class UserService {
     return user;
   }
 
-  async updateGoals(userId: string, goals: { goalWeight?: number | null; goalCalories?: number | null }) {
+  async updateGoals(
+    userId: string,
+    goals: {
+      goalWeight?: number | null;
+      goalCalories?: number | null;
+      targetDailyCalorieLimit?: number | null;
+      targetProteinPct?: number | null;
+      targetFatPct?: number | null;
+      targetProteinFloorPerDay?: number | null;
+      targetHighFatDaysLimit?: number | null;
+      targetExerciseDays?: number | null;
+    }
+  ) {
     const now = new Date().toISOString();
 
     await this.db
@@ -62,6 +80,18 @@ export class UserService {
       .set({
         ...(goals.goalWeight !== undefined && { goalWeight: goals.goalWeight }),
         ...(goals.goalCalories !== undefined && { goalCalories: goals.goalCalories }),
+        ...(goals.targetDailyCalorieLimit !== undefined && {
+          targetDailyCalorieLimit: goals.targetDailyCalorieLimit,
+        }),
+        ...(goals.targetProteinPct !== undefined && { targetProteinPct: goals.targetProteinPct }),
+        ...(goals.targetFatPct !== undefined && { targetFatPct: goals.targetFatPct }),
+        ...(goals.targetProteinFloorPerDay !== undefined && {
+          targetProteinFloorPerDay: goals.targetProteinFloorPerDay,
+        }),
+        ...(goals.targetHighFatDaysLimit !== undefined && {
+          targetHighFatDaysLimit: goals.targetHighFatDaysLimit,
+        }),
+        ...(goals.targetExerciseDays !== undefined && { targetExerciseDays: goals.targetExerciseDays }),
         updatedAt: now,
       })
       .where(eq(users.id, userId));

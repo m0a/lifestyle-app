@@ -138,6 +138,37 @@ export const WEEKLY_MEAL_TARGETS = {
   exerciseDaysTarget: 2, // metric 7: aim for at least this many exercise days per week
 } as const;
 
+/**
+ * Per-user overrides for the weekly targets (#170). Each field is optional and
+ * nullable: `null`/`undefined` means "not set — fall back to the global default".
+ * windowDays / weightMaWindow / carbsPct stay global (structural / reference-only).
+ */
+export interface WeeklyMealTargetOverrides {
+  dailyCalorieLimit?: number | null;
+  proteinPct?: number | null;
+  fatPct?: number | null;
+  proteinFloorPerDay?: number | null;
+  highFatDaysLimit?: number | null;
+  exerciseDaysTarget?: number | null;
+}
+
+/**
+ * Resolve the effective weekly targets by layering a user's overrides onto the
+ * global defaults. Coalescing against WEEKLY_MEAL_TARGETS (not a captured copy)
+ * means unset fields keep tracking the default if it is ever retuned.
+ */
+export function resolveWeeklyMealTargets(overrides?: WeeklyMealTargetOverrides) {
+  return {
+    ...WEEKLY_MEAL_TARGETS,
+    dailyCalorieLimit: overrides?.dailyCalorieLimit ?? WEEKLY_MEAL_TARGETS.dailyCalorieLimit,
+    proteinPct: overrides?.proteinPct ?? WEEKLY_MEAL_TARGETS.proteinPct,
+    fatPct: overrides?.fatPct ?? WEEKLY_MEAL_TARGETS.fatPct,
+    proteinFloorPerDay: overrides?.proteinFloorPerDay ?? WEEKLY_MEAL_TARGETS.proteinFloorPerDay,
+    highFatDaysLimit: overrides?.highFatDaysLimit ?? WEEKLY_MEAL_TARGETS.highFatDaysLimit,
+    exerciseDaysTarget: overrides?.exerciseDaysTarget ?? WEEKLY_MEAL_TARGETS.exerciseDaysTarget,
+  };
+}
+
 // Date formats
 export const DATE_FORMATS = {
   display: 'YYYY/MM/DD',
