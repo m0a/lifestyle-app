@@ -135,6 +135,7 @@ export const WEEKLY_MEAL_TARGETS = {
   proteinFloorPerDay: 90, // metric 3: a day "achieves" when total protein ≥ this (g)
   highFatDaysLimit: 2, // metric 4: at most this many high-fat days per week
   weightMaWindow: 7, // metric 5: window for the weight moving average
+  exerciseDaysTarget: 2, // metric 7: aim for at least this many exercise days per week
 } as const;
 
 // Date formats

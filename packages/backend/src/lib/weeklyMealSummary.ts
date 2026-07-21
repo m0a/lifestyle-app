@@ -29,6 +29,12 @@ export interface WeeklyMealTargets {
   proteinFloorPerDay: number;
   highFatDaysLimit: number;
   weightMaWindow: number;
+  exerciseDaysTarget: number;
+}
+
+/** Minimal shape needed from an exercise record: only its wall-clock timestamp. */
+export interface ExerciseRow {
+  recordedAt: string;
 }
 
 export interface WeeklyMealSummaryResult {
@@ -41,10 +47,15 @@ export interface WeeklyMealSummaryResult {
   proteinPct: number;
   fatPct: number;
   carbsPct: number;
+  avgProteinG: number;
+  avgFatG: number;
+  avgCarbsG: number;
   proteinFloorDays: number;
   highFatDays: number;
   weightDirection: 'down' | 'flat' | 'up' | 'none';
   weightDeltaKg: number;
+  exerciseDays: number;
+  exerciseSessions: number;
   targets: {
     dailyCalorieLimit: number;
     proteinPct: number;
@@ -52,6 +63,7 @@ export interface WeeklyMealSummaryResult {
     carbsPct: number;
     proteinFloorPerDay: number;
     highFatDaysLimit: number;
+    exerciseDaysTarget: number;
   };
 }
 
@@ -68,6 +80,7 @@ const macroKcal = (p: number, f: number, c: number) => p * 4 + f * 9 + c * 4;
 export function computeWeeklyMealSummary(
   meals: MealRow[],
   weights: WeightRow[],
+  exercises: ExerciseRow[],
   opts: { startDate: string; endDate: string; targets: WeeklyMealTargets }
 ): WeeklyMealSummaryResult {
   const { startDate, endDate, targets } = opts;
@@ -100,6 +113,11 @@ export function computeWeeklyMealSummary(
   const fatPct = weekMacro > 0 ? round1(((totalF * 9) / weekMacro) * 100) : 0;
   const carbsPct = weekMacro > 0 ? round1(((totalC * 4) / weekMacro) * 100) : 0;
 
+  // Average daily macro grams over recorded days (client derives the kcal split).
+  const avgProteinG = recordedMealDays > 0 ? round1(totalP / recordedMealDays) : 0;
+  const avgFatG = recordedMealDays > 0 ? round1(totalF / recordedMealDays) : 0;
+  const avgCarbsG = recordedMealDays > 0 ? round1(totalC / recordedMealDays) : 0;
+
   // metric 3: days whose total protein reached the floor.
   const proteinFloorDays = days.filter((d) => d.protein >= targets.proteinFloorPerDay).length;
 
@@ -125,6 +143,19 @@ export function computeWeeklyMealSummary(
     weightDirection = Math.abs(weightDeltaKg) < 0.1 ? 'flat' : weightDeltaKg < 0 ? 'down' : 'up';
   }
 
+  // ---- exercise (metric 7) ----
+  // Bucket by JST calendar day (same as meals) so bare-UTC "Z" rows count on the
+  // right day; exerciseDays = distinct active days, exerciseSessions = total rows.
+  const exerciseDaySet = new Set<string>();
+  let exerciseSessions = 0;
+  for (const e of exercises) {
+    const date = extractJstDate(e.recordedAt);
+    if (date < startDate || date > endDate) continue;
+    exerciseDaySet.add(date);
+    exerciseSessions += 1;
+  }
+  const exerciseDays = exerciseDaySet.size;
+
   return {
     startDate,
     endDate,
@@ -135,10 +166,15 @@ export function computeWeeklyMealSummary(
     proteinPct,
     fatPct,
     carbsPct,
+    avgProteinG,
+    avgFatG,
+    avgCarbsG,
     proteinFloorDays,
     highFatDays,
     weightDirection,
     weightDeltaKg,
+    exerciseDays,
+    exerciseSessions,
     targets: {
       dailyCalorieLimit: targets.dailyCalorieLimit,
       proteinPct: targets.proteinPct,
@@ -146,6 +182,7 @@ export function computeWeeklyMealSummary(
       carbsPct: targets.carbsPct,
       proteinFloorPerDay: targets.proteinFloorPerDay,
       highFatDaysLimit: targets.highFatDaysLimit,
+      exerciseDaysTarget: targets.exerciseDaysTarget,
     },
   };
 }

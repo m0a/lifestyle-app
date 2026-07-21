@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { WEEKLY_MEAL_TARGETS } from '../../packages/shared/src';
 import { computeWeeklyMealSummary } from '../../packages/backend/src/lib/weeklyMealSummary';
+import type { ExerciseRow } from '../../packages/backend/src/lib/weeklyMealSummary';
 import type { MealRow, WeightRow } from '../../packages/backend/src/lib/mcpAggregate';
 
 const meal = (over: Partial<MealRow>): MealRow => ({
@@ -41,7 +42,7 @@ describe('computeWeeklyMealSummary', () => {
       { weight: 70.0, recordedAt: '2026-07-19T07:00:00+09:00' },
     ];
 
-    const r = computeWeeklyMealSummary(meals, weights, opts);
+    const r = computeWeeklyMealSummary(meals, weights, [], opts);
 
     // metric 6: completeness
     expect(r.recordedMealDays).toBe(3);
@@ -55,6 +56,15 @@ describe('computeWeeklyMealSummary', () => {
     expect(r.fatPct).toBe(32.0);
     expect(r.carbsPct).toBe(46.0);
 
+    // avg daily macro grams over recorded days: P170/3, F110/3, C355/3
+    expect(r.avgProteinG).toBe(56.7);
+    expect(r.avgFatG).toBe(36.7);
+    expect(r.avgCarbsG).toBe(118.3);
+
+    // metric 7: no exercises passed → zero days/sessions
+    expect(r.exerciseDays).toBe(0);
+    expect(r.exerciseSessions).toBe(0);
+
     // metric 3 & 4
     expect(r.proteinFloorDays).toBe(1); // only 07-18
     expect(r.highFatDays).toBe(2); // 07-17 and 07-19
@@ -65,11 +75,12 @@ describe('computeWeeklyMealSummary', () => {
 
     // targets echoed for the client
     expect(r.targets.dailyCalorieLimit).toBe(1750);
+    expect(r.targets.exerciseDaysTarget).toBe(WEEKLY_MEAL_TARGETS.exerciseDaysTarget);
     expect(r.windowDays).toBe(7);
   });
 
   it('handles an empty week', () => {
-    const r = computeWeeklyMealSummary([], [], opts);
+    const r = computeWeeklyMealSummary([], [], [], opts);
     expect(r.recordedMealDays).toBe(0);
     expect(r.avgCalories).toBe(0);
     expect(r.proteinPct).toBe(0);
@@ -77,12 +88,15 @@ describe('computeWeeklyMealSummary', () => {
     expect(r.proteinFloorDays).toBe(0);
     expect(r.weightDirection).toBe('none');
     expect(r.weightDeltaKg).toBe(0);
+    expect(r.exerciseDays).toBe(0);
+    expect(r.exerciseSessions).toBe(0);
   });
 
   it('buckets a bare-UTC "Z" meal onto its JST day inside the window', () => {
     // 20:00Z on 07-18 → 05:00 JST on 07-19 (still inside the window)
     const r = computeWeeklyMealSummary(
       [meal({ recordedAt: '2026-07-18T20:00:00Z', totalProtein: 95, totalFat: 5, totalCarbs: 10, calories: 500 })],
+      [],
       [],
       opts
     );
@@ -94,8 +108,22 @@ describe('computeWeeklyMealSummary', () => {
     const r = computeWeeklyMealSummary(
       [meal({ recordedAt: '2026-07-12T12:00:00+09:00' })], // one day before startDate
       [],
+      [],
       opts
     );
     expect(r.recordedMealDays).toBe(0);
+  });
+
+  it('counts exercise as distinct JST days + total sessions, JST-bucketed', () => {
+    const exercises: ExerciseRow[] = [
+      { recordedAt: '2026-07-17T10:00:00+09:00' }, // 07-17
+      { recordedAt: '2026-07-17T18:00:00+09:00' }, // 07-17 (same day, 2nd session)
+      { recordedAt: '2026-07-19T07:00:00+09:00' }, // 07-19
+      { recordedAt: '2026-07-18T20:00:00Z' }, // bare-UTC Z → 07-19 05:00 JST → 07-19
+      { recordedAt: '2026-07-10T10:00:00+09:00' }, // out of window → excluded
+    ];
+    const r = computeWeeklyMealSummary([], [], exercises, opts);
+    expect(r.exerciseDays).toBe(2); // {07-17, 07-19}
+    expect(r.exerciseSessions).toBe(4); // 4 in-window rows, the 07-10 one dropped
   });
 });
