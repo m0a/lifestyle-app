@@ -3,6 +3,7 @@ import {
   extractLocalDate,
   getWeekDateRange,
   nextLocalDate,
+  toJstIsoString,
 } from '../../packages/backend/src/lib/localDate';
 
 describe('extractLocalDate', () => {
@@ -11,6 +12,50 @@ describe('extractLocalDate', () => {
     expect(extractLocalDate('2026-01-17T23:30:00-05:00')).toBe('2026-01-17');
     expect(extractLocalDate('2026-01-16T23:00:00Z')).toBe('2026-01-16');
     expect(extractLocalDate('2026-01-17')).toBe('2026-01-17');
+  });
+});
+
+describe('toJstIsoString (writer-side format for recorded_at)', () => {
+  it('renders an instant as JST wall clock with a +09:00 offset', () => {
+    expect(toJstIsoString(new Date('2026-07-20T08:09:59Z'))).toBe('2026-07-20T17:09:59+09:00');
+    expect(toJstIsoString(new Date('2026-01-01T00:00:00Z'))).toBe('2026-01-01T09:00:00+09:00');
+  });
+
+  it('drops sub-second precision so every stored value has one shape', () => {
+    // A ".sss" variant would sort before the plain form ('+' 0x2B < '.' 0x2E)
+    // and reintroduce the format mixing this whole change exists to remove.
+    expect(toJstIsoString(new Date('2026-07-20T08:09:59.018Z'))).toBe('2026-07-20T17:09:59+09:00');
+  });
+
+  it('carries the JST date into the first 10 chars across a UTC day boundary', () => {
+    // 15:00Z is midnight JST the next day — extractLocalDate must see the JST date.
+    const iso = toJstIsoString(new Date('2026-07-19T15:00:00Z'));
+    expect(iso).toBe('2026-07-20T00:00:00+09:00');
+    expect(extractLocalDate(iso)).toBe('2026-07-20');
+  });
+
+  it('produces strings whose lexicographic order matches chronological order', () => {
+    // The regression this change fixes: a bare-UTC "Z" value sorted as if it were
+    // 9 hours early, so it landed among the wrong rows under ORDER BY recorded_at.
+    const instants = [
+      new Date('2026-07-20T01:16:00Z'), // 10:16 JST
+      new Date('2026-07-20T02:16:00Z'), // 11:16 JST
+      new Date('2026-07-20T06:03:00Z'), // 15:03 JST
+      new Date('2026-07-20T06:15:00Z'), // 15:15 JST
+      new Date('2026-07-20T08:09:00Z'), // 17:09 JST
+      new Date('2026-07-20T10:32:00Z'), // 19:32 JST
+    ];
+    const rendered = instants.map(toJstIsoString);
+
+    expect([...rendered].sort()).toEqual(rendered);
+  });
+
+  it('keeps midnight-crossing records in chronological string order', () => {
+    const before = toJstIsoString(new Date('2026-07-19T14:59:00Z')); // 23:59 JST 7/19
+    const after = toJstIsoString(new Date('2026-07-19T15:01:00Z')); // 00:01 JST 7/20
+    expect(before < after).toBe(true);
+    expect(extractLocalDate(before)).toBe('2026-07-19');
+    expect(extractLocalDate(after)).toBe('2026-07-20');
   });
 });
 

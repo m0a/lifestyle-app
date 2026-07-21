@@ -15,6 +15,7 @@ import { AIAnalysisService } from '../services/ai-analysis';
 import { AIUsageService } from '../services/ai-usage';
 import { aiUsageLimitCheck } from '../middleware/ai-usage-limit';
 import { getAIConfigFromEnv } from '../lib/ai-provider';
+import { toJstIsoString } from '../lib/localDate';
 import type { Database } from '../db';
 import {
   createFoodItemSchema,
@@ -140,8 +141,9 @@ mealAnalysis.post('/analyze', async (c) => {
     // Create meal record
     const mealId = uuidv4();
     const now = new Date().toISOString();
-    // Use client-provided recordedAt if available (with timezone offset)
-    const recordedAt = clientRecordedAt || now;
+    // Use client-provided recordedAt if available (with timezone offset).
+    // The fallback must be JST-offset, not `now` (Z) — see lib/localDate.ts.
+    const recordedAt = clientRecordedAt || toJstIsoString(new Date());
 
     await db.insert(mealRecords).values({
       id: mealId,
@@ -278,7 +280,9 @@ mealAnalysis.post(
 
 // Schema for create-empty endpoint
 const createEmptySchema = z.object({
-  recordedAt: z.string().regex(/^.+([+-]\d{2}:\d{2}|Z)$/).optional(),
+  // Offset-aware only. Bare UTC "Z" is rejected: it breaks both the lexicographic
+  // ORDER BY on recorded_at and the extractLocalDate prefix property (#167 follow-up).
+  recordedAt: z.string().regex(/^.+[+-]\d{2}:\d{2}$/).optional(),
   mealType: z.enum(['breakfast', 'lunch', 'dinner', 'snack']).optional(),
   content: z.string().optional(),
 });
@@ -291,8 +295,9 @@ mealAnalysis.post('/create-empty', zValidator('json', createEmptySchema), async 
 
   const mealId = uuidv4();
   const now = new Date().toISOString();
-  // Use client-provided recordedAt if available (with timezone offset)
-  const recordedAt = data.recordedAt || now;
+  // Use client-provided recordedAt if available (with timezone offset).
+  // The fallback must be JST-offset, not `now` (Z) — see lib/localDate.ts.
+  const recordedAt = data.recordedAt || toJstIsoString(new Date());
 
   await db.insert(mealRecords).values({
     id: mealId,
@@ -603,7 +608,8 @@ mealAnalysis.post(
     }
 
     const now = new Date().toISOString();
-    const recordedAt = data.recordedAt || now;
+    // The fallback must be JST-offset, not `now` (Z) — see lib/localDate.ts.
+    const recordedAt = data.recordedAt || toJstIsoString(new Date());
 
     // Get food items for content
     const items = await db.query.mealFoodItems.findMany({

@@ -13,6 +13,7 @@ import type {
   DateTimeSource,
 } from '@lifestyle-app/shared';
 import { inferMealTypeFromHour } from '@lifestyle-app/shared';
+import { toJstIsoString } from '../lib/localDate';
 
 // Helper to format date with timezone offset from original ISO string
 // If originalIsoString has offset (e.g., +09:00), apply it to the date
@@ -39,7 +40,9 @@ function formatDateWithOffset(date: Date, originalIsoString?: string): string {
       return `${year}-${month}-${day}T${hour}:${minute}:${second}${offsetStr}`;
     }
   }
-  return date.toISOString();
+  // No usable offset in the source string: fall back to JST rather than bare UTC.
+  // Returning toISOString() here was a "Z" source that broke recorded_at sorting.
+  return toJstIsoString(date);
 }
 
 // Token usage (normalized from AI SDK's inputTokens/outputTokens)
