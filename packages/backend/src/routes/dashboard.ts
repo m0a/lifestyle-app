@@ -5,6 +5,7 @@ import { WEEKLY_MEAL_TARGETS, weeklyMealSummaryQuerySchema } from '@lifestyle-ap
 import { DashboardService } from '../services/dashboard';
 import { MealService } from '../services/meal';
 import { WeightService } from '../services/weight';
+import { ExerciseService } from '../services/exercise';
 import { computeWeeklyMealSummary } from '../lib/weeklyMealSummary';
 import { authMiddleware } from '../middleware/auth';
 import type { Bindings, Variables } from '../types';
@@ -123,12 +124,13 @@ export const dashboard = new Hono<{ Bindings: Bindings; Variables: Variables }>(
       // the preceding week rather than starting cold.
       const weightStart = shiftDate(startDate, -WEEKLY_MEAL_TARGETS.weightMaWindow);
 
-      const [meals, weights] = await Promise.all([
+      const [meals, weights, exercises] = await Promise.all([
         new MealService(db).findByUserId(user.id, { startDate, endDate }),
         new WeightService(db).findByUserId(user.id, { startDate: weightStart, endDate }),
+        new ExerciseService(db).findByUserId(user.id, { startDate, endDate }),
       ]);
 
-      const summary = computeWeeklyMealSummary(meals, weights, {
+      const summary = computeWeeklyMealSummary(meals, weights, exercises, {
         startDate,
         endDate,
         targets: WEEKLY_MEAL_TARGETS,

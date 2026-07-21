@@ -237,6 +237,11 @@ export const weeklyMealSummarySchema = z.object({
   proteinPct: z.number(),
   fatPct: z.number(),
   carbsPct: z.number(),
+  // Average daily macro grams over recorded days — the client renders 糖質(C)g and
+  // the kcal breakdown (P*4 / F*9 / C*4) from these without a new aggregation.
+  avgProteinG: z.number(),
+  avgFatG: z.number(),
+  avgCarbsG: z.number(),
   // metric 3: days whose total protein reached the floor
   proteinFloorDays: z.number().int(),
   // metric 4: days whose fat share exceeded the fat band
@@ -244,6 +249,9 @@ export const weeklyMealSummarySchema = z.object({
   // metric 5: 7-day weight moving-average direction over the window
   weightDirection: z.enum(['down', 'flat', 'up', 'none']),
   weightDeltaKg: z.number(),
+  // metric 7: exercise activity within the window (distinct JST days + total sessions)
+  exerciseDays: z.number().int(),
+  exerciseSessions: z.number().int(),
   // Targets echoed so the client renders bands/levers without duplicating them.
   targets: z.object({
     dailyCalorieLimit: z.number(),
@@ -252,6 +260,7 @@ export const weeklyMealSummarySchema = z.object({
     carbsPct: z.number(),
     proteinFloorPerDay: z.number(),
     highFatDaysLimit: z.number(),
+    exerciseDaysTarget: z.number(),
   }),
 });
 
