@@ -78,7 +78,9 @@ export class MealService {
       .select()
       .from(schema.mealRecords)
       .where(and(...conditions))
-      .orderBy(desc(schema.mealRecords.recordedAt));
+      // created_at breaks ties: recorded_at alone is ambiguous when several meals
+      // fall back to the same "now", and equal keys give a non-deterministic order.
+      .orderBy(desc(schema.mealRecords.recordedAt), desc(schema.mealRecords.createdAt));
 
     const filtered = options?.limit
       ? await baseQuery.limit(options.limit).all()
@@ -207,7 +209,7 @@ export class MealService {
       .from(schema.mealFoodItems)
       .innerJoin(schema.mealRecords, eq(schema.mealFoodItems.mealId, schema.mealRecords.id))
       .where(and(...conditions))
-      .orderBy(desc(schema.mealRecords.recordedAt))
+      .orderBy(desc(schema.mealRecords.recordedAt), desc(schema.mealRecords.createdAt))
       .all();
   }
 

@@ -1,6 +1,7 @@
 import { streamText } from 'ai';
 import { getAIProvider, getModelId, type AIConfig } from '../lib/ai-provider';
 import type { FoodItem, ChatMessage, ChatChange } from '@lifestyle-app/shared';
+import { toJstIsoString } from '../lib/localDate';
 
 // Token usage from AI SDK
 interface TokenUsage {
@@ -224,7 +225,7 @@ export class AIChatService {
             if (!isNaN(date.getTime())) {
               changes.push({
                 action: 'set_datetime',
-                recordedAt: date.toISOString(),
+                recordedAt: toJstIsoString(date),
               });
               pos = closeBracketIdx + 1;
               continue;
@@ -271,7 +272,7 @@ export class AIChatService {
           if (!isNaN(date.getTime())) {
             changes.push({
               action: 'set_datetime',
-              recordedAt: date.toISOString(),
+              recordedAt: toJstIsoString(date),
             });
           }
         } else if (markerType === 'change') {
@@ -281,7 +282,7 @@ export class AIChatService {
             if (!isNaN(date.getTime())) {
               changes.push({
                 action: 'set_datetime',
-                recordedAt: date.toISOString(),
+                recordedAt: toJstIsoString(date),
               });
             }
           } else if (parsed.action === 'add' && parsed.food) {

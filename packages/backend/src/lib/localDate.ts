@@ -35,7 +35,9 @@ export function nextLocalDate(localDate: string): string {
 /** Japan Standard Time is a fixed UTC+9 (no DST) — the app's implicit local zone. */
 const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
-function jstParts(iso: string): { y: number; mo: number; d: number; h: number; mi: number } | null {
+interface JstParts { y: number; mo: number; d: number; h: number; mi: number; s: number }
+
+function jstParts(iso: string): JstParts | null {
   const ms = Date.parse(iso);
   if (Number.isNaN(ms)) return null;
   // Shift the absolute instant by +9h, then read UTC fields to get JST wall clock.
@@ -46,6 +48,7 @@ function jstParts(iso: string): { y: number; mo: number; d: number; h: number; m
     d: t.getUTCDate(),
     h: t.getUTCHours(),
     mi: t.getUTCMinutes(),
+    s: t.getUTCSeconds(),
   };
 }
 
@@ -75,6 +78,29 @@ export function extractJstDate(iso: string): string {
   if (!p) return iso.slice(0, 10);
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${p.y}-${pad(p.mo)}-${pad(p.d)}`;
+}
+
+/**
+ * Render an instant as a JST offset-aware ISO string suitable for `recorded_at`.
+ *
+ * This is the single writer-side source of truth for the storage convention: every
+ * recorded_at must come out of here (or from a client string that already carries an
+ * offset). Bare UTC "Z" values break both the lexicographic ORDER BY and the
+ * extractLocalDate prefix property that the range filters depend on.
+ *
+ * The output must satisfy two properties:
+ *   1. Its first 10 chars are the JST calendar date (extractLocalDate works on it).
+ *   2. String comparison between two outputs matches chronological order.
+ */
+export function toJstIsoString(date: Date): string {
+  const p = jstParts(date.toISOString());
+  if (!p) return date.toISOString();
+  const pad = (n: number) => String(n).padStart(2, '0');
+
+  // Second resolution, no milliseconds: existing "+09:00" rows and the 0026/0040
+  // backfills are all second-precision, and mixing ".sss" back in would reintroduce
+  // two shapes competing in the same string comparison.
+  return `${p.y}-${pad(p.mo)}-${pad(p.d)}T${pad(p.h)}:${pad(p.mi)}:${pad(p.s)}+09:00`;
 }
 
 /** Sunday-through-Saturday range containing the supplied local date. */
