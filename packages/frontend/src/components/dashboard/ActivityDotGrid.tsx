@@ -23,6 +23,11 @@ interface LensPosition {
 
 const COLUMNS = 25;
 const BASE_SIZES = [2, 6, 12, 18]; // Level 0-3 base sizes
+
+// Cool blue ramp by activity level (記録の充実度): 淡い→鮮やか
+// level 0: 記録なしの薄いミスト / level 3: 全記録の深い青
+const LEVEL_COLORS = ['#cddff7', '#88b8f2', '#3b82f6', '#1d4ed8'];
+const CENTER_COLOR = '#2563eb';
 const MAX_SCALE = 2.5; // Maximum scale factor for center dot
 const LENS_RADIUS = 4; // Number of dots affected by lens (wider = smoother)
 const LERP_SPEED = 0.15; // Smoothing factor (0-1, lower = smoother)
@@ -271,18 +276,17 @@ function Dot({ activity, index, lensPos }: DotProps) {
   const scaleFactor = 1 + (scale - 1) * (1 - baseSize / 24);
   const effectiveScale = Math.min(scaleFactor, MAX_SIZE / baseSize);
 
-  // Center dot gets blue color, others use gray scale
-  let color: string;
+  // Blue ramp by activity level. Focused center pops with a white ring + glow.
+  const level = Math.min(activity.level, LEVEL_COLORS.length - 1);
+  let bgColor: string;
+  let boxShadow: string | undefined;
   if (isCenter) {
-    color = 'bg-blue-500';
+    bgColor = CENTER_COLOR;
+    boxShadow = '0 0 0 2px rgba(255,255,255,0.9), 0 0 12px rgba(37,99,235,0.7)';
   } else {
-    const colorMap: Record<number, string> = {
-      0: 'bg-gray-300',
-      1: 'bg-gray-500',
-      2: 'bg-gray-700',
-      3: 'bg-black',
-    };
-    color = colorMap[activity.level] || 'bg-gray-300';
+    bgColor = LEVEL_COLORS[level] ?? '#cddff7';
+    // 全記録の日だけ柔らかく発光させて "熱量" を強調
+    boxShadow = level === 3 ? '0 0 6px rgba(29,78,216,0.55)' : undefined;
   }
 
   // Use transform scale instead of width/height to avoid layout shifts
@@ -297,10 +301,12 @@ function Dot({ activity, index, lensPos }: DotProps) {
       }}
     >
       <span
-        className={`rounded-full ${color} transition-transform duration-100`}
+        className="rounded-full transition-transform duration-100"
         style={{
           width: `${baseSize}px`,
           height: `${baseSize}px`,
+          backgroundColor: bgColor,
+          boxShadow,
           transform: `translate(${offsetX}px, ${offsetY}px) scale(${effectiveScale})`,
         }}
       />
