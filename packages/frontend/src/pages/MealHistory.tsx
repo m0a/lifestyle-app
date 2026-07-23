@@ -8,6 +8,7 @@ import { MealCalendar } from '../components/meal/MealCalendar';
 import { CalorieSummary } from '../components/meal/CalorieSummary';
 import { api } from '../lib/client';
 import { getTodayDateString, formatDateString } from '../lib/dateValidation';
+import { resolvePfcGramTargets } from '@lifestyle-app/shared';
 import type { MealRecord } from '@lifestyle-app/shared';
 
 function MealHistory() {
@@ -59,6 +60,12 @@ function MealHistory() {
       totalCarbs,
     };
   }, [meals]);
+
+  // Per-day PFC gram targets derived from the calorie goal + weekly band settings.
+  const pfcTargets = resolvePfcGramTargets(profile?.goalCalories, {
+    fatPct: profile?.targetFatPct,
+    proteinFloorPerDay: profile?.targetProteinFloorPerDay,
+  });
 
   // Format the selected date for display
   const formattedDate = useMemo(() => {
@@ -117,6 +124,9 @@ function MealHistory() {
           totalProtein={daySummary.totalProtein}
           totalFat={daySummary.totalFat}
           totalCarbs={daySummary.totalCarbs}
+          proteinTarget={pfcTargets.protein}
+          fatTarget={pfcTargets.fat}
+          carbsTarget={pfcTargets.carbs}
           isHistory
         />
       )}

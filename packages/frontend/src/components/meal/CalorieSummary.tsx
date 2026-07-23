@@ -7,8 +7,55 @@ interface CalorieSummaryProps {
   totalProtein: number;
   totalFat: number;
   totalCarbs: number;
+  /** PFCのグラム目標（resolvePfcGramTargetsで算出）。未指定なら目標線なし。 */
+  proteinTarget?: number | null;
+  fatTarget?: number | null;
+  carbsTarget?: number | null;
   /** 履歴画面用のラベル表示 */
   isHistory?: boolean;
+}
+
+/** 目標に対する意味づけ。floor=下限(満たす), cap=上限(超で赤), reference=目安(中立) */
+type MacroTone = 'floor' | 'cap' | 'reference';
+
+function MacroBar({
+  label,
+  current,
+  target,
+  tone,
+}: {
+  label: string;
+  current: number;
+  target: number | null | undefined;
+  tone: MacroTone;
+}) {
+  const hasTarget = target != null && target > 0;
+  const progress = hasTarget ? Math.min((current / target) * 100, 100) : 0;
+
+  let barColor = 'bg-sky-400'; // reference（炭水化物の目安）
+  if (hasTarget && tone === 'floor') {
+    barColor = current >= target ? 'bg-emerald-400' : 'bg-amber-400';
+  } else if (hasTarget && tone === 'cap') {
+    barColor = current > target ? 'bg-red-400' : 'bg-emerald-400';
+  }
+
+  return (
+    <div>
+      <div className="flex items-baseline justify-between text-[10px] text-gray-400">
+        <span>{label}</span>
+        <span className="tabular-nums">
+          {current.toFixed(1)}
+          {hasTarget ? ` / ${Math.round(target)}` : ''}g
+        </span>
+      </div>
+      <div className="mt-0.5 h-1 overflow-hidden rounded-full bg-gray-100">
+        <div
+          className={`h-full rounded-full transition-all ${barColor}`}
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+    </div>
+  );
 }
 
 export function CalorieSummary({
@@ -20,6 +67,9 @@ export function CalorieSummary({
   totalProtein,
   totalFat,
   totalCarbs,
+  proteinTarget,
+  fatTarget,
+  carbsTarget,
   isHistory = false,
 }: CalorieSummaryProps) {
   const progress = Math.min((totalCalories / targetCalories) * 100, 100);
@@ -34,9 +84,6 @@ export function CalorieSummary({
         <p className="mt-1 text-xl font-bold text-gray-900 tabular-nums sm:text-2xl">
           {totalCalories.toLocaleString()} <span className="text-xs font-normal text-gray-400">kcal</span>
         </p>
-        <p className="mt-1 text-xs text-gray-400">
-          P: {totalProtein.toFixed(1)}g  F: {totalFat.toFixed(1)}g  C: {totalCarbs.toFixed(1)}g
-        </p>
         <div className="mt-2">
           <div className="h-1.5 overflow-hidden rounded-full bg-gray-100">
             <div
@@ -49,6 +96,11 @@ export function CalorieSummary({
           <p className="mt-1 text-[10px] text-gray-400">
             目標: {targetCalories.toLocaleString()} kcal
           </p>
+        </div>
+        <div className="mt-2.5 space-y-1.5">
+          <MacroBar label="P たんぱく質" current={totalProtein} target={proteinTarget} tone="floor" />
+          <MacroBar label="F 脂質" current={totalFat} target={fatTarget} tone="cap" />
+          <MacroBar label="C 炭水化物" current={totalCarbs} target={carbsTarget} tone="reference" />
         </div>
       </div>
 
