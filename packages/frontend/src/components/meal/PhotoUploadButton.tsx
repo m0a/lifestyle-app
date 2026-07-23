@@ -15,9 +15,10 @@ export function PhotoUploadButton({
 }: PhotoUploadButtonProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const libraryInputRef = useRef<HTMLInputElement>(null);
 
-  // Handle file selection with validation
+  // Handle file selection with validation — shared by both camera and library inputs
   const handleFileSelect = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
@@ -58,32 +59,58 @@ export function PhotoUploadButton({
     [onUpload]
   );
 
-  const baseClasses = 'flex items-center justify-center gap-2 rounded-lg px-4 py-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed';
+  const baseClasses = 'flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed';
 
-  const variantClasses = variant === 'primary'
+  // Camera button follows the variant; library button stays neutral (bordered)
+  const cameraClasses = variant === 'primary'
     ? 'bg-blue-500 text-white hover:bg-blue-600'
     : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50';
+  const libraryClasses = 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50';
 
   return (
     <div className="flex flex-col gap-2">
+      {/* Camera input: capture 属性でカメラを直接起動 */}
       <input
-        ref={fileInputRef}
+        ref={cameraInputRef}
+        type="file"
+        accept="image/jpeg,image/jpg,image/png"
+        capture="environment"
+        onChange={handleFileSelect}
+        className="hidden"
+      />
+      {/* Library input: capture なしでフォトライブラリ/ギャラリーを開く */}
+      <input
+        ref={libraryInputRef}
         type="file"
         accept="image/jpeg,image/jpg,image/png"
         onChange={handleFileSelect}
         className="hidden"
       />
 
-      <button
-        onClick={() => fileInputRef.current?.click()}
-        disabled={disabled || isProcessing}
-        className={`${baseClasses} ${variantClasses}`}
-        type="button"
-      >
-        <span>{isProcessing ? '⏳' : '📷'}</span>
-        <span>{isProcessing ? '処理中...' : '写真を追加'}</span>
-      </button>
+      <div className="flex gap-2">
+        <button
+          onClick={() => cameraInputRef.current?.click()}
+          disabled={disabled || isProcessing}
+          className={`${baseClasses} ${cameraClasses}`}
+          type="button"
+        >
+          <span>📷</span>
+          <span>カメラ</span>
+        </button>
+        <button
+          onClick={() => libraryInputRef.current?.click()}
+          disabled={disabled || isProcessing}
+          className={`${baseClasses} ${libraryClasses}`}
+          type="button"
+        >
+          <span>📁</span>
+          <span>ライブラリ</span>
+        </button>
+      </div>
 
+      {isProcessing && (
+        <p className="text-sm text-gray-500">⏳ 処理中...</p>
+      )}
       {error && (
         <p className="text-sm text-red-500">{error}</p>
       )}
