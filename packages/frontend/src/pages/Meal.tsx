@@ -13,7 +13,7 @@ import { mealAnalysisApi } from '../lib/api';
 import { api } from '../lib/client';
 import { getTodayDateString } from '../lib/dateValidation';
 import type { MealType, MealRecord } from '@lifestyle-app/shared';
-import { MEAL_TYPE_LABELS } from '@lifestyle-app/shared';
+import { MEAL_TYPE_LABELS, resolvePfcGramTargets } from '@lifestyle-app/shared';
 
 export function Meal() {
   const [filterType, setFilterType] = useState<MealType | ''>('');
@@ -57,6 +57,12 @@ export function Meal() {
     await mealAnalysisApi.saveMealAnalysis(mealId, mealType, recordedAt);
   }, []);
 
+  // Per-day PFC gram targets derived from the calorie goal + weekly band settings.
+  const pfcTargets = resolvePfcGramTargets(profile?.goalCalories, {
+    fatPct: profile?.targetFatPct,
+    proteinFloorPerDay: profile?.targetProteinFloorPerDay,
+  });
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-16">
@@ -88,6 +94,9 @@ export function Meal() {
           totalProtein={todaySummary.totalProtein ?? 0}
           totalFat={todaySummary.totalFat ?? 0}
           totalCarbs={todaySummary.totalCarbs ?? 0}
+          proteinTarget={pfcTargets.protein}
+          fatTarget={pfcTargets.fat}
+          carbsTarget={pfcTargets.carbs}
         />
       )}
 

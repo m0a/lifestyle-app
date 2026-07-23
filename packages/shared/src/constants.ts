@@ -169,6 +169,47 @@ export function resolveWeeklyMealTargets(overrides?: WeeklyMealTargetOverrides) 
   };
 }
 
+// Energy density per gram of each macronutrient (kcal/g). Protein and carbs
+// yield ~4 kcal/g, fat ~9 kcal/g. Used to translate a %-of-calories target band
+// into an absolute gram target for the meal tab's PFC bars.
+export const KCAL_PER_GRAM = { protein: 4, fat: 9, carbs: 4 } as const;
+
+/**
+ * Per-day PFC gram targets used as the baseline for the meal card's macro bars.
+ * - `protein` is a floor (aim to meet or exceed).
+ * - `fat` is an upper cap (stay at or under); null when no calorie goal is set.
+ * - `carbs` is a ~carbsPct reference; null when no calorie goal is set.
+ */
+export interface PfcGramTargets {
+  protein: number;
+  fat: number | null;
+  carbs: number | null;
+}
+
+/**
+ * Derive per-day PFC gram targets from the calorie goal and the user's weekly
+ * band settings (#170 overrides layered over WEEKLY_MEAL_TARGETS). Protein is a
+ * floor in g/day, so it is always available. Fat and carbs are defined as a
+ * share of calories, so translating them to grams needs `goalCalories`; when it
+ * is absent they are returned as null (bar renders without a target line).
+ */
+export function resolvePfcGramTargets(
+  goalCalories: number | null | undefined,
+  overrides?: Pick<WeeklyMealTargetOverrides, 'proteinFloorPerDay' | 'fatPct'>,
+): PfcGramTargets {
+  const targets = resolveWeeklyMealTargets(overrides);
+  const protein = targets.proteinFloorPerDay;
+
+  // Fat/carbs are defined as a % share of calories, so convert
+  // "share of kcal ÷ kcal-per-gram" once a calorie goal exists.
+  const fat: number | null =
+    goalCalories == null ? null : (goalCalories * targets.fatPct) / 100 / KCAL_PER_GRAM.fat;
+  const carbs: number | null =
+    goalCalories == null ? null : (goalCalories * targets.carbsPct) / 100 / KCAL_PER_GRAM.carbs;
+
+  return { protein, fat, carbs };
+}
+
 // Date formats
 export const DATE_FORMATS = {
   display: 'YYYY/MM/DD',
