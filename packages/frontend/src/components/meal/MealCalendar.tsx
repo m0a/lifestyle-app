@@ -192,11 +192,14 @@ export function MealCalendar({ selectedDate, onDateSelect, targets }: MealCalend
           const dots = day !== null ? dotStates(verdictFor(day)) : null;
           return (
             <div key={index} className="aspect-square">
+              {/* pb-2.5 lifts the centred number clear of the dots pinned to the
+                  bottom edge — at a 320px viewport a cell is only ~38px, and
+                  without it the digits and dots collide. */}
               {day !== null ? (
                 <button
                   onClick={() => handleDayClick(day)}
                   aria-label={dayAriaLabel(day, verdictFor(day))}
-                  className={`relative flex h-full w-full flex-col items-center justify-center rounded-lg text-sm transition-colors ${
+                  className={`relative flex h-full w-full flex-col items-center justify-center rounded-lg pb-2.5 text-sm transition-colors ${
                     isSelected(day)
                       ? 'bg-green-600 text-white'
                       : isToday(day)
