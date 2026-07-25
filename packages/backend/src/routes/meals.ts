@@ -289,9 +289,11 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
     const user = c.get('user');
 
     const mealService = new MealService(db);
-    const dates = await mealService.getMealDates(user.id, year, month);
+    const days = await mealService.getMealDaySummaries(user.id, year, month);
 
-    return c.json({ dates });
+    // `dates` is derived from `days` and kept for clients cached before the
+    // per-day totals shipped (SW updates are prompt-based, so old tabs persist).
+    return c.json({ dates: days.map((d) => d.date), days });
   })
   .get('/:id', async (c) => {
     const id = c.req.param('id');

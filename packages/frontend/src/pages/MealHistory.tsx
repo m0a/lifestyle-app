@@ -8,7 +8,7 @@ import { MealCalendar } from '../components/meal/MealCalendar';
 import { CalorieSummary } from '../components/meal/CalorieSummary';
 import { api } from '../lib/client';
 import { getTodayDateString, formatDateString } from '../lib/dateValidation';
-import { resolvePfcGramTargets } from '@lifestyle-app/shared';
+import { resolvePfcGramTargets, resolveWeeklyMealTargets } from '@lifestyle-app/shared';
 import type { MealRecord } from '@lifestyle-app/shared';
 
 function MealHistory() {
@@ -67,6 +67,23 @@ function MealHistory() {
     proteinFloorPerDay: profile?.targetProteinFloorPerDay,
   });
 
+  // Thresholds the calendar's per-day dots are judged against. Memoised because
+  // resolveWeeklyMealTargets returns a fresh object each call, which would
+  // otherwise re-judge every day of the month on every render.
+  const dayTargets = useMemo(
+    () =>
+      resolveWeeklyMealTargets({
+        dailyCalorieLimit: profile?.targetDailyCalorieLimit,
+        fatPct: profile?.targetFatPct,
+        proteinFloorPerDay: profile?.targetProteinFloorPerDay,
+      }),
+    [
+      profile?.targetDailyCalorieLimit,
+      profile?.targetFatPct,
+      profile?.targetProteinFloorPerDay,
+    ]
+  );
+
   // Format the selected date for display
   const formattedDate = useMemo(() => {
     const date = new Date(selectedDate + 'T00:00:00');
@@ -111,6 +128,7 @@ function MealHistory() {
       <MealCalendar
         selectedDate={new Date(selectedDate + 'T00:00:00')}
         onDateSelect={handleDateSelect}
+        targets={dayTargets}
       />
 
       {/* Day Summary */}

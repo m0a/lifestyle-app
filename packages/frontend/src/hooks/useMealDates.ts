@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/client';
+import type { MealDaySummary } from '@lifestyle-app/shared';
 
 interface UseMealDatesOptions {
   year: number;
@@ -24,11 +25,20 @@ export function useMealDates(options: UseMealDatesOptions) {
       }
       return res.json();
     },
-    select: (data) => new Set(data.dates),
+    // `days` may be missing when the response comes from a service-worker cache
+    // written before per-day totals shipped — fall back to dates-only so the
+    // calendar still renders (without dots) instead of crashing.
+    select: (data) => ({
+      dates: new Set(data.dates),
+      days: new Map<string, MealDaySummary>(
+        (data.days ?? []).map((d) => [d.date, d] as const)
+      ),
+    }),
   });
 
   return {
-    datesWithMeals: query.data ?? new Set<string>(),
+    datesWithMeals: query.data?.dates ?? new Set<string>(),
+    daySummaries: query.data?.days ?? new Map<string, MealDaySummary>(),
     isLoading: query.isLoading,
     error: query.error,
   };

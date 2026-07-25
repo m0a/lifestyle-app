@@ -217,11 +217,30 @@ export const mealDatesQuerySchema = z.object({
   month: z.coerce.number().int().min(1).max(12),
 });
 
+/**
+ * One day's nutrition totals, used by the calendar to render its per-day PFC
+ * verdict (three dots). Totals only — the pass/fail judgement lives in
+ * `evaluateDayNutrition` so the calendar and the weekly card share one rule set.
+ */
+export const mealDaySummarySchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  calories: z.number(),
+  protein: z.number(),
+  fat: z.number(),
+  carbs: z.number(),
+  mealCount: z.number().int(),
+});
+
 export const mealDatesResponseSchema = z.object({
+  // Kept alongside `days` on purpose: the service worker uses registerType
+  // 'prompt', so a tab opened before the deploy can still be running the old
+  // client against the new API. Dropping `dates` would break those tabs.
   dates: z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)),
+  days: z.array(mealDaySummarySchema),
 });
 
 export type MealDatesQuery = z.infer<typeof mealDatesQuerySchema>;
+export type MealDaySummary = z.infer<typeof mealDaySummarySchema>;
 export type MealDatesResponse = z.infer<typeof mealDatesResponseSchema>;
 
 // Weekly meal summary schema (食事タブ「この1週間」評価カード)
