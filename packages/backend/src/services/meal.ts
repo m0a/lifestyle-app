@@ -3,7 +3,12 @@ import { v4 as uuidv4 } from 'uuid';
 import type { Database } from '../db';
 import { schema } from '../db';
 import { AppError } from '../middleware/error';
-import type { CreateMealInput, UpdateMealInput, MealType } from '@lifestyle-app/shared';
+import type {
+  CreateMealInput,
+  UpdateMealInput,
+  MealType,
+  MealDaySummary,
+} from '@lifestyle-app/shared';
 import { extractLocalDate, nextLocalDate } from '../lib/localDate';
 
 export class MealService {
@@ -317,11 +322,19 @@ export class MealService {
    * Get dates with meals for a given month.
    * Since recordedAt contains timezone offset, we extract local dates directly.
    */
-  async getMealDates(
+  /**
+   * Per-day nutrition totals for a month, for the meal-history calendar.
+   *
+   * The month's records were already being fetched here to derive the set of
+   * dates; folding them into per-day totals costs no extra query. Bucketing goes
+   * through extractLocalDate rather than Date#getDate because recorded_at mixes
+   * "+09:00" and bare-UTC "Z" rows and Workers run in UTC.
+   */
+  async getMealDaySummaries(
     userId: string,
     year: number,
     month: number
-  ): Promise<string[]> {
+  ): Promise<MealDaySummary[]> {
     // 月の範囲を計算（ローカル日付形式）
     const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
     const lastDay = new Date(year, month, 0).getDate();
@@ -330,13 +343,21 @@ export class MealService {
     // 日付範囲内の食事を取得
     const meals = await this.findByUserId(userId, { startDate, endDate });
 
-    // ローカル日付でユニークな日付を抽出
-    const dateSet = new Set<string>();
+    // ローカル日付ごとに栄養素を合算（null は 0 として扱う）
+    const dayMap = new Map<string, MealDaySummary>();
     for (const meal of meals) {
-      const dateStr = extractLocalDate(meal.recordedAt);
-      dateSet.add(dateStr);
+      const date = extractLocalDate(meal.recordedAt);
+      const day =
+        dayMap.get(date) ??
+        { date, calories: 0, protein: 0, fat: 0, carbs: 0, mealCount: 0 };
+      day.calories += meal.calories ?? 0;
+      day.protein += meal.totalProtein ?? 0;
+      day.fat += meal.totalFat ?? 0;
+      day.carbs += meal.totalCarbs ?? 0;
+      day.mealCount += 1;
+      dayMap.set(date, day);
     }
 
-    return Array.from(dateSet).sort();
+    return Array.from(dayMap.values()).sort((a, b) => a.date.localeCompare(b.date));
   }
 }
