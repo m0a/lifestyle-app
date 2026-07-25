@@ -1,3 +1,5 @@
+import { KCAL_PER_GRAM, macroKcal } from '@lifestyle-app/shared';
+
 interface CalorieSummaryProps {
   totalCalories: number;
   averageCalories: number;
@@ -11,6 +13,11 @@ interface CalorieSummaryProps {
   proteinTarget?: number | null;
   fatTarget?: number | null;
   carbsTarget?: number | null;
+  /**
+   * 脂質シェアの上限(%)。resolveWeeklyMealTargets().fatPct を渡す。
+   * 指定すると脂質バーの下に実シェアを併記する。
+   */
+  fatPctTarget?: number | null;
   /** 履歴画面用のラベル表示 */
   isHistory?: boolean;
 }
@@ -23,11 +30,14 @@ function MacroBar({
   current,
   target,
   tone,
+  note,
 }: {
   label: string;
   current: number;
   target: number | null | undefined;
   tone: MacroTone;
+  /** バー下の補足行。ok=false のとき警告色にする。 */
+  note?: { text: string; ok: boolean };
 }) {
   const hasTarget = target != null && target > 0;
   const progress = hasTarget ? Math.min((current / target) * 100, 100) : 0;
@@ -54,6 +64,15 @@ function MacroBar({
           style={{ width: `${progress}%` }}
         />
       </div>
+      {note && (
+        <p
+          className={`mt-0.5 text-[10px] tabular-nums ${
+            note.ok ? 'text-gray-400' : 'text-amber-600'
+          }`}
+        >
+          {note.text}
+        </p>
+      )}
     </div>
   );
 }
@@ -70,12 +89,29 @@ export function CalorieSummary({
   proteinTarget,
   fatTarget,
   carbsTarget,
+  fatPctTarget,
   isHistory = false,
 }: CalorieSummaryProps) {
   const progress = Math.min((totalCalories / targetCalories) * 100, 100);
   const remaining = targetCalories - totalCalories;
   const isOverTarget = remaining < 0;
   const dayLabel = isHistory ? 'この日' : '今日';
+
+  // 脂質はグラムの絶対量とエネルギーシェアの2つで見る必要がある。グラム目標
+  // (fatTarget) は「目標カロリーを食べたとき」の上限なので、食べた量が少ない日は
+  // 絶対量が目標内でもシェアは超えうる。カレンダーのドットはシェアで判定するため、
+  // 併記しないと「バーは緑なのにドットは未達」に見える。
+  const macro = macroKcal(totalProtein, totalFat, totalCarbs);
+  const rawFatShare = macro > 0 ? ((totalFat * KCAL_PER_GRAM.fat) / macro) * 100 : null;
+  const fatShareNote =
+    rawFatShare != null && fatPctTarget != null
+      ? {
+          // 比較は丸める前の生値で行う（evaluateDayNutrition と同じ向き）。
+          // 丸めてから比べるとカレンダーのドットと判定がズレる。
+          ok: rawFatShare <= fatPctTarget,
+          text: `シェア ${(Math.round(rawFatShare * 10) / 10).toFixed(1)}%（目標 ${fatPctTarget}% 以下）`,
+        }
+      : undefined;
 
   return (
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -99,7 +135,13 @@ export function CalorieSummary({
         </div>
         <div className="mt-2.5 space-y-1.5">
           <MacroBar label="P たんぱく質" current={totalProtein} target={proteinTarget} tone="floor" />
-          <MacroBar label="F 脂質" current={totalFat} target={fatTarget} tone="cap" />
+          <MacroBar
+            label="F 脂質"
+            current={totalFat}
+            target={fatTarget}
+            tone="cap"
+            note={fatShareNote}
+          />
           <MacroBar label="C 炭水化物" current={totalCarbs} target={carbsTarget} tone="reference" />
         </div>
       </div>
