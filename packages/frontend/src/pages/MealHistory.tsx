@@ -145,6 +145,7 @@ function MealHistory() {
           proteinTarget={pfcTargets.protein}
           fatTarget={pfcTargets.fat}
           carbsTarget={pfcTargets.carbs}
+          fatPctTarget={dayTargets.fatPct}
           isHistory
         />
       )}

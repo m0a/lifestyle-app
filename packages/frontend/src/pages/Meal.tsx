@@ -13,7 +13,7 @@ import { mealAnalysisApi } from '../lib/api';
 import { api } from '../lib/client';
 import { getTodayDateString } from '../lib/dateValidation';
 import type { MealType, MealRecord } from '@lifestyle-app/shared';
-import { MEAL_TYPE_LABELS, resolvePfcGramTargets } from '@lifestyle-app/shared';
+import { MEAL_TYPE_LABELS, resolvePfcGramTargets, resolveWeeklyMealTargets } from '@lifestyle-app/shared';
 
 export function Meal() {
   const [filterType, setFilterType] = useState<MealType | ''>('');
@@ -63,6 +63,10 @@ export function Meal() {
     proteinFloorPerDay: profile?.targetProteinFloorPerDay,
   });
 
+  // The fat SHARE band (%), shown alongside the gram bar. Same source as the
+  // calendar's dots, so the two never disagree.
+  const fatPctTarget = resolveWeeklyMealTargets({ fatPct: profile?.targetFatPct }).fatPct;
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-16">
@@ -97,6 +101,7 @@ export function Meal() {
           proteinTarget={pfcTargets.protein}
           fatTarget={pfcTargets.fat}
           carbsTarget={pfcTargets.carbs}
+          fatPctTarget={fatPctTarget}
         />
       )}
 
