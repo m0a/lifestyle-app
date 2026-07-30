@@ -550,7 +550,7 @@ jobs:
       - name: Deploy PR Preview
         run: |
           cd packages/backend
-          pnpm exec wrangler deploy --name lifestyle-tracker-pr-${{ github.event.pull_request.number }} \
+          pnpm exec wrangler deploy --env="" --name lifestyle-tracker-pr-${{ github.event.pull_request.number }} \
             --var ENVIRONMENT:preview \
             --var AI_PROVIDER:google \
             --var AI_MODEL:gemini-3-flash-preview \
