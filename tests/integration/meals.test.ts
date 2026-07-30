@@ -159,7 +159,9 @@ describe('Meal API Integration Tests', () => {
       expect(error.message).toContain('10MB');
     });
 
-    it('should reject invalid photo formats (not JPEG/PNG)', async () => {
+    // The route accepts any image/* type (WebP included since the client
+    // re-encodes uploads); what it rejects is a non-image upload.
+    it('should reject a non-image upload', async () => {
       // T053: File type validation
       const invalidImage = new Blob([new Uint8Array([0x00, 0x01, 0x02])], { type: 'text/plain' });
 

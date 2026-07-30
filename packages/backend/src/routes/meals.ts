@@ -94,7 +94,7 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
       // Validate each photo
       for (const photo of photos) {
         if (!photo.type.startsWith('image/')) {
-          return c.json({ message: '画像ファイルのみアップロードできます' }, 400);
+          return c.json({ message: 'Only image files are supported' }, 400);
         }
         if (photo.size > 10 * 1024 * 1024) {
           return c.json({ message: 'File size exceeds 10MB limit' }, 400);
