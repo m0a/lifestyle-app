@@ -1,32 +1,63 @@
 /**
- * Resize image to maximum dimensions while preserving aspect ratio
- * Converts to JPEG with quality compression
+ * Downscale a photo and re-encode it as WebP before upload.
+ *
+ * Meal photos dominate R2 storage (the bucket averaged ~609KB per object while
+ * still on 1920px JPEG). Two levers apply: the long edge, and the codec. WebP
+ * is typically 25-35% smaller than JPEG at comparable quality, and 1280px still
+ * leaves headroom for Gemini — whose effective image input is well below that —
+ * while display never needs more than a phone-width card.
+ *
+ * Falls back to the original file whenever anything goes wrong, so a browser
+ * without WebP encoding (or a decode failure) never blocks an upload.
  */
+
+/** Long-edge cap. Above Gemini's effective input size, below the old 1920px. */
+export const MAX_IMAGE_DIMENSION = 1280;
+
+/** WebP quality. 0.80 keeps food detail while undercutting JPEG q0.85 markedly. */
+export const IMAGE_QUALITY = 0.8;
+
+const WEBP_MIME = 'image/webp';
+
+/**
+ * Whether canvas can actually encode WebP. Safari only gained this in 14, and
+ * toBlob silently falls back to PNG for an unsupported type — which would make
+ * files *larger*, so this is checked rather than assumed.
+ */
+function canEncodeWebP(): boolean {
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1;
+    canvas.height = 1;
+    return canvas.toDataURL(WEBP_MIME).startsWith(`data:${WEBP_MIME}`);
+  } catch {
+    return false;
+  }
+}
+
 export async function resizeImage(
   file: File,
-  maxWidth: number = 1920,
-  maxHeight: number = 1920,
-  quality: number = 0.85
+  maxWidth: number = MAX_IMAGE_DIMENSION,
+  maxHeight: number = MAX_IMAGE_DIMENSION,
+  quality: number = IMAGE_QUALITY
 ): Promise<File> {
-  // If already small enough, return as-is
-  if (file.size < 500 * 1024) {
-    // Less than 500KB, no need to resize
-    return file;
-  }
-
+  // NOTE: deliberately no "small files pass through" shortcut. A 400KB JPEG is
+  // still worth re-encoding, and skipping by size alone would leave the stored
+  // format inconsistent for no benefit.
   try {
-    // Create image bitmap from file
     const img = await createImageBitmap(file);
+    const sourceWidth = img.width;
+    const sourceHeight = img.height;
 
-    // Calculate new dimensions preserving aspect ratio
-    let { width, height } = img;
+    // Preserve aspect ratio; never upscale.
+    let width = sourceWidth;
+    let height = sourceHeight;
     if (width > maxWidth || height > maxHeight) {
       const ratio = Math.min(maxWidth / width, maxHeight / height);
       width = Math.floor(width * ratio);
       height = Math.floor(height * ratio);
     }
 
-    // Create canvas and draw resized image
     const canvas = document.createElement('canvas');
     canvas.width = width;
     canvas.height = height;
@@ -37,8 +68,12 @@ export async function resizeImage(
     }
 
     ctx.drawImage(img, 0, 0, width, height);
+    img.close();
 
-    // Convert to blob
+    const useWebP = canEncodeWebP();
+    const mimeType = useWebP ? WEBP_MIME : 'image/jpeg';
+    const extension = useWebP ? '.webp' : '.jpg';
+
     const blob = await new Promise<Blob>((resolve, reject) => {
       canvas.toBlob(
         (result) => {
@@ -48,14 +83,20 @@ export async function resizeImage(
             reject(new Error('Failed to create blob'));
           }
         },
-        'image/jpeg',
+        mimeType,
         quality
       );
     });
 
-    // Convert blob to File
-    return new File([blob], file.name.replace(/\.\w+$/, '.jpg'), {
-      type: 'image/jpeg',
+    // Re-encoding can lose to the original on an already-optimised image that
+    // needed no downscaling. Keeping the smaller of the two means this never
+    // makes an upload heavier than it was.
+    if (blob.size >= file.size && width === sourceWidth && height === sourceHeight) {
+      return file;
+    }
+
+    return new File([blob], file.name.replace(/\.\w+$/, extension), {
+      type: mimeType,
       lastModified: Date.now(),
     });
   } catch (error) {

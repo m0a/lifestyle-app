@@ -27,6 +27,10 @@ const TOKEN_CLEANUP_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 const EMAIL_LOG_RETENTION_MS = 90 * 24 * 60 * 60 * 1000; // 90 days (operational logs, recipient PII)
 const AI_USAGE_RETENTION_MS = 90 * 24 * 60 * 60 * 1000; // 90 days (detail; total kept in rollup)
 const TEMP_PHOTO_RETENTION_MS = 24 * 60 * 60 * 1000; // 24 hours (analysis review flow is minutes)
+// Grace period before an unreferenced photo object is considered orphaned. An
+// object is written to R2 before its meal_photos row exists, so anything recent
+// may simply be mid-save.
+const ORPHANED_PHOTO_GRACE_MS = 24 * 60 * 60 * 1000; // 24 hours
 const R2_DELETE_BATCH_SIZE = 1000; // R2 bucket.delete() accepts up to 1000 keys per call
 
 interface CleanupResult {
@@ -39,6 +43,59 @@ interface CleanupResult {
   deletedAiUsageRecords: number;
   deletedRateLimits: number;
   deletedTempPhotos: number;
+  deletedOrphanedPhotos: number;
+}
+
+/**
+ * Delete R2 photo objects that no meal_photos row references any more.
+ *
+ * Deleting a meal removes its meal_photos rows through ON DELETE CASCADE, but
+ * CASCADE only reaches rows in this database — the R2 objects survive. The
+ * delete route now removes them directly, and per-photo deletion has always
+ * tried to; both, however, swallow storage failures on purpose (the DB is the
+ * source of truth). This sweep is the backstop that makes those cases
+ * eventually consistent, and it also collects objects orphaned before the
+ * delete route was fixed, including the legacy `meals/<id>/photo.jpg` layout.
+ *
+ * The grace window matters: a photo is written to R2 before its meal_photos row
+ * exists, so a freshly uploaded object is briefly unreferenced. Only objects
+ * older than the window are eligible, which keeps an in-flight save safe.
+ *
+ * temp/ is excluded — cleanupTempPhotos owns that prefix and uses its own rule.
+ *
+ * Exported for unit testing.
+ */
+export async function cleanupOrphanedPhotos(
+  bucket: R2Bucket,
+  db: D1Database,
+  now: number
+): Promise<number> {
+  const cutoff = now - ORPHANED_PHOTO_GRACE_MS;
+
+  const referenced = new Set<string>();
+  const rows = await db.prepare('SELECT photo_key FROM meal_photos').all<{ photo_key: string }>();
+  for (const row of rows.results ?? []) {
+    referenced.add(row.photo_key);
+  }
+
+  const orphanedKeys: string[] = [];
+  let cursor: string | undefined;
+  do {
+    const listed = await bucket.list({ cursor });
+    for (const object of listed.objects) {
+      if (object.key.startsWith('temp/')) continue;
+      if (object.uploaded.getTime() >= cutoff) continue;
+      if (referenced.has(object.key)) continue;
+      orphanedKeys.push(object.key);
+    }
+    cursor = listed.truncated ? listed.cursor : undefined;
+  } while (cursor);
+
+  for (let i = 0; i < orphanedKeys.length; i += R2_DELETE_BATCH_SIZE) {
+    await bucket.delete(orphanedKeys.slice(i, i + R2_DELETE_BATCH_SIZE));
+  }
+
+  return orphanedKeys.length;
 }
 
 /**
@@ -293,6 +350,22 @@ export async function executeScheduledCleanup(
     console.error('[Cleanup] Error deleting orphaned temp photos:', error);
   }
 
+  // 10. Delete photo objects no meal_photos row references any more. Deleting a
+  //     meal used to leave its R2 objects behind (CASCADE does not reach R2),
+  //     and both delete paths swallow storage errors by design, so this sweep is
+  //     what makes the bucket eventually consistent with the database.
+  let deletedOrphanedPhotos = 0;
+  try {
+    deletedOrphanedPhotos = await cleanupOrphanedPhotos(photosBucket, db, now);
+    console.log(
+      deletedOrphanedPhotos > 0
+        ? `[Cleanup] Deleted ${deletedOrphanedPhotos} orphaned photos from R2`
+        : '[Cleanup] No orphaned photos to delete'
+    );
+  } catch (error) {
+    console.error('[Cleanup] Error deleting orphaned photos:', error);
+  }
+
   const result = {
     deletedUsers,
     deletedPasswordResetTokens,
@@ -303,6 +376,7 @@ export async function executeScheduledCleanup(
     deletedAiUsageRecords,
     deletedRateLimits,
     deletedTempPhotos,
+    deletedOrphanedPhotos,
   };
 
   console.log('[Cleanup] Cleanup tasks completed:', result);

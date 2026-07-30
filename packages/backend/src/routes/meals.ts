@@ -5,7 +5,7 @@ import { nanoid } from 'nanoid';
 import { createMealSchema, updateMealSchema, dateRangeSchema, mealTypeSchema, mealDatesQuerySchema, ANALYSIS_SOURCE, MEAL_CONTENT_DELIMITER } from '@lifestyle-app/shared';
 import { MealService } from '../services/meal';
 import { MealPhotoService, deletePhotosWithFoodItems } from '../services/meal-photo.service';
-import { PhotoStorageService } from '../services/photo-storage';
+import { PhotoStorageService, photoExtensionFor } from '../services/photo-storage';
 import { AIAnalysisService } from '../services/ai-analysis';
 import { AIUsageService } from '../services/ai-usage';
 import { aiUsageLimitCheck } from '../middleware/ai-usage-limit';
@@ -94,7 +94,7 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
       // Validate each photo
       for (const photo of photos) {
         if (!photo.type.startsWith('image/')) {
-          return c.json({ message: 'Only JPEG and PNG images are supported' }, 400);
+          return c.json({ message: 'Only image files are supported' }, 400);
         }
         if (photo.size > 10 * 1024 * 1024) {
           return c.json({ message: 'File size exceeds 10MB limit' }, 400);
@@ -137,8 +137,11 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
         // Upload to R2 - generate permanent key
         const photoId = nanoid();
-        const photoKey = `photos/${user.id}/${meal.id}/${photoId}.jpg`;
-        await photoStorage.uploadPhoto(photoKey, photoData);
+        const photoKey = `photos/${user.id}/${meal.id}/${photoId}${photoExtensionFor(photo.type)}`;
+        // Pass the File (not the ArrayBuffer) so the stored contentType comes
+        // from the upload instead of defaulting to image/jpeg — the client now
+        // sends WebP. photoData is still used for the AI analysis below.
+        await photoStorage.uploadPhoto(photoKey, photo);
 
         // Create meal_photo record
         const mealPhoto = await photoService.addPhoto({
@@ -322,7 +325,30 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
     const user = c.get('user');
 
     const mealService = new MealService(db);
+
+    // Verify ownership BEFORE reading anything about the meal, so a request for
+    // someone else's meal never reaches its photo keys.
+    await mealService.findById(id, user.id);
+
+    // Collect the R2 keys before the row goes away. meal_photos is removed by
+    // ON DELETE CASCADE when meal_records is deleted, but CASCADE only reaches
+    // rows in this database — the objects in R2 would be left behind forever
+    // (they accounted for the bulk of the orphaned objects in the bucket).
+    const photoService = new MealPhotoService(db);
+    const photos = await photoService.getMealPhotos(id);
+
     await mealService.delete(id, user.id);
+
+    const photoStorage = new PhotoStorageService(c.env.PHOTOS);
+    for (const photo of photos) {
+      try {
+        await photoStorage.deletePhoto(photo.photoKey);
+      } catch (error) {
+        // The row is already gone, so the object is now unreferenced; the
+        // scheduled orphan sweep will pick it up. Don't fail the request.
+        console.error('Failed to delete photo from storage:', error);
+      }
+    }
 
     return c.json({ message: 'Deleted' });
   })
@@ -405,7 +431,7 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
     try {
       // Upload to R2
       const photoId = nanoid();
-      const photoKey = `photos/${user.id}/${mealId}/${photoId}.jpg`;
+      const photoKey = `photos/${user.id}/${mealId}/${photoId}${photoExtensionFor(photoFile.type)}`;
       await photoStorage.uploadPhoto(photoKey, photoFile);
 
       // Create DB record

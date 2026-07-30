@@ -11,7 +11,7 @@ import { AIUsageService } from '../services/ai-usage';
 import { aiUsageLimitCheck } from '../middleware/ai-usage-limit';
 import { AIAnalysisService } from '../services/ai-analysis';
 import { MealPhotoService } from '../services/meal-photo.service';
-import { PhotoStorageService } from '../services/photo-storage';
+import { PhotoStorageService, photoExtensionFor } from '../services/photo-storage';
 import { getAIConfigFromEnv } from '../lib/ai-provider';
 import type { Database } from '../db';
 import {
@@ -417,7 +417,7 @@ mealChat.post('/:mealId/chat/add-photo', async (c) => {
   try {
     // Upload to R2
     const photoId = nanoid();
-    const photoKey = `photos/${user.id}/${mealId}/${photoId}.jpg`;
+    const photoKey = `photos/${user.id}/${mealId}/${photoId}${photoExtensionFor(photoFile.type)}`;
     await photoStorage.uploadPhoto(photoKey, photoFile);
 
     // Create DB record

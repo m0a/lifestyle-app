@@ -28,7 +28,7 @@ export function PhotoUploadButton({
       event.target.value = '';
 
       // T076: Validate file type (JPEG/PNG only)
-      const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png'];
+      const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
       if (!ALLOWED_TYPES.includes(file.type.toLowerCase())) {
         setError('JPEG または PNG 形式の画像を選択してください');
         return;
@@ -73,7 +73,7 @@ export function PhotoUploadButton({
       <input
         ref={cameraInputRef}
         type="file"
-        accept="image/jpeg,image/jpg,image/png"
+        accept="image/jpeg,image/jpg,image/png,image/webp"
         capture="environment"
         onChange={handleFileSelect}
         className="hidden"
@@ -82,7 +82,7 @@ export function PhotoUploadButton({
       <input
         ref={libraryInputRef}
         type="file"
-        accept="image/jpeg,image/jpg,image/png"
+        accept="image/jpeg,image/jpg,image/png,image/webp"
         onChange={handleFileSelect}
         className="hidden"
       />

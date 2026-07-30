@@ -59,7 +59,7 @@ export interface UsePhotoMealFlowReturn {
   reset: () => void;
 }
 
-const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png'];
+const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const MAX_PHOTOS = 10;
 
