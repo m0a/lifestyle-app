@@ -336,7 +336,6 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
     // (they accounted for the bulk of the orphaned objects in the bucket).
     const photoService = new MealPhotoService(db);
     const photos = await photoService.getMealPhotos(id);
-    console.log(`[Meal Delete] meal=${id} photos=${photos.length}`);
 
     await mealService.delete(id, user.id);
 
@@ -344,7 +343,6 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
     for (const photo of photos) {
       try {
         await photoStorage.deletePhoto(photo.photoKey);
-        console.log(`[Meal Delete] removed from R2: ${photo.photoKey}`);
       } catch (error) {
         // The row is already gone, so the object is now unreferenced; the
         // scheduled orphan sweep will pick it up. Don't fail the request.
