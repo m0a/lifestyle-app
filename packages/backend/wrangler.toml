@@ -6,11 +6,15 @@ compatibility_date = "2024-01-01"
 port = 8787
 ip = "0.0.0.0"
 
-[dev.vars]
-ENVIRONMENT = "development"
-RP_ID = "localhost"
-RP_NAME = "Lifestyle Tracker (Dev)"
-RP_ORIGIN = "http://localhost:5174"
+# ローカル開発用の環境変数は .dev.vars（gitignore対象）に書くこと。
+# [dev.vars] というテーブルは wrangler が読まないため、ここに書いても効かない
+# （wrangler 4 は "Unexpected fields found in dev field" と警告する）。設定が
+# 無い場合 `pnpm dev` は下の [vars] を読むので ENVIRONMENT=production として
+# 起動する点に注意。ローカルを dev 扱いにしたい場合の .dev.vars の例:
+#   ENVIRONMENT=development
+#   RP_ID=localhost
+#   RP_NAME=Lifestyle Tracker (Dev)
+#   RP_ORIGIN=http://localhost:5174
 
 [assets]
 directory = "./public"
