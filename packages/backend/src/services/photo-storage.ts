@@ -1,6 +1,26 @@
 import { v4 as uuidv4 } from 'uuid';
 import { nanoid } from 'nanoid';
 
+/**
+ * File extension matching a photo's MIME type.
+ *
+ * The R2 key used to end in a hard-coded `.jpg`. Since the client re-encodes
+ * uploads to WebP, that would label WebP bytes as JPEG — harmless to serving
+ * (the stored contentType is what browsers honour) but actively misleading
+ * when reading keys during an investigation. Unknown types keep `.jpg`, which
+ * is what every object predating WebP already uses.
+ */
+export function photoExtensionFor(mimeType: string | undefined): string {
+  switch (mimeType) {
+    case 'image/webp':
+      return '.webp';
+    case 'image/png':
+      return '.png';
+    default:
+      return '.jpg';
+  }
+}
+
 export class PhotoStorageService {
   constructor(private r2: R2Bucket) {}
 
@@ -44,7 +64,7 @@ export class PhotoStorageService {
     const data = await tempObject.arrayBuffer();
     const mimeType = tempObject.httpMetadata?.contentType || 'image/jpeg';
     const photoId = nanoid();
-    const permanentKey = `photos/${userId}/${mealId}/${photoId}.jpg`;
+    const permanentKey = `photos/${userId}/${mealId}/${photoId}${photoExtensionFor(mimeType)}`;
 
     await this.r2.put(permanentKey, data, {
       httpMetadata: {
