@@ -17,7 +17,9 @@ import { Dashboard } from './pages/Dashboard';
 import { Settings } from './pages/Settings';
 import { useAuthStore } from './stores/authStore';
 import { useActivityDots } from './hooks/useActivityDots';
+import { useWeeklyPfcTrend } from './hooks/useWeeklyPfcTrend';
 import { ActivityDotGrid } from './components/dashboard/ActivityDotGrid';
+import { WeeklyPfcTrendCard } from './components/dashboard/WeeklyPfcTrendCard';
 import { useQuery } from '@tanstack/react-query';
 import { api } from './lib/client';
 import { getTodayDateString } from './lib/dateValidation';
@@ -88,6 +90,7 @@ function Home() {
 function AuthenticatedHome() {
   const dotsCount = useDotsCount();
   const { data: activityData, isLoading: dotsLoading } = useActivityDots(dotsCount);
+  const { weeks: pfcWeeks, fatPctTarget } = useWeeklyPfcTrend();
   const today = getTodayDateString();
 
   // Latest weight (no date filter - gets most recent)
@@ -163,6 +166,13 @@ function AuthenticatedHome() {
           )}
         </Link>
       </div>
+
+      {/* 週ごとのPFC。レポート画面(/dashboard)はモバイルの下部ナビに導線が無く
+          事実上たどり着けないので、毎日開くホームに置く。ドットグリッドは縦に
+          長いので、その下だとスクロールしないと見えず「毎日目に入る」にならない。 */}
+      {pfcWeeks && pfcWeeks.length > 0 && (
+        <WeeklyPfcTrendCard weeks={pfcWeeks} fatPctTarget={fatPctTarget} />
+      )}
 
       {/* Activity Dots */}
       <ActivityDotGrid

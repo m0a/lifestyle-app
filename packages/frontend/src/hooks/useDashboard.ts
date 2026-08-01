@@ -31,18 +31,6 @@ export function useDashboard(options: UseDashboardOptions = {}) {
     },
   });
 
-  const trendsQuery = useQuery({
-    queryKey: ['dashboard', 'trends'],
-    queryFn: async () => {
-      const res = await api.dashboard.trends.$get({ query: { weeks: '4' } });
-      if (!res.ok) {
-        const error = await res.json().catch(() => ({ message: 'Failed to fetch trends' }));
-        throw new Error((error as { message?: string }).message || 'Failed to fetch trends');
-      }
-      return res.json();
-    },
-  });
-
   const goalsQuery = useQuery({
     queryKey: ['dashboard', 'goals'],
     queryFn: async () => {
@@ -61,10 +49,8 @@ export function useDashboard(options: UseDashboardOptions = {}) {
     isSummaryLoading: summaryQuery.isLoading,
     summaryError: summaryQuery.error,
 
-    // Trends data
-    trends: trendsQuery.data,
-    isTrendsLoading: trendsQuery.isLoading,
-    trendsError: trendsQuery.error,
+    // 週次トレンド（/trends）はホームの WeeklyPfcTrendCard が useWeeklyPfcTrend で
+    // 直接引く。レポート画面では使わないので、ここでは取らない。
 
     // Goals data
     goals: goalsQuery.data,
@@ -72,12 +58,11 @@ export function useDashboard(options: UseDashboardOptions = {}) {
     goalsError: goalsQuery.error,
 
     // Combined loading state
-    isLoading: summaryQuery.isLoading || trendsQuery.isLoading || goalsQuery.isLoading,
+    isLoading: summaryQuery.isLoading || goalsQuery.isLoading,
 
     // Refetch all
     refetch: () => {
       summaryQuery.refetch();
-      trendsQuery.refetch();
       goalsQuery.refetch();
     },
   };
