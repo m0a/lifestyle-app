@@ -83,6 +83,37 @@ describe('MealService', () => {
       // The photos were fetched with a WHERE clause (inArray), not a full scan.
       expect(mockDb.where).toHaveBeenCalled();
     });
+
+    it('splits the photo lookup so it stays under D1\'s 100 bound-parameter cap', async () => {
+      // Regression: inArray spends one binding per meal id, so a range with more
+      // than 100 meals produced "D1_ERROR: too many SQL variables". Production
+      // had 115 meals in 2026-01, which broke the monthly calendar outright.
+      const userId = 'user-123';
+      const now = '2026-01-15T12:00:00+09:00';
+      const meals = Array.from({ length: 115 }, (_, i) => ({
+        id: `m${i}`, userId, mealType: 'lunch', content: 'x', calories: 100,
+        recordedAt: now, createdAt: now, updatedAt: now,
+      }));
+
+      mockDb.all
+        .mockResolvedValueOnce(meals)
+        // One photo query per chunk: 115 ids => 100 + 15.
+        .mockResolvedValueOnce([{ id: 'p0', mealId: 'm0', photoKey: 'k0', displayOrder: 0 }])
+        .mockResolvedValueOnce([{ id: 'p114', mealId: 'm114', photoKey: 'k114', displayOrder: 0 }]);
+
+      const service = new MealService(mockDb as never);
+      const result = await service.findByUserId(userId, {
+        startDate: '2026-01-01',
+        endDate: '2026-01-31',
+      });
+
+      // 1 meals query + 2 chunked photo queries.
+      expect(mockDb.all).toHaveBeenCalledTimes(3);
+      expect(result).toHaveLength(115);
+      // Photos from BOTH chunks land on their meals — the concatenation is not lossy.
+      expect(result.find((r) => r.id === 'm0')!.firstPhotoKey).toBe('k0');
+      expect(result.find((r) => r.id === 'm114')!.firstPhotoKey).toBe('k114');
+    });
   });
 
   describe('getCalorieSummary', () => {

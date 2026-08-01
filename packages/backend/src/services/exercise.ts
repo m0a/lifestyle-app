@@ -4,6 +4,7 @@ import type { Database } from '../db';
 import { schema } from '../db';
 import { AppError } from '../middleware/error';
 import { extractLocalDate, getWeekDateRange, nextLocalDate } from '../lib/localDate';
+import { chunkBindings } from '../lib/d1';
 import type {
   CreateExerciseInput,
   UpdateExerciseInput,
@@ -353,24 +354,43 @@ export class ExerciseService {
     // per-record computation stays in JS — but only the relevant rows are
     // fetched now. Empty/undefined exerciseTypes keeps the "all types"
     // behavior (inArray with [] would match nothing, so it's guarded).
-    const conditions = [
+    const baseConditions = [
       eq(schema.exerciseRecords.userId, userId),
       isNotNull(schema.exerciseRecords.weight),
     ];
-    if (exerciseTypes && exerciseTypes.length > 0) {
-      conditions.push(inArray(schema.exerciseRecords.exerciseType, exerciseTypes));
-    }
 
-    const filtered = await this.db
-      .select({
-        exerciseType: schema.exerciseRecords.exerciseType,
-        weight: schema.exerciseRecords.weight,
-        reps: schema.exerciseRecords.reps,
-        recordedAt: schema.exerciseRecords.recordedAt,
-      })
-      .from(schema.exerciseRecords)
-      .where(and(...conditions))
-      .all();
+    // A fresh builder per query — drizzle builders can't be reused after .where().
+    const selectRows = () =>
+      this.db
+        .select({
+          exerciseType: schema.exerciseRecords.exerciseType,
+          weight: schema.exerciseRecords.weight,
+          reps: schema.exerciseRecords.reps,
+          recordedAt: schema.exerciseRecords.recordedAt,
+        })
+        .from(schema.exerciseRecords);
+
+    // exerciseTypes comes straight from `?exerciseTypes=a,b,c`, so its length is
+    // client-controlled and unbounded. inArray spends one binding per entry and
+    // D1 caps a statement at 100 (see lib/d1.ts), so chunk it. One binding is
+    // reserved for userId (isNotNull binds nothing). The max-by-type reduction
+    // below is order-independent, so concatenating the chunks is equivalent.
+    const filtered =
+      exerciseTypes && exerciseTypes.length > 0
+        ? (
+            await Promise.all(
+              chunkBindings(exerciseTypes, 1).map((chunk) =>
+                selectRows()
+                  .where(
+                    and(...baseConditions, inArray(schema.exerciseRecords.exerciseType, chunk))
+                  )
+                  .all()
+              )
+            )
+          ).flat()
+        : await selectRows()
+            .where(and(...baseConditions))
+            .all();
 
     // Group by exercise type and find max 1RM for each
     const maxByType = new Map<string, { maxRM: number; achievedAt: string }>();

@@ -10,6 +10,7 @@ import type {
   MealDaySummary,
 } from '@lifestyle-app/shared';
 import { extractLocalDate, nextLocalDate } from '../lib/localDate';
+import { chunkBindings } from '../lib/d1';
 
 export class MealService {
   constructor(private db: Database) {}
@@ -101,13 +102,27 @@ export class MealService {
       // Fetch only this user's meal photos, filtered and ordered in the DB so
       // the idx_meal_photos_meal (meal_id, display_order) index is used —
       // instead of scanning every user's photos and filtering/sorting in JS
-      // (#102). mealIds is guaranteed non-empty here, so inArray is safe.
-      const photoRecords = await this.db
-        .select()
-        .from(schema.mealPhotos)
-        .where(inArray(schema.mealPhotos.mealId, mealIds))
-        .orderBy(schema.mealPhotos.mealId, schema.mealPhotos.displayOrder)
-        .all();
+      // (#102).
+      //
+      // Chunked because inArray spends one bound parameter per id and D1 caps a
+      // statement at 100 (see lib/d1.ts). mealIds is as long as the requested
+      // range has meals, so a month of records blew the limit outright and made
+      // the monthly calendar and the MCP period tools fail with
+      // "too many SQL variables". Splitting is safe for the grouping below: we
+      // chunk BY mealId, so one meal's photos never straddle two chunks and the
+      // per-meal displayOrder ordering survives the concatenation.
+      const photoRecords = (
+        await Promise.all(
+          chunkBindings(mealIds).map((chunk) =>
+            this.db
+              .select()
+              .from(schema.mealPhotos)
+              .where(inArray(schema.mealPhotos.mealId, chunk))
+              .orderBy(schema.mealPhotos.mealId, schema.mealPhotos.displayOrder)
+              .all()
+          )
+        )
+      ).flat();
 
       // Group photos by mealId (rows are already restricted to these meals and
       // ordered by displayOrder within each meal).
