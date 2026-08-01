@@ -1,13 +1,28 @@
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { resolveWeeklyMealTargets } from '@lifestyle-app/shared';
 import { useDashboard, type Period } from '../hooks/useDashboard';
+import { api } from '../lib/client';
 import { PeriodSelector } from '../components/dashboard/PeriodSelector';
 import { WeightSummaryCard } from '../components/dashboard/WeightSummaryCard';
 import { MealSummaryCard } from '../components/dashboard/MealSummaryCard';
 import { ExerciseSummaryCard } from '../components/dashboard/ExerciseSummaryCard';
+import { WeeklyPfcTrendCard } from '../components/dashboard/WeeklyPfcTrendCard';
 
 export function Dashboard() {
   const [period, setPeriod] = useState<Period>('week');
-  const { summary, isLoading, refetch } = useDashboard({ period });
+  const { summary, trends, isLoading, refetch } = useDashboard({ period });
+
+  // 脂質シェアの参照線はユーザー個別の目標に追従させる（#170で users に保存済み）。
+  const { data: profile } = useQuery({
+    queryKey: ['user', 'profile'],
+    queryFn: async () => {
+      const res = await api.user.profile.$get();
+      if (!res.ok) throw new Error('Failed to fetch profile');
+      return res.json();
+    },
+  });
+  const fatPctTarget = resolveWeeklyMealTargets({ fatPct: profile?.targetFatPct }).fatPct;
 
   if (isLoading) {
     return (
@@ -93,6 +108,11 @@ export function Dashboard() {
               byType={summary?.exercises.byType ?? {}}
             />
           </div>
+
+          {/* 週次のPFC推移。/trends のローリング窓なので period セレクタとは独立。 */}
+          {trends && trends.length > 0 && (
+            <WeeklyPfcTrendCard weeks={trends} fatPctTarget={fatPctTarget} />
+          )}
 
           {/* Period Info */}
           {summary?.period && (

@@ -5,6 +5,7 @@ import {
   dailyWeightSeries,
   movingAverageSeries,
   weeklyWeightAverages,
+  sumNutrition,
   nutritionTrend,
   exerciseBreakdown,
   type FoodItemRow,
@@ -146,6 +147,49 @@ describe('weeklyWeightAverages', () => {
     const weekly = weeklyWeightAverages(daily);
     expect(weekly).toHaveLength(1);
     expect(weekly[0]).toMatchObject({ weekStart: '2026-07-12', avg: 71, count: 2 });
+  });
+});
+
+describe('sumNutrition', () => {
+  it('sums PFC, counts distinct JST days, and averages per LOGGED day', () => {
+    const totals = sumNutrition([
+      meal({ recordedAt: '2026-07-17T08:00:00+09:00', calories: 400, totalProtein: 30, totalFat: 10, totalCarbs: 40 }),
+      meal({ recordedAt: '2026-07-17T19:00:00+09:00', calories: 600, totalProtein: 30, totalFat: 20, totalCarbs: 60 }),
+      meal({ recordedAt: '2026-07-19T12:00:00+09:00', calories: 500, totalProtein: 20, totalFat: 15, totalCarbs: 50 }),
+    ]);
+    expect(totals).toMatchObject({
+      days: 2, // 07-17 and 07-19; 07-18 was skipped and is NOT a divisor
+      meals: 3,
+      totalCalories: 1500,
+      totalProtein: 80,
+      totalFat: 45,
+      totalCarbs: 150,
+      avgCalories: 750,
+      avgProtein: 40,
+      avgFat: 22.5,
+      avgCarbs: 75,
+    });
+  });
+
+  it('treats null macros as zero but still counts the day as logged', () => {
+    const totals = sumNutrition([
+      meal({ recordedAt: '2026-07-17T12:00:00+09:00', calories: null, totalProtein: null, totalFat: null, totalCarbs: null }),
+    ]);
+    expect(totals).toMatchObject({ days: 1, meals: 1, totalCalories: 0, totalFat: 0, avgFat: 0 });
+  });
+
+  it('returns zeros (not NaN) for an empty period', () => {
+    expect(sumNutrition([])).toMatchObject({ days: 0, meals: 0, avgCalories: 0, avgFat: 0 });
+  });
+
+  it('buckets a legacy bare-UTC row onto its JST day, not its UTC prefix', () => {
+    // 2026-07-17T22:00:00Z is 2026-07-18 07:00 JST (pre-#159 rows). A naive
+    // slice(0,10) would read "2026-07-17" and split these into two days.
+    const totals = sumNutrition([
+      meal({ recordedAt: '2026-07-17T22:00:00Z' }),
+      meal({ recordedAt: '2026-07-18T12:00:00+09:00' }),
+    ]);
+    expect(totals.days).toBe(1);
   });
 });
 
