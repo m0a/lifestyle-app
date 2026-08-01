@@ -243,8 +243,7 @@ export function weeklyWeightAverages(daily: DailyWeight[]): WeeklyWeightAverage[
 
 export type NutritionGrouping = 'week' | 'month';
 
-export interface NutritionBucket {
-  label: string;
+export interface NutritionTotals {
   days: number;
   meals: number;
   totalCalories: number;
@@ -253,46 +252,71 @@ export interface NutritionBucket {
   totalCarbs: number;
   avgCalories: number;
   avgProtein: number;
+  avgFat: number;
+  avgCarbs: number;
+}
+
+export interface NutritionBucket extends NutritionTotals {
+  label: string;
+}
+
+/**
+ * Sum calories/PFC over an already-selected set of meals.
+ *
+ * `days` counts distinct JST dates that carry a meal, so the per-day averages
+ * divide by LOGGED days rather than the calendar length of the period — a week
+ * with 3 logged days reports the average of those 3 days instead of a figure
+ * diluted across 7. Nulls count as 0: an un-analyzed meal contributes nothing
+ * but still marks the day as logged.
+ *
+ * Split out of nutritionTrend so callers that bucket meals themselves — the
+ * dashboard's rolling 7-day weeks, which do not line up with calendar weeks —
+ * reuse this arithmetic instead of re-summing PFC on their own.
+ */
+export function sumNutrition(meals: MealRow[]): NutritionTotals {
+  const dates = new Set<string>();
+  let cal = 0;
+  let p = 0;
+  let f = 0;
+  let c = 0;
+  for (const m of meals) {
+    dates.add(extractJstDate(m.recordedAt));
+    cal += m.calories ?? 0;
+    p += m.totalProtein ?? 0;
+    f += m.totalFat ?? 0;
+    c += m.totalCarbs ?? 0;
+  }
+  const days = dates.size;
+  const perDay = (total: number): number => (days > 0 ? total / days : 0);
+  return {
+    days,
+    meals: meals.length,
+    totalCalories: cal,
+    totalProtein: p,
+    totalFat: f,
+    totalCarbs: c,
+    avgCalories: perDay(cal),
+    avgProtein: perDay(p),
+    avgFat: perDay(f),
+    avgCarbs: perDay(c),
+  };
 }
 
 /**
  * Bucket meals into weeks (Sun–Sat start date as label) or calendar months
- * (YYYY-MM) and sum calories/PFC. `days` counts distinct JST dates with a meal
- * in the bucket, so the per-day averages reflect actual logged days rather than
- * calendar length.
+ * (YYYY-MM) and sum calories/PFC per bucket via sumNutrition.
  */
 export function nutritionTrend(meals: MealRow[], groupBy: NutritionGrouping): NutritionBucket[] {
-  const buckets = new Map<
-    string,
-    { label: string; dates: Set<string>; meals: number; cal: number; p: number; f: number; c: number }
-  >();
+  const buckets = new Map<string, MealRow[]>();
   for (const m of meals) {
     const date = extractJstDate(m.recordedAt);
     const label = groupBy === 'week' ? getWeekDateRange(date).startDate : date.slice(0, 7);
-    const b = buckets.get(label) ?? { label, dates: new Set<string>(), meals: 0, cal: 0, p: 0, f: 0, c: 0 };
-    b.dates.add(date);
-    b.meals += 1;
-    b.cal += m.calories ?? 0;
-    b.p += m.totalProtein ?? 0;
-    b.f += m.totalFat ?? 0;
-    b.c += m.totalCarbs ?? 0;
-    buckets.set(label, b);
+    const group = buckets.get(label);
+    if (group) group.push(m);
+    else buckets.set(label, [m]);
   }
-  return [...buckets.values()]
-    .map((b) => {
-      const days = b.dates.size;
-      return {
-        label: b.label,
-        days,
-        meals: b.meals,
-        totalCalories: b.cal,
-        totalProtein: b.p,
-        totalFat: b.f,
-        totalCarbs: b.c,
-        avgCalories: days > 0 ? b.cal / days : 0,
-        avgProtein: days > 0 ? b.p / days : 0,
-      };
-    })
+  return [...buckets.entries()]
+    .map(([label, group]) => ({ label, ...sumNutrition(group) }))
     .sort((a, b) => a.label.localeCompare(b.label));
 }
 

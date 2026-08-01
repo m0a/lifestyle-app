@@ -1,7 +1,9 @@
 import { eq, desc, and, gte, lt } from 'drizzle-orm';
+import { KCAL_PER_GRAM, macroKcal } from '@lifestyle-app/shared';
 import { weights, meals, exercises } from '../db/schema';
 import type { Database } from '../db';
 import { extractLocalDate, nextLocalDate } from '../lib/localDate';
+import { sumNutrition } from '../lib/mcpAggregate';
 
 interface DateRange {
   startDate: Date;
@@ -70,6 +72,23 @@ interface WeeklyTrendItem {
   weight: number | null;
   totalCalories: number;
   exerciseSets: number;
+  /** Days in the week that carry at least one meal — the divisor for the avg* fields. */
+  mealDays: number;
+  mealCount: number;
+  totalProtein: number;
+  totalFat: number;
+  totalCarbs: number;
+  /** Per LOGGED day (mealDays), not per calendar day. */
+  avgCalories: number;
+  avgProtein: number;
+  avgFat: number;
+  avgCarbs: number;
+  /**
+   * Fat's share of macro-derived kcal, 0–100, UNROUNDED. null when the week has
+   * no analyzed macros. Rounding is left to the caller so a display value is
+   * never mistaken for a comparison value (the trap fixed in #178).
+   */
+  fatPct: number | null;
 }
 
 interface GoalProgress {
@@ -357,9 +376,13 @@ export class DashboardService {
       const weekMeals = allMeals.filter((m) => inWeek(m.recordedAt));
       const weekExercises = allExercises.filter((e) => inWeek(e.recordedAt));
 
-      const totalCalories = weekMeals
-        .filter((m) => m.calories != null)
-        .reduce((sum, m) => sum + (m.calories || 0), 0);
+      // Same arithmetic the MCP nutrition trend uses, applied to this rolling
+      // 7-day bucket instead of a calendar week (#181). sumNutrition buckets
+      // `days` by extractJstDate while week membership above uses the
+      // extractLocalDate prefix; the two only diverge for legacy bare-"Z" rows
+      // (pre-#159), which no longer occur inside a trailing few-week window.
+      const nutrition = sumNutrition(weekMeals);
+      const macro = macroKcal(nutrition.totalProtein, nutrition.totalFat, nutrition.totalCarbs);
 
       // Each record is 1 set
       const exerciseSets = weekExercises.length;
@@ -368,8 +391,18 @@ export class DashboardService {
         weekStart: weekStartLocal,
         weekEnd: weekEndLocal,
         weight: latestWeekWeight?.weight ?? null,
-        totalCalories,
+        totalCalories: nutrition.totalCalories,
         exerciseSets,
+        mealDays: nutrition.days,
+        mealCount: nutrition.meals,
+        totalProtein: nutrition.totalProtein,
+        totalFat: nutrition.totalFat,
+        totalCarbs: nutrition.totalCarbs,
+        avgCalories: nutrition.avgCalories,
+        avgProtein: nutrition.avgProtein,
+        avgFat: nutrition.avgFat,
+        avgCarbs: nutrition.avgCarbs,
+        fatPct: macro > 0 ? ((nutrition.totalFat * KCAL_PER_GRAM.fat) / macro) * 100 : null,
       });
     }
 

@@ -203,6 +203,83 @@ describe('DashboardService', () => {
       expect(result).toBeDefined();
       expect(Array.isArray(result)).toBe(true);
     });
+
+    // #181: the trend now carries weekly PFC so the dashboard can show the fat
+    // share as a rolling-7-day trend instead of a single noisy day.
+    describe('weekly PFC', () => {
+      beforeEach(() => {
+        vi.useFakeTimers();
+        // 2026-01-17T05:00:00Z = 2026-01-17 14:00 JST. weeks=2 =>
+        // [2026-01-04 .. 2026-01-10] and [2026-01-11 .. 2026-01-17].
+        vi.setSystemTime(new Date('2026-01-17T05:00:00Z'));
+      });
+      afterEach(() => {
+        vi.useRealTimers();
+      });
+
+      it('sums PFC per rolling week and derives the fat energy share', async () => {
+        mockDb.all.mockResolvedValueOnce([]); // allWeights
+        mockDb.all.mockResolvedValueOnce([
+          // Older week: macros never analyzed.
+          { calories: 600, recordedAt: '2026-01-08T12:00:00+09:00', totalProtein: null, totalFat: null, totalCarbs: null },
+          // Recent week: two meals on 01-12, one on 01-15 => 2 logged days.
+          { calories: 800, recordedAt: '2026-01-12T08:00:00+09:00', totalProtein: 30, totalFat: 25, totalCarbs: 80 },
+          { calories: 700, recordedAt: '2026-01-12T19:00:00+09:00', totalProtein: 20, totalFat: 10, totalCarbs: 40 },
+          { calories: 500, recordedAt: '2026-01-15T12:00:00+09:00', totalProtein: 10, totalFat: 5, totalCarbs: 30 },
+          // Before the oldest weekStart — must be excluded from both weeks.
+          { calories: 9999, recordedAt: '2026-01-03T12:00:00+09:00', totalProtein: 99, totalFat: 99, totalCarbs: 99 },
+        ]); // allMeals
+        mockDb.all.mockResolvedValueOnce([]); // allExercises
+
+        const result = await service.getWeeklyTrend('user-pfc', 2);
+
+        expect(result).toHaveLength(2);
+        // result is unshifted, so [0] is the older week.
+        expect(result[0]).toMatchObject({
+          weekStart: '2026-01-04',
+          weekEnd: '2026-01-10',
+          totalCalories: 600,
+          mealDays: 1,
+          mealCount: 1,
+          totalProtein: 0,
+          totalFat: 0,
+          // No analyzed macros => no denominator => share is unknown, not 0%.
+          fatPct: null,
+        });
+        expect(result[1]).toMatchObject({
+          weekStart: '2026-01-11',
+          weekEnd: '2026-01-17',
+          totalCalories: 2000,
+          mealDays: 2,
+          mealCount: 3,
+          totalProtein: 60,
+          totalFat: 40,
+          totalCarbs: 150,
+          // Per LOGGED day (2), not per calendar day (7).
+          avgCalories: 1000,
+          avgProtein: 30,
+          avgFat: 20,
+          avgCarbs: 75,
+        });
+        // macro kcal = 60*4 + 40*9 + 150*4 = 1200; fat contributes 360 => 30%.
+        expect(result[1]!.fatPct).toBeCloseTo(30, 10);
+      });
+
+      it('reports zeros and a null fat share for a week with no meals', async () => {
+        mockDb.all.mockResolvedValue([]);
+
+        const result = await service.getWeeklyTrend('user-empty', 1);
+
+        expect(result[0]).toMatchObject({
+          totalCalories: 0,
+          mealDays: 0,
+          mealCount: 0,
+          totalFat: 0,
+          avgFat: 0,
+          fatPct: null,
+        });
+      });
+    });
   });
 
   describe('getGoalProgress', () => {
