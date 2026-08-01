@@ -101,7 +101,11 @@ export function WeeklyPfcTrendCard({ weeks, fatPctTarget }: WeeklyPfcTrendCardPr
     };
   });
 
-  const hasAnyData = rows.some((r) => r.shares !== null);
+  // PFCは写真のAI解析（またはfood item）経由でしか入らないので、「食事はあるが
+  // マクロが1件も無い」状態が普通に起きる。行を4本とも「PFC未分析」で埋めるより、
+  // 何をすれば出るのかを1行で言うほうが親切。
+  const hasAnyShares = rows.some((r) => r.shares !== null);
+  const hasAnyMeals = rows.some((r) => r.week.mealDays > 0);
 
   return (
     <div className="card p-4 sm:p-5" data-testid="weekly-pfc-trend-card">
@@ -110,9 +114,11 @@ export function WeeklyPfcTrendCard({ weeks, fatPctTarget }: WeeklyPfcTrendCardPr
         <span className="text-[11px] text-gray-400">脂質シェアの推移（{weeks.length}週）</span>
       </div>
 
-      {!hasAnyData ? (
+      {!hasAnyShares ? (
         <p className="mt-4 text-center text-sm text-gray-400">
-          食事を記録すると週ごとの推移が出ます
+          {hasAnyMeals
+            ? '食事の写真をAI解析するとPFCの推移が出ます'
+            : '食事を記録すると週ごとの推移が出ます'}
         </p>
       ) : (
         <>
@@ -134,7 +140,11 @@ export function WeeklyPfcTrendCard({ weeks, fatPctTarget }: WeeklyPfcTrendCardPr
                         脂質 {week.fatPct.toFixed(1)}%
                       </span>
                     ) : (
-                      <span className="text-gray-300">記録なし</span>
+                      // 食事はあるがマクロが未分析の週を「記録なし」と書くと嘘になる
+                      // （手入力の食事や、写真解析前の食事はカロリーだけを持つ）。
+                      <span className="text-gray-300">
+                        {week.mealDays > 0 ? 'PFC未分析' : '記録なし'}
+                      </span>
                     )}
                     {delta.text && (
                       <span className={`text-[10px] ${deltaClass[delta.tone]}`}>{delta.text}</span>
@@ -153,11 +163,17 @@ export function WeeklyPfcTrendCard({ weeks, fatPctTarget }: WeeklyPfcTrendCardPr
                     <div className="h-2 w-full rounded-full bg-gray-100" />
                   )}
                 </div>
-                {shares && (
+                {week.mealDays > 0 && (
                   <p className="mt-1 text-[10px] text-gray-400 tabular-nums">
-                    1日 {Math.round(week.avgCalories).toLocaleString()}kcal・P
-                    {Math.round(week.avgProtein)}g F{Math.round(week.avgFat)}g C
-                    {Math.round(week.avgCarbs)}g（記録{week.mealDays}日）
+                    1日 {Math.round(week.avgCalories).toLocaleString()}kcal
+                    {/* マクロ未分析の週はカロリーだけ分かっているので、そこまでは出す。 */}
+                    {shares && (
+                      <>
+                        ・P{Math.round(week.avgProtein)}g F{Math.round(week.avgFat)}g C
+                        {Math.round(week.avgCarbs)}g
+                      </>
+                    )}
+                    （記録{week.mealDays}日）
                   </p>
                 )}
               </div>
