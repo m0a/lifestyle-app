@@ -167,17 +167,18 @@ function AuthenticatedHome() {
         </Link>
       </div>
 
+      {/* 週ごとのPFC。レポート画面(/dashboard)はモバイルの下部ナビに導線が無く
+          事実上たどり着けないので、毎日開くホームに置く。ドットグリッドは縦に
+          長いので、その下だとスクロールしないと見えず「毎日目に入る」にならない。 */}
+      {pfcWeeks && pfcWeeks.length > 0 && (
+        <WeeklyPfcTrendCard weeks={pfcWeeks} fatPctTarget={fatPctTarget} />
+      )}
+
       {/* Activity Dots */}
       <ActivityDotGrid
         activities={activityData?.activities ?? []}
         isLoading={dotsLoading}
       />
-
-      {/* 週ごとのPFC。レポート画面(/dashboard)はモバイルの下部ナビに導線が無く
-          事実上たどり着けないので、毎日開くホームに置く。 */}
-      {pfcWeeks && pfcWeeks.length > 0 && (
-        <WeeklyPfcTrendCard weeks={pfcWeeks} fatPctTarget={fatPctTarget} />
-      )}
     </div>
   );
 }
