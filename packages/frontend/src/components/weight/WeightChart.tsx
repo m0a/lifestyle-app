@@ -82,23 +82,25 @@ export function WeightChart({ weights }: WeightChartProps) {
 
   const [preset, setPreset] = useState<PresetKey>('30d');
   const [endIndex, setEndIndex] = useState(() => sortedWeights.length - 1);
-  const dragRef = useRef<{ startPointerIdx: number; startEndIdx: number } | null>(
-    null
+  const [windowStart, setWindowStart] = useState(() =>
+    startIndexForSpan(sortedWeights, sortedWeights.length - 1, 30)
   );
+  const dragRef = useRef<{
+    startPointerIdx: number;
+    startEndIdx: number;
+    startStartIdx: number;
+  } | null>(null);
 
   const lastIndex = sortedWeights.length - 1;
+  const presetDef = PRESETS.find((p) => p.key === preset) ?? PRESETS[0]!;
+  const presetDays = presetDef.days;
 
-  // Reset window to the latest data whenever data set changes
+  // Reset window to the latest data whenever the data set changes
   useEffect(() => {
     setEndIndex(lastIndex);
-  }, [lastIndex]);
+    setWindowStart(startIndexForSpan(sortedWeights, lastIndex, presetDays));
+  }, [lastIndex, presetDays, sortedWeights]);
 
-  const presetDef = PRESETS.find((p) => p.key === preset) ?? PRESETS[0]!;
-  const windowStart = startIndexForSpan(
-    sortedWeights,
-    endIndex,
-    presetDef.days
-  );
   const visibleWeights = sortedWeights.slice(windowStart, endIndex + 1);
 
   const labels = visibleWeights.map((w) =>
@@ -212,6 +214,7 @@ export function WeightChart({ weights }: WeightChartProps) {
     dragRef.current = {
       startPointerIdx: indexFromPointerX(e.clientX, rect.left, rect.width),
       startEndIdx: endIndex,
+      startStartIdx: windowStart,
     };
   };
 
@@ -222,7 +225,9 @@ export function WeightChart({ weights }: WeightChartProps) {
     const rect = target.getBoundingClientRect();
     const currentIdx = indexFromPointerX(e.clientX, rect.left, rect.width);
     const delta = currentIdx - drag.startPointerIdx;
-    setEndIndex(Math.min(lastIndex, Math.max(0, drag.startEndIdx + delta)));
+    const nextEnd = Math.min(lastIndex, Math.max(0, drag.startEndIdx + delta));
+    setEndIndex(nextEnd);
+    setWindowStart(Math.min(nextEnd, Math.max(0, drag.startStartIdx + delta)));
   };
 
   const endPointerDrag = () => {
@@ -255,6 +260,7 @@ export function WeightChart({ weights }: WeightChartProps) {
               onClick={() => {
                 setPreset(p.key);
                 setEndIndex(lastIndex);
+                setWindowStart(startIndexForSpan(sortedWeights, lastIndex, p.days));
               }}
               className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
                 preset === p.key
