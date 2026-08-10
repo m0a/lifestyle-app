@@ -56,6 +56,7 @@ function startIndexForSpan(
   fromEnd: number,
   days: number | null
 ): number {
+  if (weights.length === 0 || fromEnd < 0) return 0;
   if (days === null) return 0;
   const endTime = new Date(weights[fromEnd]!.recordedAt).getTime();
   const spanMs = days * DAY_MS;
