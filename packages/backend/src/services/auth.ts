@@ -51,6 +51,46 @@ export class AuthService {
     };
   }
 
+  /**
+   * Create an account whose only authenticator is a passkey. No email, no
+   * password — the credential is the account.
+   *
+   * users.email and users.password_hash are both still NOT NULL at this
+   * migration step, so each gets a value nothing can ever authenticate with:
+   * an unroutable synthetic address (.invalid, RFC 2606) and a bcrypt hash of a
+   * throwaway random secret. Both columns are dropped outright once password
+   * auth is removed — doing it here would mean rebuilding `users` (SQLite cannot
+   * drop NOT NULL in place) twice.
+   */
+  async createPasskeyUser(id: string, displayName: string) {
+    const unusablePassword = crypto.randomUUID() + crypto.randomUUID();
+    const passwordHash = await bcrypt.hash(unusablePassword, 10);
+    const now = new Date().toISOString();
+
+    await this.db.insert(schema.users).values({
+      id,
+      email: `${id}@passkey.invalid`,
+      displayName,
+      passwordHash,
+      emailVerified: 1,
+      goalWeight: null,
+      goalCalories: 2000,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    return {
+      id,
+      email: `${id}@passkey.invalid`,
+      displayName,
+      emailVerified: true,
+      goalWeight: null,
+      goalCalories: 2000,
+      createdAt: now,
+      updatedAt: now,
+    };
+  }
+
   async login(input: LoginInput) {
     const user = await this.db
       .select()
@@ -89,6 +129,7 @@ export class AuthService {
       .select({
         id: schema.users.id,
         email: schema.users.email,
+        displayName: schema.users.displayName,
         emailVerified: schema.users.emailVerified,
         goalWeight: schema.users.goalWeight,
         goalCalories: schema.users.goalCalories,

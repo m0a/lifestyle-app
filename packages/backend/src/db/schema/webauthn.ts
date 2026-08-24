@@ -37,7 +37,12 @@ export const webauthnChallenges = sqliteTable(
     id: text('id').primaryKey(),
     userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }),
     challenge: text('challenge').notNull().unique(),
-    type: text('type', { enum: ['registration', 'authentication'] }).notNull(),
+    type: text('type', { enum: ['registration', 'authentication', 'signup'] }).notNull(),
+    // Signup-only (no user row exists yet, so userId must be NULL): the id the
+    // user row will be created with, minted up front so it can be handed to the
+    // authenticator as the WebAuthn userID, and the label to create it with.
+    signupUserId: text('signup_user_id'),
+    signupDisplayName: text('signup_display_name'),
     expiresAt: text('expires_at').notNull(),
     createdAt: text('created_at').notNull(),
   },

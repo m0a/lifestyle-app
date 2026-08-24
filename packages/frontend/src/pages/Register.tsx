@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { registerSchema, type RegisterInput } from '@lifestyle-app/shared';
 import { api } from '../lib/client';
 import { useAuthStore } from '../stores/authStore';
+import { usePasskeySignup } from '../hooks/usePasskeySignup';
 
 export function Register() {
   const navigate = useNavigate();
@@ -18,6 +19,15 @@ export function Register() {
   } = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema),
   });
+
+  // Passkey signup shares nothing with the form above: no email, no password.
+  const {
+    signup: signupWithPasskey,
+    isPending: isPasskeyPending,
+    error: passkeyError,
+    isSupported: isPasskeySupported,
+  } = usePasskeySignup();
+  const [passkeyDisplayName, setPasskeyDisplayName] = useState('');
 
   const onSubmit = async (data: RegisterInput) => {
     setError(null);
@@ -141,6 +151,48 @@ export function Register() {
           >
             {isSubmitting ? '登録中...' : '登録する'}
           </button>
+
+          {isPasskeySupported && (
+            <>
+              <div className="relative flex items-center">
+                <div className="flex-grow border-t border-gray-200" />
+                <span className="mx-3 flex-shrink text-xs text-gray-400">または</span>
+                <div className="flex-grow border-t border-gray-200" />
+              </div>
+              <div>
+                <label htmlFor="passkeyDisplayName" className="block text-sm font-medium text-gray-700">
+                  表示名
+                </label>
+                <input
+                  type="text"
+                  id="passkeyDisplayName"
+                  value={passkeyDisplayName}
+                  onChange={(e) => setPasskeyDisplayName(e.target.value)}
+                  maxLength={50}
+                  required
+                  autoComplete="nickname"
+                  className={inputClassName}
+                />
+                <p className="mt-1 text-[10px] text-gray-400">
+                  パスキー管理画面にもこの名前で表示されます
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => signupWithPasskey(passkeyDisplayName.trim())}
+                disabled={isPasskeyPending || passkeyDisplayName.trim().length === 0}
+                className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+              >
+                <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clipRule="evenodd" />
+                </svg>
+                {isPasskeyPending ? '登録中...' : 'パスキーで登録（メール・パスワード不要）'}
+              </button>
+              {passkeyError && (
+                <p className="text-center text-xs text-red-500">{passkeyError}</p>
+              )}
+            </>
+          )}
 
           <p className="text-center text-sm text-gray-500">
             すでにアカウントをお持ちですか？{' '}

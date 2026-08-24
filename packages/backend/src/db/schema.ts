@@ -31,6 +31,10 @@ export const users = sqliteTable(
   {
     id: text('id').primaryKey(),
     email: text('email').notNull().unique(),
+    // Cosmetic label, not an identifier: no uniqueness, no auth role. Replaces
+    // email as the string shown in the UI (migration 0042). Nullable only
+    // because the column was added to existing rows; treat it as required.
+    displayName: text('display_name'),
     passwordHash: text('password_hash').notNull(),
     emailVerified: integer('email_verified').notNull().default(0), // 0 = false, 1 = true
     goalWeight: real('goal_weight'),
