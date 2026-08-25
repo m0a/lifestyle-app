@@ -6,7 +6,7 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { addVirtualAuthenticator } from '../helpers/e2e';
+import { addVirtualAuthenticator, signUpAndWait } from '../helpers/e2e';
 
 test.describe('Authentication (passkey only)', () => {
   test('shows login and register links when not authenticated', async ({ page }) => {
@@ -48,10 +48,7 @@ test.describe('Authentication (passkey only)', () => {
     await page.goto('/register');
     await page.waitForLoadState('networkidle');
     await page.getByLabel('表示名').fill('パスキー太郎');
-    await Promise.all([
-      page.waitForURL('/', { timeout: 15000 }),
-      page.getByRole('button', { name: /パスキーで登録/ }).click(),
-    ]);
+    await signUpAndWait(page);
 
     const me = await page.evaluate(() => fetch('/api/auth/me').then((r) => r.json()));
     expect(me.user?.displayName).toBe('パスキー太郎');
@@ -80,10 +77,7 @@ test.describe('Authentication (passkey only)', () => {
     await page.goto('/register');
     await page.waitForLoadState('networkidle');
     await page.getByLabel('表示名').fill('唯一のパスキー');
-    await Promise.all([
-      page.waitForURL('/', { timeout: 15000 }),
-      page.getByRole('button', { name: /パスキーで登録/ }).click(),
-    ]);
+    await signUpAndWait(page);
 
     const list = await page.evaluate(() =>
       fetch('/api/auth/webauthn/credentials').then((r) => r.json())

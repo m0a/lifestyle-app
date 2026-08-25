@@ -224,6 +224,14 @@ jobs:
         env:
           CI: true
 
+      # Passkey ceremonies fail server-side in ways the browser only shows as a
+      # generic message, so without this a CI-only failure cannot be diagnosed.
+      - name: Dump backend log on failure
+        if: failure()
+        run: |
+          echo "===== backend.log (tail 200) ====="
+          tail -200 packages/backend/backend.log || true
+
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
         if: always()
