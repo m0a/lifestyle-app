@@ -30,13 +30,16 @@ export const users = sqliteTable(
   'users',
   {
     id: text('id').primaryKey(),
+    // DEAD COLUMN. Nothing reads it: auth is passkey-only and its contents were
+    // replaced with synthetic <id>@passkey.invalid values in migration 0043. It
+    // survives only because it is NOT NULL UNIQUE, and dropping it would mean
+    // rebuilding `users` — measured to cascade-delete every child record under
+    // D1's migration runner (see 0043). Inserts must still supply a value.
     email: text('email').notNull().unique(),
-    // Cosmetic label, not an identifier: no uniqueness, no auth role. Replaces
-    // email as the string shown in the UI (migration 0042). Nullable only
-    // because the column was added to existing rows; treat it as required.
+    // Cosmetic label, not an identifier: no uniqueness, no auth role. The only
+    // human-readable field on an account. Nullable at the DB level only because
+    // SQLite cannot add a NOT NULL column to existing rows; signup requires it.
     displayName: text('display_name'),
-    passwordHash: text('password_hash').notNull(),
-    emailVerified: integer('email_verified').notNull().default(0), // 0 = false, 1 = true
     goalWeight: real('goal_weight'),
     goalCalories: integer('goal_calories').default(2000),
     // Per-user weekly evaluation targets (#170). Nullable with no default:
@@ -50,16 +53,6 @@ export const users = sqliteTable(
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
-  (table) => ({
-    // The cleanup cron filters `email_verified = 0 AND created_at < cutoff`.
-    // A lone email_verified index is near-useless (2 distinct values); the
-    // composite lets that scan seek straight to old unverified rows (#106,
-    // replaces idx_users_email_verified in migration 0038).
-    idx_users_email_verified_created: index('idx_users_email_verified_created').on(
-      table.emailVerified,
-      table.createdAt
-    ),
-  })
 );
 
 export const weightRecords = sqliteTable(
@@ -266,9 +259,6 @@ export type AIUsageRecord = typeof aiUsageRecords.$inferSelect;
 export type NewAIUsageRecord = typeof aiUsageRecords.$inferInsert;
 export type AIUsageTotal = typeof aiUsageTotals.$inferSelect;
 export type NewAIUsageTotal = typeof aiUsageTotals.$inferInsert;
-
-// Email-related tables
-export * from './schema/email';
 
 // WebAuthn / Passkey tables
 export * from './schema/webauthn';

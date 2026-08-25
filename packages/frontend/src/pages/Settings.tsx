@@ -220,8 +220,8 @@ export function Settings() {
         <h2 className="mb-3 text-sm font-semibold text-gray-900">プロフィール</h2>
         <div className="space-y-3">
           <div>
-            <p className="text-xs text-gray-400">メールアドレス</p>
-            <p className="text-sm font-medium text-gray-900">{profile?.email}</p>
+            <p className="text-xs text-gray-400">表示名</p>
+            <p className="text-sm font-medium text-gray-900">{profile?.displayName || '-'}</p>
           </div>
           <div>
             <p className="text-xs text-gray-400">登録日</p>

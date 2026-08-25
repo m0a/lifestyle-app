@@ -61,14 +61,13 @@ packages/
 - **Database**: Drizzle ORM + Cloudflare D1 (SQLite)
 - **Storage**: Cloudflare R2 (meal photos)
 - **AI**: Google Gemini via Vercel AI SDK (`@ai-sdk/google`)
-- **Email**: Resend API (domain: yasedas.com)
 - **Validation**: Zod (shared schemas)
 - **Dead Code**: Knip
 
 ### Backend
 
 - **Entry**: `packages/backend/src/index.ts`
-- **Routes**: `/api/auth`, `/api/weights`, `/api/meals`, `/api/exercises`, `/api/dashboard`, `/api/email`, `/api/logs`
+- **Routes**: `/api/auth`, `/api/weights`, `/api/meals`, `/api/exercises`, `/api/dashboard`, `/api/logs`
 - **RPC**: Exports `AppType` for type-safe frontend client (`hc<AppType>`)
 
 ### Frontend
@@ -77,6 +76,16 @@ packages/
 - **API Client**: `packages/frontend/src/lib/client.ts` - Hono RPC client
 - **Pages**: ホーム(`/`) → 今日のサマリー+ドットグリッド、体重(`/weight`)、食事(`/meals`)、運動(`/exercises`)、レポート(`/dashboard`)、設定(`/settings`)
 - **Offline**: IndexedDB (`idb`) for offline support
+
+### Authentication (passkey only)
+
+パスワードもメールアドレスも使わない。**パスキー（WebAuthn）が唯一の認証手段**。
+
+- **登録**: `POST /api/auth/webauthn/signup/options` → `/signup/verify`（どちらも未認証で叩ける）。ユーザーが入力するのは**表示名だけ**。ユーザーIDは options 時点で採番して `webauthn_challenges.signup_user_id` に持たせる（認証器に userHandle として保存されるため、verify で採番し直すと2本目のパスキーが別アカウント扱いになる）。
+- **ログイン**: `POST /api/auth/webauthn/authenticate/options` → `/authenticate/verify`。`residentKey: 'required'` の discoverable credential なので**識別子の入力は不要**。
+- **パスキー追加/削除**: `/webauthn/register/*`（認証必須）、`DELETE /webauthn/credentials/:id`。**最後の1本は削除できない**（`LAST_CREDENTIAL`）。他に認証手段がなく締め出されるため。UIでもボタンを無効化する。
+- **users.email は死んだ列**。`NOT NULL UNIQUE` のため物理削除するとテーブル再構築が必要で、それは実測でカスケード削除により全記録が消える（migration `0043` のコメント参照）。中身は `<id>@passkey.invalid` に無害化済みで、`display_name` が唯一の人間可読フィールド。INSERT時のみ合成値を入れる必要がある。
+- **テスト**: E2Eは CDP の仮想認証器（`tests/helpers/e2e.ts` の `addVirtualAuthenticator`）でテストごとに新規登録する。統合テストは ceremony を通せないので、`createSessionToken` でセッションcookieを署名する（`tests/helpers/integration.ts`）。本番コードにテスト用ログインは持たせない。
 
 ### Type-Safe API Pattern
 
@@ -91,7 +100,7 @@ export const client = hc<AppType>(API_BASE_URL);
 
 ### Database Schema
 
-Tables: `users`, `weight_records`, `meal_records`, `meal_food_items`, `meal_photos`, `meal_chat_messages`, `exercise_records`, `password_reset_tokens`, `email_verification_tokens`, `email_change_requests`, `email_delivery_logs`, `email_rate_limits`, `ai_usage_logs`
+Tables: `users`, `weight_records`, `meal_records`, `meal_food_items`, `meal_photos`, `meal_chat_messages`, `exercise_records`, `passkey_credentials`, `webauthn_challenges`, `mcp_tokens`, `ai_usage_records`, `ai_usage_totals`
 
 Migrations in `packages/backend/migrations/`. Run migrations before testing new schema changes.
 
@@ -154,7 +163,7 @@ gh run list --branch main --limit 3
 
 ## Scheduled Cron (Cleanup)
 
-`packages/backend/src/cron/cleanup.ts` が定期実行され、期限切れトークン類・未認証ユーザー・古いログ・レート制限行に加え、**24時間経過した `temp/` プレフィックスのR2オブジェクト**（保存されなかった分析用写真）を削除する。
+`packages/backend/src/cron/cleanup.ts` が定期実行され、期限切れWebAuthn challenge・保持期間を過ぎたAI利用明細に加え、**24時間経過した `temp/` プレフィックスのR2オブジェクト**（保存されなかった分析用写真）と、どの `meal_photos` 行からも参照されなくなった写真を削除する。
 
 ローカルでの動作確認:
 ```bash

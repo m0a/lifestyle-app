@@ -1,75 +1,104 @@
+/**
+ * Passkey-only authentication E2E.
+ *
+ * Covers the ceremonies that have no unit/integration equivalent: they need a
+ * real authenticator, which the CDP virtual authenticator provides.
+ */
+
 import { test, expect } from '@playwright/test';
+import { addVirtualAuthenticator } from '../helpers/e2e';
 
-test.describe('Authentication', () => {
-  test.beforeEach(async ({ page }) => {
+test.describe('Authentication (passkey only)', () => {
+  test('shows login and register links when not authenticated', async ({ page }) => {
     await page.goto('/');
-    // Wait for React to hydrate
     await page.waitForLoadState('networkidle');
-  });
 
-  test('should display login and register links when not authenticated', async ({ page }) => {
-    // Use navigation links in header (more specific selector)
     await expect(page.getByRole('navigation').getByRole('link', { name: 'ログイン' })).toBeVisible();
     await expect(page.getByRole('navigation').getByRole('link', { name: '登録' })).toBeVisible();
   });
 
-  test('should navigate to login page', async ({ page }) => {
-    await page.getByRole('navigation').getByRole('link', { name: 'ログイン' }).click();
-    await expect(page).toHaveURL('/login');
+  test('login page offers a passkey button and asks for no credentials', async ({ page }) => {
+    await page.goto('/login');
+    await page.waitForLoadState('networkidle');
+
     await expect(page.getByRole('heading', { name: 'ログイン' })).toBeVisible();
+    await expect(page.getByRole('button', { name: /パスキーでログイン/ })).toBeVisible();
+    // The whole point of the change: nothing to type.
+    await expect(page.locator('input[type="password"]')).toHaveCount(0);
+    await expect(page.locator('input[type="email"]')).toHaveCount(0);
   });
 
-  test('should navigate to register page', async ({ page }) => {
-    await page.getByRole('navigation').getByRole('link', { name: '登録' }).click();
-    await expect(page).toHaveURL('/register');
-    await expect(page.getByRole('heading', { name: 'アカウント登録' })).toBeVisible();
-  });
-
-  test('should show validation errors on login with empty fields', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByRole('button', { name: 'ログイン', exact: true }).click();
-    // Form validation should prevent submission
-    await expect(page).toHaveURL('/login');
-  });
-
-  test('should show validation errors on register with invalid email', async ({ page }) => {
+  test('signup requires a display name', async ({ page }) => {
     await page.goto('/register');
     await page.waitForLoadState('networkidle');
-    await page.getByLabel('メールアドレス').fill('invalid-email');
-    await page.getByLabel('パスワード').fill('password123');
-    await page.getByRole('button', { name: '登録する' }).click();
-    // Browser's native email validation (type="email") or Zod validation prevents invalid submission
-    // Either way, we should stay on the register page
-    await expect(page).toHaveURL('/register');
+
+    await expect(page.getByRole('button', { name: /パスキーで登録/ })).toBeDisabled();
+
+    await page.getByLabel('表示名').fill('  ');
+    await expect(page.getByRole('button', { name: /パスキーで登録/ })).toBeDisabled();
+
+    await page.getByLabel('表示名').fill('テスト太郎');
+    await expect(page.getByRole('button', { name: /パスキーで登録/ })).toBeEnabled();
   });
 
-  test('should show validation errors on register with short password', async ({ page }) => {
-    await page.goto('/register');
-    await page.getByLabel('メールアドレス').fill('test@example.com');
-    await page.getByLabel('パスワード').fill('short');
-    await page.getByRole('button', { name: '登録する' }).click();
-    await expect(page.getByText('8文字以上')).toBeVisible();
-  });
+  test('signs up with a passkey, then logs back in without typing anything', async ({ page }) => {
+    await addVirtualAuthenticator(page);
 
-  test('should have link to register from login page', async ({ page }) => {
-    await page.goto('/login');
-    await expect(page.getByRole('link', { name: '登録する' })).toBeVisible();
-  });
-
-  test('should have link to login from register page', async ({ page }) => {
+    // --- sign up ---
     await page.goto('/register');
     await page.waitForLoadState('networkidle');
-    // The form has a link to login page
-    await expect(page.locator('form').getByRole('link', { name: 'ログイン' })).toBeVisible();
+    await page.getByLabel('表示名').fill('パスキー太郎');
+    await Promise.all([
+      page.waitForURL('/', { timeout: 15000 }),
+      page.getByRole('button', { name: /パスキーで登録/ }).click(),
+    ]);
+
+    const me = await page.evaluate(() => fetch('/api/auth/me').then((r) => r.json()));
+    expect(me.user?.displayName).toBe('パスキー太郎');
+    const userId = me.user?.id;
+
+    // --- log out ---
+    await page.evaluate(() => fetch('/api/auth/logout', { method: 'POST' }));
+    const status = await page.evaluate(() => fetch('/api/auth/me').then((r) => r.status));
+    expect(status).toBe(401);
+
+    // --- log back in: no identifier is supplied, the credential is discoverable ---
+    await page.goto('/login');
+    await page.waitForLoadState('networkidle');
+    await Promise.all([
+      page.waitForURL('/', { timeout: 15000 }),
+      page.getByRole('button', { name: /パスキーでログイン/ }).click(),
+    ]);
+
+    const me2 = await page.evaluate(() => fetch('/api/auth/me').then((r) => r.json()));
+    expect(me2.user?.id).toBe(userId);
   });
 
-  test('should redirect to login when accessing protected route', async ({ page }) => {
-    await page.goto('/dashboard');
-    await expect(page).toHaveURL('/login');
-  });
+  test('refuses to delete the only passkey', async ({ page }) => {
+    await addVirtualAuthenticator(page);
 
-  test('should redirect to login when accessing weight page without auth', async ({ page }) => {
-    await page.goto('/weight');
-    await expect(page).toHaveURL('/login');
+    await page.goto('/register');
+    await page.waitForLoadState('networkidle');
+    await page.getByLabel('表示名').fill('唯一のパスキー');
+    await Promise.all([
+      page.waitForURL('/', { timeout: 15000 }),
+      page.getByRole('button', { name: /パスキーで登録/ }).click(),
+    ]);
+
+    const list = await page.evaluate(() =>
+      fetch('/api/auth/webauthn/credentials').then((r) => r.json())
+    );
+    expect(list.credentials).toHaveLength(1);
+
+    // Server-side guard: deleting the last credential would lock the account out.
+    const result = await page.evaluate(async (credentialId: string) => {
+      const res = await fetch(`/api/auth/webauthn/credentials/${credentialId}`, {
+        method: 'DELETE',
+      });
+      return { status: res.status, body: await res.json() };
+    }, list.credentials[0].credentialId);
+
+    expect(result.status).toBe(400);
+    expect(result.body.code).toBe('LAST_CREDENTIAL');
   });
 });

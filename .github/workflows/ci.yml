@@ -554,8 +554,6 @@ jobs:
             --var ENVIRONMENT:preview \
             --var AI_PROVIDER:google \
             --var AI_MODEL:gemini-3-flash-preview \
-            --var FROM_EMAIL:onboarding@resend.dev \
-            --var FRONTEND_URL:https://lifestyle-tracker-pr-${{ github.event.pull_request.number }}.abe00makoto.workers.dev \
             --var RP_ID:lifestyle-tracker-pr-${{ github.event.pull_request.number }}.abe00makoto.workers.dev \
             --var RP_NAME:"Lifestyle Tracker (PR Preview)" \
             --var RP_ORIGIN:https://lifestyle-tracker-pr-${{ github.event.pull_request.number }}.abe00makoto.workers.dev
@@ -568,7 +566,6 @@ jobs:
         run: |
           cd packages/backend
           echo "${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}" | pnpm exec wrangler secret put GOOGLE_GENERATIVE_AI_API_KEY --name lifestyle-tracker-pr-${{ github.event.pull_request.number }}
-          echo "${{ secrets.RESEND_API_KEY }}" | pnpm exec wrangler secret put RESEND_API_KEY --name lifestyle-tracker-pr-${{ github.event.pull_request.number }}
           # Optional: when the SESSION_SECRET repo secret is unset, the preview
           # worker falls back to the dev key (non-production), so skip rather than
           # push an empty secret.

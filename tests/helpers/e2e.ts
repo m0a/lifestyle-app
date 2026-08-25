@@ -1,102 +1,69 @@
 /**
  * E2E Test Helpers for Playwright
  *
- * Provides utilities for E2E tests including:
- * - Authentication helpers
- * - Common page actions
- * - Test data setup
+ * Authentication here is passkey-only, so there is no password to type and no
+ * shared seeded account to log into. Instead each test installs a CDP virtual
+ * authenticator into its own browser context and signs up a fresh account:
+ * credentials live inside that authenticator, so they cannot be shared between
+ * contexts anyway. A side effect is that tests no longer contend over one
+ * account's data.
+ *
+ * Requires Chromium (WebAuthn.* CDP domain); the CI project is chromium-only.
  */
 
 import type { Page } from '@playwright/test';
 
-const TEST_USERS = {
-  default: {
-    email: 'test@example.com',
-    password: 'test1234',
-  },
-  secondary: {
-    email: 'test2@example.com',
-    password: 'test1234',
-  },
-} as const;
+/**
+ * Install a virtual authenticator so navigator.credentials resolves without any
+ * OS/biometric prompt.
+ *
+ * hasResidentKey + isUserVerified are what make discoverable credentials work,
+ * which is what lets the app log in without any identifier being typed.
+ */
+export async function addVirtualAuthenticator(page: Page): Promise<void> {
+  const client = await page.context().newCDPSession(page);
+  await client.send('WebAuthn.enable');
+  await client.send('WebAuthn.addVirtualAuthenticator', {
+    options: {
+      protocol: 'ctap2',
+      transport: 'internal',
+      hasResidentKey: true,
+      hasUserVerification: true,
+      isUserVerified: true,
+      automaticPresenceSimulation: true,
+    },
+  });
+}
 
 /**
- * Login to the application via UI
+ * Sign up a fresh passkey account and land authenticated on the home page.
+ *
+ * Named for the role it plays in tests (get me a logged-in page); the account is
+ * created rather than reused, for the reasons in the module comment.
  */
 export async function loginAsTestUser(
   page: Page,
-  email: string = TEST_USERS.default.email,
-  password: string = TEST_USERS.default.password
+  displayName = 'E2Eテストユーザー'
 ): Promise<void> {
-  // Navigate to login page and wait for it to be ready
-  await page.goto('/login');
+  await addVirtualAuthenticator(page);
+
+  await page.goto('/register');
   await page.waitForLoadState('networkidle');
 
-  // Wait for the login form to be visible
-  await page.waitForSelector('input[name="email"], input[type="email"]', { timeout: 5000 });
+  await page.getByLabel('表示名').fill(displayName);
 
-  // Fill in credentials
-  await page.getByLabel(/メールアドレス/i).fill(email);
-  await page.getByLabel(/パスワード/i).fill(password);
-
-  // Click login button and wait for navigation
   await Promise.all([
     page.waitForURL('/', { timeout: 15000 }),
-    page.getByRole('button', { name: 'ログイン', exact: true }).click(),
+    page.getByRole('button', { name: /パスキーで登録/ }).click(),
   ]);
 
-  // Wait for auth state to be updated
   await page.waitForLoadState('networkidle');
 }
 
 /**
- * Logout from the application
+ * Kept as a no-op so existing specs read unchanged: with passkey signup there is
+ * no account to provision ahead of time — loginAsTestUser creates one.
  */
-async function logout(page: Page): Promise<void> {
-  // Click on user menu or logout button
-  // Adjust selector based on your UI
-  const logoutButton = page.getByRole('button', { name: /ログアウト|logout/i });
-  if (await logoutButton.isVisible()) {
-    await logoutButton.click();
-    await page.waitForURL('/login', { timeout: 5000 });
-  }
+export async function ensureTestUserExists(): Promise<void> {
+  // intentionally empty
 }
-
-/**
- * Register a new user (for test setup)
- */
-async function registerTestUser(
-  page: Page,
-  email: string,
-  password: string
-): Promise<void> {
-  await page.goto('/register');
-
-  await page.getByLabel(/メールアドレス/i).fill(email);
-  await page.getByLabel(/パスワード/i).fill(password);
-
-  await page.getByRole('button', { name: /登録/i }).click();
-
-  // Wait for successful registration (redirects to '/')
-  await Promise.all([
-    page.waitForURL('/', { timeout: 10000 }),
-  ]);
-}
-
-/**
- * Ensure test user exists (try to register, ignore if already exists)
- */
-export async function ensureTestUserExists(
-  page: Page,
-  email: string = TEST_USERS.default.email,
-  password: string = TEST_USERS.default.password
-): Promise<void> {
-  try {
-    await registerTestUser(page, email, password);
-    // If registration succeeds, logout
-    await logout(page);
-  } catch {
-    // User probably already exists, that's fine
-  }
-}
-

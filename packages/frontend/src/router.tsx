@@ -5,11 +5,6 @@ import { Layout } from './components/Layout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
-import { ForgotPassword } from './pages/ForgotPassword';
-import { ResetPassword } from './pages/ResetPassword';
-import { VerifyEmail } from './pages/VerifyEmail';
-import { ConfirmEmailChange } from './pages/ConfirmEmailChange';
-import { CancelEmailChange } from './pages/CancelEmailChange';
 import { Weight } from './pages/Weight';
 import { Meal } from './pages/Meal';
 import { Exercise } from './pages/Exercise';
@@ -195,26 +190,6 @@ const routes: RouteObject[] = [
   {
     path: '/register',
     element: <Layout><Register /></Layout>,
-  },
-  {
-    path: '/forgot-password',
-    element: <Layout><ForgotPassword /></Layout>,
-  },
-  {
-    path: '/reset-password',
-    element: <Layout><ResetPassword /></Layout>,
-  },
-  {
-    path: '/verify-email',
-    element: <Layout><VerifyEmail /></Layout>,
-  },
-  {
-    path: '/change-email/confirm',
-    element: <Layout><ConfirmEmailChange /></Layout>,
-  },
-  {
-    path: '/change-email/cancel',
-    element: <Layout><CancelEmailChange /></Layout>,
   },
   {
     path: '/dashboard',

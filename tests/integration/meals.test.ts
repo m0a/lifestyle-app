@@ -1,25 +1,17 @@
-import { describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest';
-import { createTestSession, ensureTestUser, TEST_USERS, API_BASE } from '../helpers/integration';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { createTestSession, API_BASE } from '../helpers/integration';
 import type { TestSession } from '../helpers/integration';
 
 describe('Meal API Integration Tests', () => {
   let session: TestSession;
 
-  beforeAll(async () => {
-    // Backend readiness is checked by CI workflow before tests run
-    // Ensure test user exists
-    await ensureTestUser(TEST_USERS.default.email, TEST_USERS.default.password);
-  });
-
   beforeEach(async () => {
-    // Create new session and login before each test
-    session = createTestSession();
-    await session.login(TEST_USERS.default.email, TEST_USERS.default.password);
+    // A fresh seeded account per test, so no test can see another's records.
+    session = await createTestSession();
   });
 
-  afterEach(async () => {
-    // Logout after each test
-    await session.logout();
+  afterEach(() => {
+    session.cleanup();
   });
 
   describe('POST /api/meals', () => {

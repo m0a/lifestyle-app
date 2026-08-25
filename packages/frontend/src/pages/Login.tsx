@@ -1,184 +1,65 @@
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useState } from 'react';
-import { loginSchema, type LoginInput } from '@lifestyle-app/shared';
-import { api } from '../lib/client';
-import { useAuthStore } from '../stores/authStore';
-import { ForgotPasswordLink } from '../components/auth/ForgotPasswordLink';
+import { Link, useLocation } from 'react-router-dom';
 import { usePasskeyAuth } from '../hooks/usePasskeyAuth';
+import { PasskeyIcon } from '../components/auth/PasskeyIcon';
 
+/**
+ * Passkey-only login.
+ *
+ * No identifier is typed: the credential is discoverable (residentKey required),
+ * so the authenticator itself decides which account is being signed into.
+ */
 export function Login() {
-  const navigate = useNavigate();
   const location = useLocation();
-  const { setUser } = useAuthStore();
-  const [error, setError] = useState<string | null>(null);
-  const [isEmailNotVerified, setIsEmailNotVerified] = useState(false);
-
   const from = (location.state as { from?: Location })?.from?.pathname || '/';
   const successMessage = (location.state as { message?: string })?.message;
 
-  const {
-    authenticate: authenticateWithPasskey,
-    isPending: isPasskeyPending,
-    error: passkeyError,
-    isSupported: isPasskeySupported,
-  } = usePasskeyAuth(from);
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<LoginInput>({
-    resolver: zodResolver(loginSchema),
-  });
-
-  const onSubmit = async (data: LoginInput) => {
-    setError(null);
-    setIsEmailNotVerified(false);
-    try {
-      const res = await api.auth.login.$post({ json: data });
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ message: 'ログインに失敗しました' }));
-        const errorObj = errorData as { message?: string; code?: string };
-
-        // Check if error is EMAIL_NOT_VERIFIED
-        if (errorObj.code === 'EMAIL_NOT_VERIFIED') {
-          setIsEmailNotVerified(true);
-        }
-
-        throw new Error(errorObj.message || 'ログインに失敗しました');
-      }
-      const response = await res.json();
-      setUser(response.user);
-      navigate(from, { replace: true });
-    } catch (err) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('ログインに失敗しました');
-      }
-    }
-  };
+  const { authenticate, isPending, error, isSupported } = usePasskeyAuth(from);
 
   return (
     <div className="flex min-h-[calc(100vh-12rem)] items-center justify-center px-4">
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900">ログイン</h1>
-          <p className="mt-1 text-sm text-gray-500">アカウントにログインしてください</p>
+          <p className="mt-1 text-sm text-gray-500">パスキーでログインしてください</p>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-          {successMessage && (
-            <div className="card bg-emerald-50 p-3">
-              <p className="text-sm text-emerald-700">{successMessage}</p>
-            </div>
-          )}
-
-          {error && (
-            <div className={`card p-3 ${isEmailNotVerified ? 'bg-amber-50 border-l-4 border-amber-400' : 'bg-red-50'}`}>
-              <div className="flex">
-                {isEmailNotVerified && (
-                  <div className="flex-shrink-0">
-                    <svg className="h-5 w-5 text-amber-400" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                )}
-                <div className={isEmailNotVerified ? 'ml-3' : ''}>
-                  <p className={`text-sm ${isEmailNotVerified ? 'text-amber-800' : 'text-red-700'}`}>
-                    {error}
-                  </p>
-                  {isEmailNotVerified && (
-                    <p className="mt-2 text-sm text-amber-700">
-                      確認メールが届いていない場合は、迷惑メールフォルダをご確認いただくか、
-                      <Link to="/register" className="font-medium underline hover:text-amber-900">
-                        登録画面
-                      </Link>
-                      から再度登録してください。
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                メールアドレス
-              </label>
-              <input
-                {...register('email')}
-                type="email"
-                id="email"
-                autoComplete="email"
-                className="mt-1 block w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors"
-              />
-              {errors.email && (
-                <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>
-              )}
-            </div>
-
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                パスワード
-              </label>
-              <input
-                {...register('password')}
-                type="password"
-                id="password"
-                autoComplete="current-password"
-                className="mt-1 block w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors"
-              />
-              {errors.password && (
-                <p className="mt-1 text-xs text-red-500">{errors.password.message}</p>
-              )}
-            </div>
+        {successMessage && (
+          <div className="card bg-emerald-50 p-3">
+            <p className="text-sm text-emerald-700">{successMessage}</p>
           </div>
+        )}
 
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 transition-colors"
-          >
-            {isSubmitting ? 'ログイン中...' : 'ログイン'}
-          </button>
+        {isSupported ? (
+          <div className="space-y-4">
+            <button
+              type="button"
+              onClick={authenticate}
+              disabled={isPending}
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 transition-colors"
+            >
+              <PasskeyIcon />
+              {isPending ? '認証中...' : 'パスキーでログイン'}
+            </button>
+            {error && <p className="text-center text-xs text-red-500">{error}</p>}
+            <p className="text-center text-[10px] text-gray-400">
+              メールアドレスやパスワードの入力は不要です
+            </p>
+          </div>
+        ) : (
+          <div className="card bg-amber-50 border-l-4 border-amber-400 p-3">
+            <p className="text-sm text-amber-800">
+              このブラウザはパスキーに対応していません。パスキーに対応したブラウザ（Chrome、Safari、Edge
+              等の最新版）をお使いください。
+            </p>
+          </div>
+        )}
 
-          {isPasskeySupported && (
-            <>
-              <div className="relative flex items-center">
-                <div className="flex-grow border-t border-gray-200" />
-                <span className="mx-3 flex-shrink text-xs text-gray-400">または</span>
-                <div className="flex-grow border-t border-gray-200" />
-              </div>
-              <button
-                type="button"
-                onClick={authenticateWithPasskey}
-                disabled={isPasskeyPending}
-                className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors"
-              >
-                <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clipRule="evenodd" />
-                </svg>
-                {isPasskeyPending ? '認証中...' : 'パスキーでログイン'}
-              </button>
-              {passkeyError && (
-                <p className="text-center text-xs text-red-500">{passkeyError}</p>
-              )}
-            </>
-          )}
-
-          <ForgotPasswordLink />
-
-          <p className="text-center text-sm text-gray-500">
-            アカウントをお持ちでないですか？{' '}
-            <Link to="/register" className="font-medium text-blue-600 hover:text-blue-500">
-              登録する
-            </Link>
-          </p>
-        </form>
+        <p className="text-center text-sm text-gray-500">
+          アカウントをお持ちでないですか？{' '}
+          <Link to="/register" className="font-medium text-blue-600 hover:text-blue-500">
+            登録する
+          </Link>
+        </p>
       </div>
     </div>
   );

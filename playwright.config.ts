@@ -2,6 +2,13 @@ import { defineConfig, devices } from '@playwright/test';
 
 const isCI = !!process.env['CI'];
 
+// Ports are overridable because several git worktrees of this repo are often
+// running at once and Vite silently falls back to the next free port. Point the
+// suite at whichever instance is actually under test:
+//   E2E_BASE_URL=http://localhost:5175 pnpm test:e2e
+const frontendUrl =
+  process.env['E2E_BASE_URL'] ?? (isCI ? 'http://localhost:4174' : 'http://localhost:5174');
+
 export default defineConfig({
   testDir: './tests/e2e',
   fullyParallel: true,
@@ -10,17 +17,14 @@ export default defineConfig({
   workers: isCI ? 2 : undefined,
   reporter: isCI ? 'list' : 'html',
   timeout: 30000,
-  // Global setup ensures the test user is configured before tests run.
-  // In CI, the test user is seeded into the local D1 by a dedicated workflow
-  // step (`db:seed:local`, see .github/workflows/ci.yml) — NOT by migrations,
-  // so the known-credential account never reaches preview/production (#96).
-  // Locally, global setup helps fix stale test user data. Before running E2E
-  // tests locally, apply migrations and seed:
+  // Auth is passkey-only, so E2E tests provision themselves: each installs a
+  // CDP virtual authenticator and signs up a fresh account (tests/helpers/e2e.ts).
+  // Global setup only sanity-checks that a local D1 exists. Before running E2E
+  // tests locally, apply migrations:
   //   pnpm --filter @lifestyle-app/backend db:migrate:local
-  //   pnpm --filter @lifestyle-app/backend db:seed:local
   globalSetup: isCI ? undefined : './tests/setup/e2e-global-setup.ts',
   use: {
-    baseURL: isCI ? 'http://localhost:4174' : 'http://localhost:5174',
+    baseURL: frontendUrl,
     trace: 'on-first-retry',
   },
   projects: isCI
@@ -56,7 +60,7 @@ export default defineConfig({
     // Frontend server (Vite)
     {
       command: isCI ? 'pnpm --filter @lifestyle-app/frontend preview' : 'pnpm dev',
-      url: isCI ? 'http://localhost:4174' : 'http://localhost:5174',
+      url: frontendUrl,
       reuseExistingServer: true,
       timeout: 60000,
     },

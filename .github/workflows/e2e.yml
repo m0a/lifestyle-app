@@ -65,9 +65,13 @@ jobs:
           cd packages/backend
           echo "GOOGLE_GENERATIVE_AI_API_KEY=${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}" > .dev.vars
           echo "ENVIRONMENT=e2e" >> .dev.vars
-          echo "RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}" >> .dev.vars
-          echo "FROM_EMAIL=onboarding@resend.dev" >> .dev.vars
-          echo "FRONTEND_URL=http://localhost:5173" >> .dev.vars
+          # Passkey ceremonies are origin-bound. Without these the worker would
+          # fall back to wrangler.toml's production RP_ID and every WebAuthn
+          # verification in the suite would fail. 4174 is the preview server the
+          # CI Playwright project targets (playwright.config.ts).
+          echo "RP_ID=localhost" >> .dev.vars
+          echo "RP_NAME=Lifestyle Tracker (E2E)" >> .dev.vars
+          echo "RP_ORIGIN=http://localhost:4174" >> .dev.vars
         env:
           NODE_ENV: test
 

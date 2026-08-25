@@ -10,8 +10,9 @@ test.describe('User Settings - Export and Delete', () => {
   test('should navigate to settings page', async ({ page }) => {
     await page.goto('/settings');
     await page.waitForLoadState('networkidle');
-    // Settings page shows user email in profile section
-    await expect(page.getByRole('main').getByText('test@example.com')).toBeVisible();
+    // Settings shows the display name in the profile section (there is no email
+    // address on an account any more).
+    await expect(page.getByRole('main').getByText('E2Eテストユーザー')).toBeVisible();
   });
 
   test.describe('Data Export', () => {
@@ -62,7 +63,9 @@ test.describe('User Settings - Export and Delete', () => {
     test('should display delete account section', async ({ page }) => {
       await page.goto('/settings');
       await expect(page.getByText('アカウント削除')).toBeVisible();
-      await expect(page.getByRole('button', { name: /削除/ })).toBeVisible();
+      // Named exactly: the passkey list on this page also has a 「削除」 button,
+      // so a loose /削除/ match is ambiguous.
+      await expect(page.getByRole('button', { name: 'アカウントを削除' })).toBeVisible();
     });
 
     test('should show confirmation dialog before deletion', async ({ page }) => {
@@ -99,21 +102,13 @@ test.describe('User Settings - Export and Delete', () => {
       await expect(page.getByText('本当に削除しますか')).not.toBeVisible();
     });
 
-    test.skip('should delete account and redirect to home', async ({ page }) => {
-      // SKIPPED: This test creates a new user which requires email verification
-      // In e2e environment, new users have emailVerified=0 and cannot access protected routes
-      // To properly test this, we would need to mock email verification
-
-      // Create a test user specifically for deletion
-      await page.goto('/register');
-      const uniqueEmail = `delete-test-${Date.now()}@example.com`;
-      await page.getByLabel('メールアドレス').fill(uniqueEmail);
-      await page.getByLabel('パスワード').fill('test1234');
-      await page.click('button[type="submit"]');
-      await page.waitForURL('/');
-
-      // Go to settings and delete
+    test('should delete account and redirect to home', async ({ page }) => {
+      // Previously skipped because a freshly registered user had
+      // emailVerified=0 and could not reach protected routes. Passkey signup has
+      // no verification step, so the account created in beforeEach is usable
+      // immediately and can simply be deleted here.
       await page.goto('/settings');
+      await page.waitForLoadState('networkidle');
       await page.click('button:has-text("アカウントを削除")');
       await page.fill('input[placeholder="削除"]', '削除');
       await page.click('button:has-text("削除する")');
@@ -128,9 +123,9 @@ test.describe('User Settings - Export and Delete', () => {
   });
 
   test.describe('Profile Settings', () => {
-    test('should display user email', async ({ page }) => {
+    test('should display user display name', async ({ page }) => {
       await page.goto('/settings');
-      await expect(page.getByText('test@example.com').first()).toBeVisible();
+      await expect(page.getByText('E2Eテストユーザー').first()).toBeVisible();
     });
 
     test('should display user name if set', async ({ page }) => {
