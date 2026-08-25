@@ -1,86 +1,48 @@
 import { eq } from 'drizzle-orm';
-import { v4 as uuidv4 } from 'uuid';
-import bcrypt from 'bcryptjs';
 import type { Database } from '../db';
 import { schema } from '../db';
 import { AppError } from '../middleware/error';
-import type { RegisterInput, LoginInput } from '@lifestyle-app/shared';
 
+/**
+ * Account lookup and creation for passkey-only auth.
+ *
+ * There is no register()/login() here any more: a credential IS the account, so
+ * both ceremonies live in routes/auth/webauthn.ts where the WebAuthn
+ * verification happens. This service only owns the user row.
+ */
 export class AuthService {
   constructor(private db: Database) {}
 
-  async register(input: RegisterInput, environment?: string) {
-    // Check if email already exists
-    const existing = await this.db
-      .select({ id: schema.users.id })
-      .from(schema.users)
-      .where(eq(schema.users.email, input.email))
-      .get();
-
-    if (existing) {
-      throw new AppError('このメールアドレスは既に登録されています', 400, 'EMAIL_EXISTS');
-    }
-
-    const passwordHash = await bcrypt.hash(input.password, 10);
+  /**
+   * Create an account whose only authenticator is a passkey.
+   *
+   * displayName is a cosmetic label, not an identifier: it is not unique and
+   * nothing is ever looked up by it.
+   *
+   * The synthetic email exists only to satisfy the dead-but-NOT-NULL email
+   * column (see db/schema.ts and migration 0043). It is never read, never shown
+   * and, being .invalid (RFC 2606), can never be delivered to.
+   */
+  async createPasskeyUser(id: string, displayName: string) {
     const now = new Date().toISOString();
-    const id = uuidv4();
-
-    // In integration test environment (ENVIRONMENT=test), auto-verify emails
-    // to simplify testing. E2E tests (ENVIRONMENT=e2e) and production use normal flow.
-    const emailVerifiedValue = environment === 'test' ? 1 : 0;
 
     await this.db.insert(schema.users).values({
       id,
-      email: input.email,
-      passwordHash,
-      emailVerified: emailVerifiedValue,
-      goalWeight: input.goalWeight ?? null,
-      goalCalories: input.goalCalories ?? 2000,
+      email: `${id}@passkey.invalid`,
+      displayName,
+      goalWeight: null,
+      goalCalories: 2000,
       createdAt: now,
       updatedAt: now,
     });
 
     return {
       id,
-      email: input.email,
-      emailVerified: environment === 'test',
-      goalWeight: input.goalWeight ?? null,
-      goalCalories: input.goalCalories ?? 2000,
+      displayName,
+      goalWeight: null,
+      goalCalories: 2000,
       createdAt: now,
       updatedAt: now,
-    };
-  }
-
-  async login(input: LoginInput) {
-    const user = await this.db
-      .select()
-      .from(schema.users)
-      .where(eq(schema.users.email, input.email))
-      .get();
-
-    if (!user) {
-      throw new AppError('メールアドレスまたはパスワードが正しくありません', 401, 'INVALID_CREDENTIALS');
-    }
-
-    const isValidPassword = await bcrypt.compare(input.password, user.passwordHash);
-
-    if (!isValidPassword) {
-      throw new AppError('メールアドレスまたはパスワードが正しくありません', 401, 'INVALID_CREDENTIALS');
-    }
-
-    // Check email verification
-    if (user.emailVerified === 0) {
-      throw new AppError('メールアドレスを確認してください。確認メールのリンクをクリックしてアカウントを有効化してください。', 403, 'EMAIL_NOT_VERIFIED');
-    }
-
-    return {
-      id: user.id,
-      email: user.email,
-      emailVerified: user.emailVerified === 1, // Convert to boolean
-      goalWeight: user.goalWeight,
-      goalCalories: user.goalCalories,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
     };
   }
 
@@ -88,8 +50,7 @@ export class AuthService {
     const user = await this.db
       .select({
         id: schema.users.id,
-        email: schema.users.email,
-        emailVerified: schema.users.emailVerified,
+        displayName: schema.users.displayName,
         goalWeight: schema.users.goalWeight,
         goalCalories: schema.users.goalCalories,
         createdAt: schema.users.createdAt,
@@ -103,9 +64,6 @@ export class AuthService {
       throw new AppError('ユーザーが見つかりません', 404, 'USER_NOT_FOUND');
     }
 
-    return {
-      ...user,
-      emailVerified: user.emailVerified === 1, // Convert to boolean
-    };
+    return user;
   }
 }

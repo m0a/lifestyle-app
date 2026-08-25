@@ -173,6 +173,13 @@ jobs:
           cd packages/backend
           echo "GOOGLE_GENERATIVE_AI_API_KEY=${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}" > .dev.vars
           echo "ENVIRONMENT=e2e" >> .dev.vars
+          # Passkey ceremonies are origin-bound. Without these the worker falls
+          # back to wrangler.toml's production RP_ID and every WebAuthn
+          # verification fails. 4174 is the preview server started below and the
+          # origin the CI Playwright project targets (playwright.config.ts).
+          echo "RP_ID=localhost" >> .dev.vars
+          echo "RP_NAME=Lifestyle Tracker (E2E)" >> .dev.vars
+          echo "RP_ORIGIN=http://localhost:4174" >> .dev.vars
           pnpm dev > backend.log 2>&1 &
           echo $! > backend.pid
         env:
@@ -216,6 +223,14 @@ jobs:
         run: CI=true pnpm test:e2e
         env:
           CI: true
+
+      # Passkey ceremonies fail server-side in ways the browser only shows as a
+      # generic message, so without this a CI-only failure cannot be diagnosed.
+      - name: Dump backend log on failure
+        if: failure()
+        run: |
+          echo "===== backend.log (tail 200) ====="
+          tail -200 packages/backend/backend.log || true
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
@@ -554,8 +569,6 @@ jobs:
             --var ENVIRONMENT:preview \
             --var AI_PROVIDER:google \
             --var AI_MODEL:gemini-3-flash-preview \
-            --var FROM_EMAIL:onboarding@resend.dev \
-            --var FRONTEND_URL:https://lifestyle-tracker-pr-${{ github.event.pull_request.number }}.abe00makoto.workers.dev \
             --var RP_ID:lifestyle-tracker-pr-${{ github.event.pull_request.number }}.abe00makoto.workers.dev \
             --var RP_NAME:"Lifestyle Tracker (PR Preview)" \
             --var RP_ORIGIN:https://lifestyle-tracker-pr-${{ github.event.pull_request.number }}.abe00makoto.workers.dev
@@ -568,7 +581,6 @@ jobs:
         run: |
           cd packages/backend
           echo "${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}" | pnpm exec wrangler secret put GOOGLE_GENERATIVE_AI_API_KEY --name lifestyle-tracker-pr-${{ github.event.pull_request.number }}
-          echo "${{ secrets.RESEND_API_KEY }}" | pnpm exec wrangler secret put RESEND_API_KEY --name lifestyle-tracker-pr-${{ github.event.pull_request.number }}
           # Optional: when the SESSION_SECRET repo secret is unset, the preview
           # worker falls back to the dev key (non-production), so skip rather than
           # push an empty secret.

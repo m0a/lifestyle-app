@@ -58,6 +58,7 @@ export function PasskeyManagement() {
   }
 
   const credentials = data?.credentials ?? [];
+  const isLastCredential = credentials.length <= 1;
 
   const handleAdd = async () => {
     try {
@@ -102,13 +103,28 @@ export function PasskeyManagement() {
               </div>
               <button
                 onClick={() => setDeleteTargetId(cred.credentialId)}
-                className="ml-2 shrink-0 rounded-md border border-red-200 bg-white px-2 py-1 text-xs text-red-600 hover:bg-red-50 transition-colors"
+                // Passkeys are the only way in, so removing the last one would
+                // lock the account out. The server refuses it too; this just
+                // avoids offering an action that always fails.
+                disabled={isLastCredential}
+                title={
+                  isLastCredential
+                    ? '最後のパスキーは削除できません。先に別のパスキーを登録してください'
+                    : undefined
+                }
+                className="ml-2 shrink-0 rounded-md border border-red-200 bg-white px-2 py-1 text-xs text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-300 disabled:hover:bg-white transition-colors"
               >
                 削除
               </button>
             </li>
           ))}
         </ul>
+      )}
+
+      {credentials.length === 1 && (
+        <p className="text-[10px] text-gray-400">
+          パスキーが1つだけのため削除できません。機種変更に備えて2つ以上の登録をおすすめします
+        </p>
       )}
 
       <div className="space-y-2">

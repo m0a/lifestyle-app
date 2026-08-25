@@ -15,8 +15,6 @@ import { mealAnalysis } from './routes/meal-analysis';
 import { mealChat } from './routes/meal-chat';
 import { mcp } from './routes/mcp';
 import { mcpTokens } from './routes/mcp-tokens';
-import { emailVerify } from './routes/email/verify';
-import { emailChange } from './routes/email/change';
 import { requestContext } from './middleware/requestContext';
 import { executeScheduledCleanup } from './cron/cleanup';
 
@@ -129,9 +127,7 @@ const routes = app
   .route('/api/user', user)
   .route('/api/mcp/tokens', mcpTokens)
   .route('/api/mcp', mcp)
-  .route('/api/logs', logs)
-  .route('/api/email', emailVerify)
-  .route('/api/email', emailChange);
+  .route('/api/logs', logs);
 
 // SPA fallback - serve index.html for non-API routes
 app.get('*', async (c) => {

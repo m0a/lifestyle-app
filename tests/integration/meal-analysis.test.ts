@@ -1,8 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import {
   createTestSession,
-  ensureTestUser,
-  TEST_USERS,
   API_BASE,
   type TestSession,
 } from '../helpers/integration';
@@ -118,13 +116,10 @@ describe('Meal Analysis API Integration Tests', () => {
     let photoPath: string;
 
     beforeAll(async () => {
-      await ensureTestUser(TEST_USERS.default.email, TEST_USERS.default.password);
-      await ensureTestUser(TEST_USERS.secondary.email, TEST_USERS.secondary.password);
-
-      owner = createTestSession();
-      await owner.login(TEST_USERS.default.email, TEST_USERS.default.password);
-      other = createTestSession();
-      await other.login(TEST_USERS.secondary.email, TEST_USERS.secondary.password);
+      // Two distinct seeded accounts: the ownership checks below depend on
+      // `other` genuinely being a different user.
+      owner = await createTestSession('default');
+      other = await createTestSession('secondary');
 
       // Create an empty meal and attach a photo (permanent key) as the owner.
       const createRes = await owner.request('/api/meals/create-empty', {

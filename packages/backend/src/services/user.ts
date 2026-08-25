@@ -5,7 +5,7 @@ import type { Database } from '../db';
 interface ExportData {
   user: {
     id: string;
-    email: string;
+    displayName: string | null;
     createdAt: string;
   };
   weights: Array<{
@@ -42,7 +42,7 @@ export class UserService {
     const user = await this.db
       .select({
         id: users.id,
-        email: users.email,
+        displayName: users.displayName,
         goalWeight: users.goalWeight,
         goalCalories: users.goalCalories,
         targetDailyCalorieLimit: users.targetDailyCalorieLimit,
@@ -104,7 +104,7 @@ export class UserService {
     const user = await this.db
       .select({
         id: users.id,
-        email: users.email,
+        displayName: users.displayName,
         createdAt: users.createdAt,
       })
       .from(users)
@@ -160,7 +160,7 @@ export class UserService {
     return {
       user: {
         id: user.id,
-        email: user.email,
+        displayName: user.displayName,
         createdAt: user.createdAt,
       },
       weights: weightRecords,
@@ -176,7 +176,7 @@ export class UserService {
 
     // Header
     lines.push('# Health Tracker Data Export');
-    lines.push(`# User: ${data.user.email}`);
+    lines.push(`# User: ${data.user.displayName ?? data.user.id}`);
     lines.push(`# Exported: ${data.exportedAt}`);
     lines.push('');
 

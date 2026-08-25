@@ -2,14 +2,13 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { api } from '../lib/client';
-import { EmailVerificationBanner } from './auth/EmailVerificationBanner';
 
 interface LayoutProps {
   children: ReactNode;
 }
 
 export function Layout({ children }: LayoutProps) {
-  const { user, isAuthenticated, logout } = useAuthStore();
+  const { isAuthenticated, logout } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -102,10 +101,6 @@ export function Layout({ children }: LayoutProps) {
           </div>
         </nav>
       </header>
-
-      {isAuthenticated && user?.emailVerified === false && (
-        <EmailVerificationBanner />
-      )}
 
       <main className="mx-auto max-w-5xl px-4 py-6 pb-20 md:pb-6 sm:px-6">
         {children}

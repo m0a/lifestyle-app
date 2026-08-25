@@ -1,30 +1,14 @@
 import { Hono } from 'hono';
-import { zValidator } from '@hono/zod-validator';
-import { setCookie, deleteCookie } from 'hono/cookie';
-import {
-  registerSchema,
-  loginSchema,
-  passwordResetRequestSchema,
-  passwordResetConfirmSchema,
-} from '@lifestyle-app/shared';
+import { deleteCookie } from 'hono/cookie';
 import { AuthService } from '../services/auth';
-import { createSessionToken, authMiddleware, resolveSessionSecret } from '../middleware/auth';
+import { authMiddleware } from '../middleware/auth';
 import type { Database } from '../db';
-import {
-  requestPasswordReset,
-  confirmPasswordReset,
-} from '../services/auth/password-reset.service';
-import { sendVerificationEmail } from '../services/email/email-verification.service';
-import { getClientIP } from '../services/rate-limit/email-rate-limit';
 import { webauthn } from './auth/webauthn';
 
 type Bindings = {
   DB: D1Database;
   ENVIRONMENT: string;
   SESSION_SECRET?: string;
-  RESEND_API_KEY: string;
-  FROM_EMAIL: string;
-  FRONTEND_URL: string;
   RP_ID: string;
   RP_NAME: string;
   RP_ORIGIN: string;
@@ -35,66 +19,13 @@ type Variables = {
   user: { id: string; email: string };
 };
 
+// Authentication is passkey-only: registering and logging in both live under
+// /webauthn. There is no password login, no email verification and no password
+// reset, so this file only keeps the session-level endpoints.
+//
 // Chain format for RPC type inference
 export const auth = new Hono<{ Bindings: Bindings; Variables: Variables }>()
   .route('/webauthn', webauthn)
-  .post('/register', zValidator('json', registerSchema), async (c) => {
-    const input = c.req.valid('json');
-    const db = c.get('db');
-    const authService = new AuthService(db);
-
-    const user = await authService.register(input, c.env.ENVIRONMENT);
-
-    // Send verification email in background (non-blocking)
-    // Skip email sending in test environment (integration tests)
-    if (c.env.ENVIRONMENT !== 'test') {
-      // Use waitUntil to send email in background without blocking response
-      c.executionCtx.waitUntil(
-        sendVerificationEmail(
-          c.env.DB,
-          user.id,
-          user.email,
-          c.env.RESEND_API_KEY,
-          c.env.FROM_EMAIL,
-          c.env.FRONTEND_URL
-        ).catch((error) => {
-          console.error('Failed to send verification email:', error);
-        })
-      );
-    }
-
-    const token = await createSessionToken(user.id, resolveSessionSecret(c.env));
-
-    const isProduction = c.env.ENVIRONMENT === 'production';
-    setCookie(c, 'session', token, {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: 'Lax',
-      path: '/',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-    });
-
-    return c.json({ user }, 201);
-  })
-  .post('/login', zValidator('json', loginSchema), async (c) => {
-    const input = c.req.valid('json');
-    const db = c.get('db');
-    const authService = new AuthService(db);
-
-    const user = await authService.login(input);
-    const token = await createSessionToken(user.id, resolveSessionSecret(c.env));
-
-    const isProduction = c.env.ENVIRONMENT === 'production';
-    setCookie(c, 'session', token, {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: 'Lax',
-      path: '/',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-    });
-
-    return c.json({ user });
-  })
   .post('/logout', async (c) => {
     deleteCookie(c, 'session', {
       path: '/',
@@ -110,44 +41,4 @@ export const auth = new Hono<{ Bindings: Bindings; Variables: Variables }>()
     const user = await authService.getUserById(authUser.id);
 
     return c.json({ user });
-  })
-  .post(
-    '/password-reset/request',
-    zValidator('json', passwordResetRequestSchema),
-    async (c) => {
-      const { email } = c.req.valid('json');
-      const clientIP = getClientIP(c.req.raw.headers);
-
-      const result = await requestPasswordReset(
-        c.env.DB,
-        email,
-        clientIP,
-        c.env.RESEND_API_KEY,
-        c.env.FROM_EMAIL,
-        c.env.FRONTEND_URL
-      );
-
-      if (!result.success) {
-        return c.json({ error: result.error }, 400);
-      }
-
-      return c.json({ message: 'パスワードリセットのメールを送信しました。' });
-    }
-  )
-  .post(
-    '/password-reset/confirm',
-    zValidator('json', passwordResetConfirmSchema),
-    async (c) => {
-      const { token, newPassword } = c.req.valid('json');
-
-      const result = await confirmPasswordReset(c.env.DB, token, newPassword);
-
-      if (!result.success) {
-        return c.json({ error: result.error }, 400);
-      }
-
-      return c.json({
-        message: 'パスワードを正常にリセットしました。新しいパスワードでログインできます。',
-      });
-    }
-  );
+  });

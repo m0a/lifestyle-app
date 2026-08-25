@@ -1,7 +1,5 @@
 import { z } from 'zod';
 import {
-  registerSchema,
-  loginSchema,
   updateUserSchema,
   updateGoalsSchema,
   createWeightSchema,
@@ -24,13 +22,7 @@ export * from './training-image';
 // Exercise import types
 export * from './exercise';
 
-// Email and token types
-export * from './email';
-export * from './token';
-
 // Infer types from schemas
-export type RegisterInput = z.infer<typeof registerSchema>;
-export type LoginInput = z.infer<typeof loginSchema>;
 export type UpdateUserInput = z.infer<typeof updateUserSchema>;
 export type UpdateGoalsInput = z.infer<typeof updateGoalsSchema>;
 export type CreateWeightInput = z.infer<typeof createWeightSchema>;
@@ -48,8 +40,10 @@ export type MaxRMResponseType = z.infer<typeof maxRMResponseSchema>;
 // Entity types
 export interface User {
   id: string;
-  email: string;
-  emailVerified: boolean;
+  // Cosmetic label chosen at signup. Not unique, not an identifier — auth is
+  // passkey-only, so nothing is ever looked up by it. Nullable for rows created
+  // before display names existed.
+  displayName: string | null;
   goalWeight: number | null;
   goalCalories: number | null;
   createdAt: string;

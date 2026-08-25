@@ -107,10 +107,10 @@ pnpm test
 Helper class for authenticated API requests in integration tests.
 
 ```typescript
-import { createTestSession, TEST_USERS } from '../helpers/integration';
+import { createTestSession } from '../helpers/integration';
 
 const session = createTestSession();
-await session.login(TEST_USERS.default.email, TEST_USERS.default.password);
+const session = await createTestSession();
 
 // Make authenticated request
 const response = await session.request('/api/meals', {
@@ -142,11 +142,10 @@ if (!isReady) {
 Helper functions for authenticating in E2E tests.
 
 ```typescript
-import { loginAsTestUser, ensureTestUserExists, logout } from '../helpers/e2e';
+import { loginAsTestUser } from '../helpers/e2e';
 
 test.beforeEach(async ({ page }) => {
   // Ensure test user exists (creates if not exists)
-  await ensureTestUserExists(page);
 
   // Login as test user
   await loginAsTestUser(page);
@@ -166,10 +165,10 @@ test.afterEach(async ({ page }) => {
 You can use a different test user:
 
 ```typescript
-import { loginAsTestUser, TEST_USERS } from '../helpers/e2e';
+import { loginAsTestUser } from '../helpers/e2e';
 
 // Login with secondary user
-await loginAsTestUser(page, TEST_USERS.secondary.email, TEST_USERS.secondary.password);
+await loginAsTestUser(page, '別のテストユーザー');
 
 // Or with custom credentials
 await loginAsTestUser(page, 'custom@example.com', 'password123');
@@ -262,7 +261,7 @@ See `.github/workflows/ci.yml` for details.
 
 ```typescript
 import { describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest';
-import { createTestSession, ensureTestUser, waitForBackend, TEST_USERS } from '../helpers/integration';
+import { createTestSession } from '../helpers/integration';
 import type { TestSession } from '../helpers/integration';
 
 describe('My API Tests', () => {
@@ -273,12 +272,11 @@ describe('My API Tests', () => {
     if (!isReady) {
       throw new Error('Backend not ready');
     }
-    await ensureTestUser(TEST_USERS.default.email, TEST_USERS.default.password);
   });
 
   beforeEach(async () => {
     session = createTestSession();
-    await session.login(TEST_USERS.default.email, TEST_USERS.default.password);
+    const session = await createTestSession();
   });
 
   afterEach(async () => {

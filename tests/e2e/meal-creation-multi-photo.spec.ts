@@ -33,7 +33,7 @@ test.describe('Unified Photo Meal Flow', () => {
 
   test.describe('Authenticated User - Photo Selector', () => {
     test.beforeEach(async ({ page }) => {
-      await ensureTestUserExists(page);
+      await ensureTestUserExists();
       await loginAsTestUser(page);
       await page.goto('/meals');
       await page.waitForLoadState('networkidle');
@@ -214,7 +214,7 @@ test.describe('Unified Photo Meal Flow', () => {
 
   test.describe('Photo Detail View', () => {
     test.beforeEach(async ({ page }) => {
-      await ensureTestUserExists(page);
+      await ensureTestUserExists();
       await loginAsTestUser(page);
     });
 

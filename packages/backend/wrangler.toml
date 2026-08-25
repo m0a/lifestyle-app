@@ -25,10 +25,6 @@ not_found_handling = "single-page-application"
 ENVIRONMENT = "production"
 AI_PROVIDER = "google"
 AI_MODEL = "gemini-3-flash-preview"
-# Email delivery configuration
-# RESEND_API_KEY should be set via wrangler secrets (see .github/workflows/ci.yml)
-FROM_EMAIL = "noreply@yasedas.com"
-FRONTEND_URL = "https://lifestyle-tracker.abe00makoto.workers.dev"
 # WebAuthn / Passkey configuration
 RP_ID = "lifestyle-tracker.abe00makoto.workers.dev"
 RP_NAME = "Lifestyle Tracker"
@@ -56,9 +52,6 @@ name = "lifestyle-tracker-preview"
 ENVIRONMENT = "preview"
 AI_PROVIDER = "google"
 AI_MODEL = "gemini-3-flash-preview"
-# Email delivery configuration
-FROM_EMAIL = "onboarding@resend.dev"
-FRONTEND_URL = "https://lifestyle-tracker-preview.abe00makoto.workers.dev"
 # WebAuthn / Passkey configuration
 RP_ID = "lifestyle-tracker-preview.abe00makoto.workers.dev"
 RP_NAME = "Lifestyle Tracker"

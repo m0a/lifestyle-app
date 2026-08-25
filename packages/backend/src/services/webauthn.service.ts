@@ -12,7 +12,11 @@ export async function saveChallenge(
   params: {
     userId: string | null;
     challenge: string;
-    type: 'registration' | 'authentication';
+    type: 'registration' | 'authentication' | 'signup';
+    // Only for type 'signup': no user row exists yet, so the pre-minted user id
+    // and label are stored here instead of in userId (migration 0042).
+    signupUserId?: string;
+    signupDisplayName?: string;
   },
 ): Promise<void> {
   const now = new Date();
@@ -21,6 +25,8 @@ export async function saveChallenge(
     userId: params.userId,
     challenge: params.challenge,
     type: params.type,
+    signupUserId: params.signupUserId ?? null,
+    signupDisplayName: params.signupDisplayName ?? null,
     expiresAt: new Date(now.getTime() + CHALLENGE_TTL_MS).toISOString(),
     createdAt: now.toISOString(),
   });
