@@ -56,7 +56,10 @@ packages/
 ### Tech Stack
 
 - **Language**: TypeScript 5.x (strict mode)
-- **Frontend**: React 18+, Vite, Tailwind CSS, Zustand (auth), TanStack Query (server state)
+- **Frontend**: React 18+, Vite 8, Tailwind CSS, Zustand (auth), TanStack Query (server state)
+  - Vite 8 の bundler は内蔵の **Rolldown**（Rollup ではない）、JSX 変換は `@vitejs/plugin-react` 6 経由の
+    **Oxc**（Babel は依存にない）。`rollupOptions` / `manualChunks` は未使用なので、チャンク分割は
+    Rolldown の自動判断に任せている。Node は `>=22.12.0` が必要。
 - **Backend**: Hono on Cloudflare Workers
 - **Database**: Drizzle ORM + Cloudflare D1 (SQLite)
 - **Storage**: Cloudflare R2 (meal photos)
