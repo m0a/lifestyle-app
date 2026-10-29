@@ -119,7 +119,7 @@ import type {
   TextAnalysisError,
 } from '@lifestyle-app/shared';
 
-interface MealAnalysisResponse extends AnalysisResult {}
+type MealAnalysisResponse = AnalysisResult;
 
 interface MealChatEvent {
   text?: string;

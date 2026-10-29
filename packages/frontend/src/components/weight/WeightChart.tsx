@@ -11,7 +11,7 @@ import {
   type TooltipItem,
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import type { WeightRecord } from '@lifestyle-app/shared';
 import { useAuthStore } from '../../stores/authStore';
 
@@ -95,11 +95,19 @@ export function WeightChart({ weights }: WeightChartProps) {
   const presetDef = PRESETS.find((p) => p.key === preset) ?? PRESETS[0]!;
   const presetDays = presetDef.days;
 
-  // Reset window to the latest data whenever the data set changes
-  useEffect(() => {
+  // Reset window to the latest data whenever the data set or the preset changes.
+  // effect ではなく render 中に前回のキーと比べて合わせる（react.dev の
+  // "Adjusting some state when a prop changes"）。effect で setState すると、
+  // プリセットを切り替えるたびに古い窓で1フレーム描いてから直す形になる。
+  const [prevWindowKey, setPrevWindowKey] = useState<{
+    weights: WeightRecord[];
+    days: number | null;
+  }>({ weights: sortedWeights, days: presetDays });
+  if (prevWindowKey.weights !== sortedWeights || prevWindowKey.days !== presetDays) {
+    setPrevWindowKey({ weights: sortedWeights, days: presetDays });
     setEndIndex(lastIndex);
     setWindowStart(startIndexForSpan(sortedWeights, lastIndex, presetDays));
-  }, [lastIndex, presetDays, sortedWeights]);
+  }
 
   const visibleWeights = sortedWeights.slice(windowStart, endIndex + 1);
 

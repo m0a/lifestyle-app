@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { WEEKLY_MEAL_TARGETS } from '@lifestyle-app/shared';
@@ -81,21 +81,24 @@ export function Settings() {
     },
   });
 
-  // Initialize goal values from profile
-  useEffect(() => {
-    if (profile) {
-      setGoalWeight(profile.goalWeight?.toString() ?? '');
-      setGoalCalories(profile.goalCalories?.toString() ?? '');
-      setWeeklyTargets({
-        targetDailyCalorieLimit: profile.targetDailyCalorieLimit?.toString() ?? '',
-        targetProteinPct: profile.targetProteinPct?.toString() ?? '',
-        targetFatPct: profile.targetFatPct?.toString() ?? '',
-        targetProteinFloorPerDay: profile.targetProteinFloorPerDay?.toString() ?? '',
-        targetHighFatDaysLimit: profile.targetHighFatDaysLimit?.toString() ?? '',
-        targetExerciseDays: profile.targetExerciseDays?.toString() ?? '',
-      });
-    }
-  }, [profile]);
+  // Initialize goal values from profile.
+  // effect ではなく render 中に前回値と比べて合わせる（react.dev の
+  // "Adjusting some state when a prop changes"）。effect で setState すると
+  // プロフィール取得直後に空のフォームが1フレーム見える。
+  const [prevProfile, setPrevProfile] = useState<typeof profile>(undefined);
+  if (profile && profile !== prevProfile) {
+    setPrevProfile(profile);
+    setGoalWeight(profile.goalWeight?.toString() ?? '');
+    setGoalCalories(profile.goalCalories?.toString() ?? '');
+    setWeeklyTargets({
+      targetDailyCalorieLimit: profile.targetDailyCalorieLimit?.toString() ?? '',
+      targetProteinPct: profile.targetProteinPct?.toString() ?? '',
+      targetFatPct: profile.targetFatPct?.toString() ?? '',
+      targetProteinFloorPerDay: profile.targetProteinFloorPerDay?.toString() ?? '',
+      targetHighFatDaysLimit: profile.targetHighFatDaysLimit?.toString() ?? '',
+      targetExerciseDays: profile.targetExerciseDays?.toString() ?? '',
+    });
+  }
 
   // Update goals mutation
   const goalsMutation = useMutation({

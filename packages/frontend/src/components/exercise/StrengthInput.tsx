@@ -1,4 +1,4 @@
-import { Fragment, useState, useCallback, useMemo, useEffect } from 'react';
+import { Fragment, useState, useCallback, useMemo } from 'react';
 import { EXERCISE_PRESETS, MUSCLE_GROUPS, MUSCLE_GROUP_LABELS, type MuscleGroup, type ExerciseRecord } from '@lifestyle-app/shared';
 import { SetRow } from './SetRow';
 import { RestTimer } from './RestTimer';
@@ -34,7 +34,6 @@ interface StrengthInputProps {
   onFetchLastRecord?: (exerciseType: string) => Promise<ExerciseRecord | null>;
   onFetchLastSession?: (exerciseType: string) => Promise<ExerciseRecord[]>;
   customTypes?: ExerciseTypeWithMuscleGroup[];
-  pendingImport?: Session | null;
 }
 
 interface SessionExercise {
@@ -53,7 +52,7 @@ interface Session {
   exercises: SessionExercise[];
 }
 
-export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, onFetchLastSession, customTypes = [], pendingImport }: StrengthInputProps) {
+export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, onFetchLastSession, customTypes = [] }: StrengthInputProps) {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [selectedMuscleGroup, setSelectedMuscleGroup] = useState<MuscleGroup>('chest');
@@ -284,13 +283,6 @@ export function StrengthInput({ onSubmit, isLoading, error, onFetchLastRecord, o
     setSuccessMessage(`「${firstExercise.exerciseType}」のセット構成を取り込みました`);
     setTimeout(() => setSuccessMessage(null), 3000);
   }, []);
-
-  // Handle external import requests
-  useEffect(() => {
-    if (pendingImport) {
-      handleSessionSelect(pendingImport);
-    }
-  }, [pendingImport, handleSessionSelect]);
 
   return (
     <form onSubmit={handleFormSubmit} className="space-y-4">

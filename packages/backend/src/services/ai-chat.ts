@@ -329,7 +329,7 @@ export class AIChatService {
             }
           }
         }
-      } catch (e) {
+      } catch {
         // Skip invalid JSON
         console.warn('Failed to parse change:', jsonStr);
       }

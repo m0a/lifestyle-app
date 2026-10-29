@@ -76,12 +76,17 @@ export function MealEditMode({
     onDirtyChange?.(isDirty);
   }, [isDirty, onDirtyChange]);
 
-  // Update totals when photoTotals change (after photo upload/delete)
-  useEffect(() => {
-    if (photoTotals) {
-      setTotals(photoTotals);
-    }
-  }, [photoTotals]);
+  // Update totals when photoTotals change (after photo upload/delete).
+  // effect ではなく render 中に前回値と比べて合わせる（react.dev の
+  // "Adjusting some state when a prop changes"）。effect で setState すると
+  // 写真を1枚追加するたびに余分な再レンダリングが1回挟まる。
+  // photoTotals は TanStack Query の data 由来で、中身が変わらない限り
+  // 参照も変わらないため同一性比較で判定できる。
+  const [prevPhotoTotals, setPrevPhotoTotals] = useState<NutritionTotals | undefined>(undefined);
+  if (photoTotals && photoTotals !== prevPhotoTotals) {
+    setPrevPhotoTotals(photoTotals);
+    setTotals(photoTotals);
+  }
 
   const handleUpdateItem = useCallback(
     async (itemId: string, updates: Partial<FoodItem>) => {

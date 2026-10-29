@@ -116,6 +116,9 @@ app.get('/api/health', (c) => {
 // without auth, which let it shadow the secured handler — removed for #97.
 
 // Routes - chain format for RPC type inference
+// The binding exists only to feed `typeof routes` into AppType below; the
+// runtime registration happens through the .route() calls themselves.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const routes = app
   .route('/api/auth', auth)
   .route('/api/weights', weights)

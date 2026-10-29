@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { api } from '../../lib/client';
 import { useRecentExercises } from '../../hooks/useExercises';
 import { RecentExercises } from './RecentExercises';
@@ -27,55 +28,60 @@ interface SessionListModalProps {
 }
 
 export function SessionListModal({ isOpen, onClose, onSelect }: SessionListModalProps) {
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
+  // 取り込み（handleRecentSelect）の失敗はセッション一覧のクエリとは別経路なので分けて持つ
+  const [importError, setImportError] = useState<string | null>(null);
 
   // Fetch recent exercises
   const { data: recentExercises = [], isLoading: isLoadingRecent } = useRecentExercises(10);
 
-  const fetchSessions = useCallback(async (cursor?: string) => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
+  // セッション一覧はカーソルページングなので useInfiniteQuery に預ける。
+  // 以前は useEffect で isOpen を監視して fetch し、ローディング・カーソル・
+  // エラーを自前の useState で持っていたが、effect 内の同期 setState は
+  // カスケード再レンダリングになる（react-hooks/set-state-in-effect）。
+  // enabled: isOpen ならモーダルが開いたときだけ走るので effect が要らない。
+  const {
+    data,
+    isPending,
+    isFetchingNextPage,
+    fetchNextPage,
+    hasNextPage,
+    error: sessionsError,
+  } = useInfiniteQuery({
+    queryKey: ['exercises', 'sessions'],
+    enabled: isOpen,
+    initialPageParam: undefined as string | undefined,
+    queryFn: async ({ pageParam }) => {
       const query: Record<string, string> = { limit: '10' };
-      if (cursor) query['cursor'] = cursor;
+      if (pageParam) query['cursor'] = pageParam;
 
       const res = await api.exercises.sessions.$get({ query });
       if (!res.ok) {
         throw new Error('Failed to fetch sessions');
       }
-      const data = await res.json();
+      return res.json();
+    },
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+  });
 
-      if (cursor) {
-        setSessions(prev => [...prev, ...data.sessions]);
-      } else {
-        setSessions(data.sessions);
-      }
-      setNextCursor(data.nextCursor ?? null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch sessions');
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const sessions: Session[] = data?.pages.flatMap((page) => page.sessions) ?? [];
+  const isLoading = isPending || isFetchingNextPage;
+  const error = importError ?? sessionsError?.message ?? null;
 
-  useEffect(() => {
-    if (isOpen) {
-      fetchSessions();
-    }
-  }, [isOpen, fetchSessions]);
+  const handleClose = useCallback(() => {
+    setImportError(null);
+    setSelectedSession(null);
+    onClose();
+  }, [onClose]);
 
   const handleLoadMore = () => {
-    if (nextCursor && !isLoading) {
-      fetchSessions(nextCursor);
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
     }
   };
 
   const handleRecentSelect = useCallback(async (exercise: RecentExerciseItem) => {
+    setImportError(null);
     try {
       // Fetch detailed exercise records for the recent exercise
       // Use date-only format (YYYY-MM-DD) as expected by exerciseQuerySchema
@@ -100,7 +106,7 @@ export function SessionListModal({ isOpen, onClose, onSelect }: SessionListModal
       if (!res.ok) {
         const errorText = await res.text();
         console.error('[SessionListModal] API error:', errorText);
-        setError(`エクササイズの詳細の取得に失敗しました (${res.status})`);
+        setImportError(`エクササイズの詳細の取得に失敗しました (${res.status})`);
         return;
       }
 
@@ -109,7 +115,7 @@ export function SessionListModal({ isOpen, onClose, onSelect }: SessionListModal
       console.log('[SessionListModal] Fetched records:', records.length);
 
       if (records.length === 0) {
-        setError('マッチする記録が見つかりませんでした');
+        setImportError('マッチする記録が見つかりませんでした');
         return;
       }
 
@@ -144,7 +150,7 @@ export function SessionListModal({ isOpen, onClose, onSelect }: SessionListModal
       onSelect(session);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : '取り込み中にエラーが発生しました');
+      setImportError(err instanceof Error ? err.message : '取り込み中にエラーが発生しました');
     }
   }, [onSelect, onClose]);
 
@@ -209,7 +215,7 @@ export function SessionListModal({ isOpen, onClose, onSelect }: SessionListModal
               種目を選択 - {formatDate(selectedSession.date)}
             </h2>
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="text-gray-400 hover:text-gray-600"
               aria-label="閉じる"
             >
@@ -266,7 +272,7 @@ export function SessionListModal({ isOpen, onClose, onSelect }: SessionListModal
             過去のトレーニングから取り込む
           </h2>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="text-gray-400 hover:text-gray-600"
             aria-label="閉じる"
           >
@@ -350,7 +356,7 @@ export function SessionListModal({ isOpen, onClose, onSelect }: SessionListModal
           </div>
 
           {/* Load More */}
-          {nextCursor && (
+          {hasNextPage && (
             <div className="mt-4 text-center">
               <button
                 onClick={handleLoadMore}
