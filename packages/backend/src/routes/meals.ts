@@ -716,7 +716,7 @@ export const meals = new Hono<{ Bindings: Bindings; Variables: Variables }>()
             .set({ analysisStatus: 'failed' })
             .where(eq(schema.mealPhotos.id, photoId));
         }
-      } catch (error) {
+      } catch {
         // Update photo status to failed
         await db.update(schema.mealPhotos)
           .set({ analysisStatus: 'failed' })

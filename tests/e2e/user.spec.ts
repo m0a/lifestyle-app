@@ -15,6 +15,22 @@ test.describe('User Settings - Export and Delete', () => {
     await expect(page.getByRole('main').getByText('E2Eテストユーザー')).toBeVisible();
   });
 
+  // 目標値のフォームは profile クエリの結果から埋める。effect ではなく render 中に
+  // 前回値と比較して合わせる形にしたので（react-hooks/set-state-in-effect）、
+  // 保存 → リロードで値が戻ってくることを押さえておく。
+  test('restores saved goal values from the profile query after a reload', async ({ page }) => {
+    await page.goto('/settings');
+    await page.waitForLoadState('networkidle');
+
+    await page.locator('#goalWeight').fill('66.5');
+    await page.getByRole('button', { name: '保存', exact: true }).click();
+    await expect(page.getByText('保存しました')).toBeVisible();
+
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+    await expect(page.locator('#goalWeight')).toHaveValue('66.5');
+  });
+
   test.describe('Data Export', () => {
     test('should display export section', async ({ page }) => {
       await page.goto('/settings');

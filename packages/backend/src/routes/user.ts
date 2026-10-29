@@ -66,7 +66,7 @@ export const user = new Hono<{ Bindings: Bindings; Variables: Variables }>()
           'Content-Disposition': `attachment; filename="${filename}"`,
         },
       });
-    } catch (error) {
+    } catch {
       return c.json({ error: 'Export failed' }, 500);
     }
   })
@@ -80,7 +80,7 @@ export const user = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
       // Clear session/cookie if applicable
       return c.json({ success: true, message: 'Account deleted successfully' });
-    } catch (error) {
+    } catch {
       return c.json({ error: 'Failed to delete account' }, 500);
     }
   })

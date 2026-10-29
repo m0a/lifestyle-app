@@ -52,10 +52,10 @@ export function ActivityDotGrid({ activities, isLoading }: ActivityDotGridProps)
 
   // Smooth animation loop
   useEffect(() => {
-    if (!target) {
-      setLens(null);
-      return;
-    }
+    // target と lens は resetIdleTimer で必ず同時にクリアされるので、ここで
+    // setLens(null) を呼ぶ必要はない（effect 内の同期 setState はカスケード
+    // 再レンダリングになる）
+    if (!target) return;
 
     const animate = () => {
       const current = currentPosRef.current;
@@ -214,13 +214,15 @@ export function ActivityDotGrid({ activities, isLoading }: ActivityDotGridProps)
 
 
       {/* Info popup - positioned above lens center */}
-      {lens !== null && focusedActivity && containerRef.current && (
+      {/* cellSize は handlePointerMove で rect.width / COLUMNS として求めた値なので、
+          render 中に ref からレイアウトを読み直さなくてもコンテナ幅を復元できる */}
+      {lens !== null && focusedActivity && (
         <InfoPopup
           activity={focusedActivity}
           centerX={lens.centerX}
           centerY={lens.centerY}
           lensRadius={LENS_RADIUS * lens.cellSize}
-          containerWidth={containerRef.current.getBoundingClientRect().width}
+          containerWidth={lens.cellSize * COLUMNS}
         />
       )}
     </div>
